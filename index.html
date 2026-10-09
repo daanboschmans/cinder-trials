@@ -10636,7 +10636,7 @@ var HX_CARDS = [
 
  /* 7 ---------- the stake ---------- */
  { id:'stake', tag:'Between rounds', cap:'', title:'Bank it or push on',
-   text:function(){ return 'Take <b>one card</b>: a safe <b>gift</b> (a boon, a little Glory) or a greedy <b>bargain</b> (a curse, much more Glory). Or <b>bank it</b>. Die and most of it is lost.'; },
+   text:function(){ return 'Every 2 rounds, take <b>one card</b>: a safe <b>gift</b> (a boon, a little Glory) or a greedy <b>bargain</b> (a curse, much more Glory). Or <b>bank it</b>. Die and most of it is lost.'; },
    keys:function(){ return (G.touch ? '' : HX_krow(HX_kc(kl('Digit1'))+HX_kc('–')+HX_kc(kl('Digit5'))+HX_kc(kl('Enter')), 'Pick one, confirm'))+HX_krow('<svg viewBox="0 0 32 32">'+HX_ETCH.curse.replace(/class="b"/g,'fill="#a88a5a"').replace(/class="d"/g,'fill="none" stroke="#120a0e" stroke-width="1.6"')+'</svg>', 'Ten rounds, then the Pitmaster'); },
    spr:function(){ return ['boss']; },
    art:function(){ var D = 8.4, o = '';
@@ -14453,16 +14453,18 @@ window.addEventListener('keydown', function(e){ if(e.key!=='Escape' && e.code!==
   e.preventDefault(); try{ d.close(); }catch(err){ if(DEV) console.log('ESC close failed: '+d.name, err); } });
 
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.esc = {ESC:ESC, top:function(){ var d = ESC.top(); return d ? d.name : null; }, names:function(){ return ESC.list.map(function(d){ return d.name; }); }}; }
-/* ---------- Between-wave offerings: 3 Crowd Gifts + 2 Bargains, pick one of each. Owned by the offerings agent. ----------
+/* ---------- Between-wave offerings: 3 Crowd Gifts + 2 Bargains, pick ONE. Owned by the offerings agent. ----------
    Spec: design/OFFERINGS.md. The old two-phase bargain (curse, then boon) becomes one screen. The flow still runs through the
    original chain: openBargain() (all wrappers: Act II pool + decree, Daily rng, Wager, party label, spell reset) rolls the curse
    cards, rollBoons() rolls the gifts, and Confirm calls choose(bargain, true) then choose(gift, false), so applyCurse, Codex
    discovery, Devil's Ledger, Pit Watch, party sharing, the A2 vote guard and nextWave all run unchanged.
-   Glory: curses no longer raise "Glory per round"; each card adds flat Glory to the stake instead (a bargain 3-4x a gift). */
+   Glory: curses no longer raise "Glory per round"; each card adds flat Glory to the stake instead (a bargain 3-4x a gift).
+   Cadence: the screen comes every 2 waves plus the last wave before a boss (OF_due); other waves go straight on (OF_skip),
+   and each offering pays for every wave it covers (OF_span), so a run's Glory total stays the same. */
 
 /* OF.onSpellGift(card, hero, target) -> true when another feature applied a spell-type gift itself (68-skills). Party runs only; solo goes through choose(). */
 var OF = {onSpellGift:null, on:false, taken:{gift:0, bargain:0}, gifts:[], bargains:[], gi:-1, bi:-1, row:0, unit:0, bossNext:false, noBargain:false,
-  K:0.066, C:2.7, CAP:2, BAN:{ruin:1, stalk:1}, wrap:null, go:null, to:null};
+  K:0.066, C:2.7, CAP:2, force:false, BAN:{ruin:1, stalk:1}, wrap:null, go:null, to:null};
 
 /* ---------- softened core curses (numbers on the card match the game) ---------- */
 (function(){ var T = function(id, arr){ var D = CURSE_BY[id]; if(D) arr.forEach(function(s, i){ if(s) D.t[i] = s; }); };
@@ -14501,7 +14503,10 @@ updateRound = function(dt){ var r = OF_updRound0.apply(this, arguments); if(CT('
 function OF_party(){ try{ if(typeof PTY!=='undefined' && PTY.on && typeof PTY_f==='function' && typeof PARTY!=='undefined') return PTY_f(PARTY.glory); }catch(e){} return 1; }
 function OF_mult(g){ return 3 + clamp(((g||0.3) - 0.2)/0.2, 0, 1); }
 function OF_sev(g){ return g <= 0.25 ? 1 : g <= 0.35 ? 2 : 3; }
-function OF_unitNow(){ var k = Math.max(1, G.act===2 ? G.wave-10 : G.wave), n = G.wave+1; return (OF.C + OF.K*k*(12+6*n)) * ((P && P.greed) || 1) * OF_party(); }
+/* one wave's worth of offering Glory (k = waves cleared in this act, n = the wave after it) */
+function OF_unitAt(w){ var k = Math.max(1, w - OF_actStart()), n = w+1; return OF.C + OF.K*k*(12+6*n); }
+/* the Offering covers every wave since the last one, so the run's total Glory matches the old one-per-wave screen */
+function OF_unitNow(){ var u = 0; OF_span().forEach(function(w){ u += OF_unitAt(w); }); return u * ((P && P.greed) || 1) * OF_party(); }
 function OF_oath(){ return G.MOD_pact && G.MOD_pact.pact_oath ? 0.75 : 1; }
 function OF_giftOf(b){ var x = {card:b, pact:/^pact_/.test(b.id||''), glory:Math.max(1, Math.round(OF.unit * (/^pact_/.test(b.id||'') ? 2 : 1)))}; OF_target(x); return x; }
 function OF_bargainOf(b){ if(b.wager){ var gw = OF.unit*(OF_mult(b.a.g) + OF_mult(b.b.g))*2*OF_oath(); return {card:b, wager:true, sev:(b.a.g||0)+(b.b.g||0), lvl:3, glory:Math.round(gw)}; }
@@ -14509,7 +14514,19 @@ function OF_bargainOf(b){ if(b.wager){ var gw = OF.unit*(OF_mult(b.a.g) + OF_mul
 
 /* ---------- curse pool for offers: tier cap II, no Brand curses, tier-I only before a boss ---------- */
 function OF_ok(c){ if(OF.BAN[c.id]) return false; var t = CT(c.id); if(OF.bossNext) return t===0; return t < Math.min(c.t.length, OF.CAP); }
-function OF_bossNext(){ var nx = G.wave+1; return (G.act===2 && nx>=20) || (G.act!==2 && isBossRound(nx)); }
+function OF_bossNext(){ return OF_bossAt(G.wave+1); }
+
+/* ---------- cadence: the Offering comes every 2 waves (after 2, 4, 6, 8) plus the last wave before each boss (9, 19, ...) ---------- */
+function OF_actStart(){ return G.act>1 ? (G.act-1)*10 : 0; }
+function OF_bossAt(n){ return G.act===2 ? n>=20 : (isBossRound(n) || (G.act>2 && n%10===0)); }
+function OF_due(w){ return w%2===0 || OF_bossAt(w+1); }
+/* the waves this offering pays for: back to (not including) the previous offering, never past the act start */
+function OF_span(){ var out = [G.wave], w = G.wave-1, a = OF_actStart(); while(w > a && !OF_due(w)){ out.push(w); w--; } return out; }
+/* no offering this wave: keep the per-wave upkeep the screen used to bring (pillars regrow, the Daily goal), then straight on */
+function OF_skip(){ OF_hide();
+  for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(p.temp) continue; if(p.dead){ p.dead = false; p.g.visible = true; p.hp = p.max*0.6; p.rise = 0.4; } else p.hp = Math.min(p.max, p.hp+p.max*0.35); }
+  if(typeof DLY!=='undefined' && DLY.run && typeof DLY_claim==='function' && DLY_claim(G.wave) && P){ SFX.pick(); dmgText(P.x, 2.8, P.z, 'DAILY TRIAL COMPLETE +'+DLY_REWARD, '#ffd27a', 20); }
+  nextWave(); }
 
 /* ---------- styles ---------- */
 (function(){ var st = document.createElement('style'); st.id = 'ofCss'; st.textContent = [
@@ -14702,7 +14719,9 @@ function OF_confirm(){ if(!OF.on || G.state!=='bargain') return; audioInit();
   if(P && add) after(0.9, function(){ if(P && G.state==='play') dmgText(P.x, 2.6, P.z, '+'+add+' ⚜ offering', '#ffd27a', 20); }); }
 
 var OF_ob0 = openBargain;
-var OF_open = function(){ OF_hide(); OF.bossNext = OF_bossNext(); var first = !save.hints.stake;
+var OF_open = function(){ var force = OF.force; OF.force = false;
+  if(!force && G.state==='play' && P && !P.dead && G.wave>0 && !OF_due(G.wave)) return OF_skip();   /* only from roundCleared; Endless "Keep fighting" always opens it */
+  OF_hide(); OF.bossNext = OF_bossNext(); var first = !save.hints.stake;
   var saved = CURSES; CURSES = saved.filter(OF_ok); var r;
   try { r = OF_ob0.apply(this, arguments); } finally { CURSES = saved; }
   if(G.state==='bargain') OF_build(first); return r; };
@@ -14735,14 +14754,15 @@ if(typeof CX_bargains==='function'){ var OF_cxB0 = CX_bargains;
         x.body = function(){ return CX_p('From round 4 the second bargain is sometimes the Wager: take two named curses at once for twice their combined bargain Glory.')+CX_tbl([['Chance', 'About 1 in 3 offerings'], ['Never', 'Right before a boss']]); }; } });
     return out; }; }
 if(typeof CX_rounds==='function'){ var OF_cxR0 = CX_rounds;
-  CX_rounds = function(){ var out = OF_cxR0.apply(this, arguments); out.forEach(function(x){ if(x.id==='act1'){ var b0 = x.body; x.body = function(){ return b0().replace('Between rounds the Pitmaster offers a bargain: take your stake, or accept a curse and fight on.', 'After each round comes the Offering: take ONE card, a crowd gift (a boon) or a bargain (a curse worth much more Glory), or take your stake and leave.'); }; } }); return out; }; }
+  CX_rounds = function(){ var out = OF_cxR0.apply(this, arguments); out.forEach(function(x){ if(x.id==='act1'){ var b0 = x.body; x.body = function(){ return b0().replace('Between rounds the Pitmaster offers a bargain: take your stake, or accept a curse and fight on.', 'Every second round, and once more before the Pitmaster, comes the Offering: take ONE card, a crowd gift (a boon) or a bargain (a curse worth much more Glory), or take your stake and leave.'); }; } }); return out; }; }
 
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.offer = { OF:OF,
   state:function(){ return {on:OF.on, taken:OF.taken, phase:G.bgPhase, unit:OF.unit, bossNext:OF.bossNext, gi:OF.gi, bi:OF.bi, stake:G.stake, ready:OF_ready(), voting:!!OF_voting(),
     gifts:OF.gifts.map(function(x){ return {id:x.card.id||x.card.spell, name:x.card.name, r:x.card.r||0, glory:x.glory, pact:x.pact, all:!!x.all, to:x.hs ? x.hs.map(function(t){ return t.h.st.cls+(t.up?'+':''); }) : null, ti:x.hs ? x.ti : -1}; }),
     bargains:OF.bargains.map(function(x){ return {id:x.card.id, name:x.card.name, tier:x.card.tier, sev:x.sev, lvl:x.lvl, glory:x.glory, wager:!!x.wager}; })}; },
   pick:function(row, i){ OF_pick(row, i); return OF_ready(); }, target:function(i, t){ OF_setTarget(i, t); return OF.gifts[i] && OF.gifts[i].hs ? OF.gifts[i].hs[OF.gifts[i].ti].h.st.cls : null; }, confirm:function(){ OF_confirm(); return G.state; }, take:function(){ takeIt(); return G.state; },
-  open:function(w){ if(typeof w==='number'){ G.wave = w; } G.waveActive = false; openBargain(); return this.state(); } }; }
+  due:function(w){ return OF_due(w==null ? G.wave : w); }, span:function(){ return OF_span(); },
+  open:function(w){ if(typeof w==='number'){ G.wave = w; } G.waveActive = false; OF.force = true; openBargain(); return this.state(); } }; }
 /* ---------- Hub feel: ambient lighting + smooth hero locomotion in the Vigil (src/57-hub.js). Owned by the hub-feel agent. Prefix HUBF_. ----------
    LIGHT (no extra point lights; +3 draws, LOWTIER +2): a cool-dark / ember hemisphere fill and a cool depth haze (fog + background) so the floor,
    the hero and the keepers read between the light sources; one additive draw of wide warm bounce pools under the shafts, braziers and the
@@ -15114,7 +15134,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:52',h:'96ee2d5'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:55',h:'f789d13'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
