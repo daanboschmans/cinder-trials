@@ -650,7 +650,7 @@ function after(sec, fn){ G.timers.push({t:sec, fn:fn}); }
 
 /* ---------- save ---------- */
 var SAVE_KEY = 'cinder_trials_v1';
-var save = {v:2, glory:0, earned:0, cls:{mage:true, blade:true, archer:false}, relics:{}, best:{mage:0, blade:0, archer:0}, hints:{}, music:0.5, sfx:0.8, last:'mage', wins:0, runs:0, bestStake:0, cos:{}, daily:{}, act2:{}, gear:{}, codex:{}, hub:{}, acts:{}, ui:{}, party:{}};
+var save = {v:2, glory:0, earned:0, cls:{mage:true, blade:true, archer:false}, relics:{}, best:{mage:0, blade:0, archer:0}, hints:{}, music:0.5, sfx:0.8, last:'mage', wins:0, runs:0, bestStake:0, cos:{}, daily:{}, act2:{}, gear:{}, codex:{}, hub:{}, acts:{}, ui:{}, party:{}, skills:{}};
 function loadSave(){ var s = CG.get(SAVE_KEY); if(!s) return; try{ var o = JSON.parse(s);
   for(var k in o){ if(o[k] && typeof o[k]==='object' && !Array.isArray(o[k]) && save[k] && typeof save[k]==='object'){ for(var j in o[k]) save[k][j]=o[k][j]; } else if(k in save) save[k]=o[k]; } }catch(e){} }
 function persist(){ CG.set(SAVE_KEY, JSON.stringify(save)); }
@@ -4314,7 +4314,7 @@ function resetMods(){ G.curses = []; recomputeMods(); }
 function clampArena(o, pad){ var r=Math.hypot(o.x,o.z), lim=AR()-(pad||0); if(r>lim){ o.x*=lim/r; o.z*=lim/r; } return o; }
 
 /* ---------- player ---------- */
-function newRun(cls){ G.testRun=false;
+function newRun(cls){ G.testRun=false; G.god=false;
   clearWorld(); resetMods(); resetPillars();
   var C = CLASSES[cls];
   P = {cls:cls, x:0, z:3, px:0, pz:3, vx:0, vz:0, face:Math.PI, hp:C.hp, maxHp:C.hp, spd:6.2, ward:'flame', atkCd:0, dashCd:0, dashCh:1, dashMax:1, dashT:0, ddx:0, ddz:0, inv:0,
@@ -5607,13 +5607,14 @@ function GR_stats(v){ var C = CLASSES[v.cls], A = GR_A[v.a], ar = v.ar, has = fu
     {k:'Revives per run', v:has('phoenix') ? '1' : '0'}]; }
 function GR_pips(n, just, max){ var s = '<div class="pips">'; for(var i = 1; i <= (max||5); i++) s += '<i class="'+(just && i === n ? 'j' : i <= n ? 'f' : i === n+1 ? 'n' : '')+'"></i>'; return s+'</div>'; }
 function GR_ft(kind, a, b){ if(kind === 'cost') return '<span class="ft cost">'+GR_gl(13)+GR_fmt(a)+'</span>'; if(kind === 'deed') return '<span class="ft deed">'+GR_dI(false)+a+'</span>'; return '<span class="ft '+(b||'')+'">'+a+'</span>'; }
-function GR_sel(){ var s = GRU.sel, cls = GR_cls(); if(GRU.tab === 'gear'){ if(!s || s.k === 'r') s = GRU.sel = {k:'w', cls:cls}; if(s.k === 'w' && s.cls !== cls) s.cls = cls; }
+function GR_sel(){ var s = GRU.sel, cls = GR_cls(); if(GRU.tab === 'skills' && typeof CSK_armSel === 'function'){ var sid = CSK_armSel(cls, s && s.k === 's' ? s.id : null); if(!s || s.k !== 's' || s.id !== sid) s = GRU.sel = {k:'s', id:sid}; return s; }
+  if(GRU.tab === 'gear'){ if(!s || s.k === 'r') s = GRU.sel = {k:'w', cls:cls}; if(s.k === 'w' && s.cls !== cls) s.cls = cls; }
   else if(!s || s.k !== 'r'){ var w = RL_worn(); s = GRU.sel = {k:'r', id:w[0] || RL_DEFS[0].id}; } return s; }
 
 /* ======================================================================================= main render */
 function GR_render(){ GR_sync(); var g = save.gear, cls = GR_cls(), sel = GR_sel(), T = GRU.tab, r = save.relics, I = LB_INFO[cls], C = CLASSES[cls];
   var root = $('relicP'); if(!root) return; root.dataset.tab = T;
-  $('armTabs').innerHTML = '<button class="tab'+(T === 'gear' ? ' on' : '')+'" data-a="tab:gear">Gear <b>8</b></button><button class="tab'+(T === 'relics' ? ' on' : '')+'" data-a="tab:relics">Relics <b>'+RL_DEFS.length+'</b></button>';
+  $('armTabs').innerHTML = '<button class="tab'+(T === 'gear' ? ' on' : '')+'" data-a="tab:gear">Gear <b>8</b></button><button class="tab'+(T === 'relics' ? ' on' : '')+'" data-a="tab:relics">Relics <b>'+RL_DEFS.length+'</b></button>'+(typeof CSK_armBoard === 'function' ? '<button class="tab'+(T === 'skills' ? ' on' : '')+'" data-a="tab:skills">Skills <b>'+CSKILL.all(cls).length+'</b></button>' : '');
   $('relicGlory').innerHTML = GR_gl(20)+'<b>'+GR_fmt(save.glory)+'</b><small>Glory</small>';
   $('armHName').textContent = C.name; $('armHEpi').textContent = I.epi;
   $('armHeroes').innerHTML = LB_ORDER.map(function(k){ return '<button class="hp'+(k === cls ? ' on' : '')+(save.cls[k] ? '' : ' lock')+'" data-a="hero:'+k+'" aria-label="'+CLASSES[k].name+'">'+lbSvg(k)+'<span>'+GR_W[k].who+'</span></button>'; }).join('');
@@ -5629,7 +5630,8 @@ function GR_render(){ GR_sync(); var g = save.gear, cls = GR_cls(), sel = GR_sel
   /* board */
   var h = '', fx = GRU.fx;
   h += '<div class="toast'+(fx ? ' on' : '')+'"><b>Forged</b><span class="tl1">'+(fx ? fx.msg : '')+'</span><span class="tl2">'+(fx ? fx.s : '')+'</span></div>';
-  if(T === 'gear'){
+  if(T === 'skills' && typeof CSK_armBoard === 'function') h += CSK_armBoard(cls, sel.id);
+  else if(T === 'gear'){
     var tiles = [], just = GRU.just;
     LB_ORDER.forEach(function(k){ var Wk = GR_W[k], rk = g.w[k], un = save.cls[k], gt = un && rk < 5 ? GR_gateW(k, rk+1) : (!un ? GR_gateW(k, 2) : null);
       tiles.push({a:'sel:w:'+k, cat:'Weapon', who:Wk.who, ico:Wk.ico, name:Wk.name, ef:un ? Wk.ef+' +'+Math.round(GR_WV[rk]*100)+'%' : Wk.ef, rank:un ? rk : 0, just:just && just.key === 'w:'+k, lock:!un, sel:sel.k === 'w' && sel.cls === k,
@@ -5664,7 +5666,8 @@ function GR_render(){ GR_sync(); var g = save.gear, cls = GR_cls(), sel = GR_sel
 
 function GR_go(label, cost, off, act){ return '<button class="go'+(off ? ' off' : '')+'" data-a="'+(act||'go')+'">'+label+(cost != null ? '<span class="pr">'+(off ? '' : GR_gl(15))+GR_fmt(cost)+'</span>' : '')+'</button>'; }
 function GR_deed(gt){ return gt ? '<div class="deed '+(gt.ok ? 'ok' : 'no')+'">'+GR_dI(gt.ok)+'<span>'+(gt.ok ? 'Deed done · ' : 'Deed needed · ')+'<b>'+gt.t+'</b></span></div>' : ''; }
-function GR_detail(cls, sel){ var g = save.gear, h = '', fill = '<div class="fill"></div>', pn = '', i;
+function GR_detail(cls, sel){ if(sel.k === 's' && typeof CSK_armDetail === 'function') return CSK_armDetail(cls, sel.id);
+  var g = save.gear, h = '', fill = '<div class="fill"></div>', pn = '', i;
   for(i = 1; i <= 5; i++) pn += '<span>'+GR_rom(i)+'</span>';
   var after = function(c){ return '<div class="cost"><span>Glory after</span><b>'+(save.glory >= c ? GR_fmt(save.glory-c) : '—')+'</b></div>'; };
   var capNote = ' · Daily cap III';
@@ -5722,6 +5725,8 @@ function GR_click(ev){ var el = ev.target.closest && ev.target.closest('[data-a]
   else if(a[0] === 'hero'){ if(GR_cls() !== a[1]){ GR_setHero(a[1]); SFX.click(); if(GRU.sel && GRU.sel.k === 'w') GRU.sel.cls = a[1]; } }
   else if(a[0] === 'sel'){ SFX.click(); if(a[1] === 'w'){ GR_setHero(a[2]); GRU.sel = {k:'w', cls:a[2]}; } else if(a[1] === 'mw') GRU.sel = {k:'mw', v:a[2]}; else GRU.sel = {k:a[1], id:a[2]}; }
   else if(a[0] === 'sock'){ if(a[1]){ if(GRU.sel && GRU.sel.k === 'r' && GRU.sel.id === a[1]){ RL_toggle(a[1]); return; } GRU.sel = {k:'r', id:a[1]}; SFX.click(); } else { SFX.click(); GRU.msg = 'Empty socket: pick an owned relic below and socket it.'; } }
+  else if(a[0] === 'csk'){ if(typeof CSK_armEquip === 'function') CSK_armEquip(+a[1]); return; }
+  else if(a[0] === 'none') return;
   else if(a[0] === 'wear'){ GR_wear(GRU.sel.id); return; }
   else if(a[0] === 'tog'){ RL_toggle(GRU.sel.id); return; }
   else if(a[0] === 'go'){ var s = GRU.sel; if(!s) return; if(s.k === 'w') return GR_forgeW(s.cls); if(s.k === 'a') return GR_forgeA(s.id); if(s.k === 'mw') return GR_wield(s.v); if(s.k === 'r') return RL_buy(s.id); }
@@ -12992,7 +12997,7 @@ function HUB_use(f){ f = f || HUB.focus; if(!f || HUB.go) return false; audioIni
   if(f.v){ SFX.click(); f.e.act++; HUB_say(f, HUB_line(f), 3.6); HUB_open(f.id); return true; }
   if(f.D){ if(f.st==='locked'){ HUB_say(f, 'Not yet.', 2.4); SFX.click(); return true; }
     var cls = LB.cls; if(!save.cls[cls]){ lbGo(); return true; }
-    if(f.id==='pit'){ if(f.st==='current') HUB_dive(0, function(){ HUB_runPit(cls); }); else HUB_dive(0, function(){ HUB_practice(cls, 1); }); }
+    if(f.id==='pit'){ HUB_dive(0, function(){ HUB_runPit(cls); }); }   /* the Pit shaft is always a fresh run from round 1 (a beaten Pit no longer drops you into a round-10 rematch) */
     else HUB_dive(1, function(){ HUB_practice(cls, 2); });
     return true; }
   return false; }
@@ -13077,7 +13082,7 @@ function HUB_label(f){ if(!f) return '';
   if(f.comp){ var C = CLASSES[f.cls]; return f.locked ? (save.glory >= C.cost ? 'Unlock '+C.name+' · '+C.cost+' Glory' : C.name+' · Unlock for '+C.cost+' Glory') : 'Play as '+C.name; }
   if(f.v) return f.what+' · '+f.name;
   if(f.st==='locked') return '';
-  if(f.id==='pit') return f.st==='current' ? 'Enter '+f.D.arena : f.D.arena+' · rematch (practice)';
+  if(f.id==='pit') return 'Enter '+f.D.arena;
   return f.st==='current' ? 'Face '+f.D.name+' · Act II practice' : f.D.arena+' · practice'; }
 function HUB_headY(f){ if(f.v) return 3.7; if(f.D) return f.id==='pit' ? (f.st==='beaten' ? 4.3 : 5.9) : (f.st==='beaten' ? 6.2 : 9.4); return f.h || 4; }
 function HUB_uiFrame(t, dt){ var U = HUB.ui; if(!U) return; var touch = !!G.touch, P0 = HUB.P, f = HUB.focus || (!touch && HUB_input() ? HUB.hover : null), hide = $('menu').classList.contains('lbOut'), hideP = hide || !!HUB.swap;
@@ -13108,7 +13113,7 @@ function HUB_uiFrame(t, dt){ var U = HUB.ui; if(!U) return; var touch = !!G.touc
   if(gk!==U.gk){ U.gk = gk; U.guideT.textContent = gk; U.guide.style.opacity = gk ? '1' : '0'; $('menu').classList.toggle('hbFirst', !!gk); } if(gk){ if(U.gwk!==gk){ U.gwk = gk; U.gw = U.guideT.offsetWidth || 300; } var pg = HUB_proj2(P0.x, 4.95, P0.z); HUB_place(U.guide, U, HUB_cl(pg.x, U.gw/2 + 8, innerWidth - U.gw/2 - 8), pg.y, 'gx', 'gy'); }
   /* touch: stick mirrors the real joystick; action button names the focus; ward button in the range */
   var sk = touch && joy.on ? 'on' : ''; if(sk!==U.sk){ U.sk = sk; U.stick.style.display = sk ? 'block' : 'none'; } if(sk){ U.stick.style.left = joy.ox+'px'; U.stick.style.top = joy.oy+'px'; U.knob.style.transform = 'translate('+(joy.x*44).toFixed(0)+'px,'+(joy.y*44).toFixed(0)+'px)'; }
-  var ak = touch && f && lab && !hide ? (f.comp ? (f.locked ? 'Unlock' : 'Swap') : f.v ? 'Talk' : f.st==='current' ? 'Enter' : 'Practice') : ''; if(ak!==U.ak){ U.ak = ak; U.act.textContent = ak; U.act.style.display = ak ? 'flex' : 'none'; }
+  var ak = touch && f && lab && !hide ? (f.comp ? (f.locked ? 'Unlock' : 'Swap') : f.v ? 'Talk' : (f.st==='current' || f.id==='pit') ? 'Enter' : 'Practice') : ''; if(ak!==U.ak){ U.ak = ak; U.act.textContent = ak; U.act.style.display = ak ? 'flex' : 'none'; }
   var bk = touch && br && !hide ? (br===1 ? 'Leave behind' : 'Bring along') : ''; if(bk!==U.bk){ U.bk = bk; U.bringB.textContent = bk; U.bringB.style.display = bk ? 'flex' : 'none'; }
   var fk = touch && !hide && !$('menu').classList.contains('lbDos') ? 'on' : ''; if(fk!==U.fk){ U.fk = fk; U.fireB.style.display = fk ? 'flex' : 'none'; if(!fk) HUB.fire = false; }
   var wk = touch && HUB.inRange && !hide ? P0.ward : ''; if(wk!==U.wk){ U.wk = wk; U.ward.style.display = wk ? 'flex' : 'none'; if(wk) U.ward.style.setProperty('--wc', ELCSS[wk]); }
@@ -13240,6 +13245,7 @@ function HUB_hudRects(){ var L = HUB.hud || (HUB.hud = []), sel = ['#menu .lbLog
   for(i=0;i<sel.length;i++) add(document.querySelector(sel[i])); if(typeof DLY_box!=='undefined') add(DLY_box);
   if(HUB.ui && HUB.ui.gk) add(HUB.ui.guideT);
   var sd = document.querySelector('#menu .lbSide'); if(sd && $('menu').classList.contains('lbDos')) add(sd); }
+window.addEventListener('resize', function(){ HUB.hudT = 0; if(HUB.ui) for(var i=0;i<HUB.ui.tags.length;i++) HUB.ui.tags[i].w = 0; });   /* tag sizes follow vh-clamped fonts */
 function HUB_hudHit(l, t, r, b){ var L = HUB.hud; if(!L) return false; for(var i=0;i<L.length;i++){ var q = L[i]; if(l < q[2] && r > q[0] && t < q[3] && b > q[1]) return true; } return false; }
 
 /* =====================================================================================
@@ -15108,7 +15114,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:41',h:'6ccccfe'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:44',h:'0c6feb6'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -15135,7 +15141,7 @@ function VER_show(){ var busy = (typeof HUB!=='undefined' && HUB.go) || (typeof 
 var VER_pos = {t:0, key:''};
 function VER_obstacles(){ var W = innerWidth, H = innerHeight, out = [], all = document.body.getElementsByTagName('*');
   for(var i=0;i<all.length;i++){ var e = all[i]; if(e===VER_tag || e.tagName==='CANVAS' || e.tagName==='SCRIPT' || e.tagName==='STYLE') continue;
-    var r = e.getBoundingClientRect(); if(r.width<2 || r.height<2 || r.bottom < H*0.45 || r.width*r.height > 0.5*W*H) continue;
+    var r = e.getBoundingClientRect(); if(r.width<2 || r.height<2 || r.top >= H - 2 || r.bottom < H*0.45 || r.width*r.height > 0.5*W*H) continue;
     if(e.checkVisibility && !e.checkVisibility({opacityProperty:true, visibilityProperty:true})) continue;
     var leafText = e.childElementCount===0 && /\S/.test(e.textContent), cs = null;
     if(!leafText && !/^(BUTTON|INPUT|IMG|svg|SELECT|A)$/.test(e.tagName)){ cs = getComputedStyle(e);
@@ -15303,6 +15309,353 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.loadout = { LO:LO, p
   open:function(kind){ if(P && !P.LO && G.state==='play') LO_applyAll(kind!=='act'); return LO_open(kind); }, fight:function(){ LO_fight(); return G.state+(G.paused ? '/paused' : ''); },
   pick:function(i, what, v){ LO_set(i, what, v); return LO.heroes[i] && LO.heroes[i].k; },
   state:function(){ return {on:LO.on, kind:LO.kind, auto:LO.auto, firstSkip:LO.firstSkip, heroes:LO_list().map(function(x){ return {cls:x.st.cls, lo:x.st.LO || null, aff:x.st.LO_aff || null, skills:LO_skills(x.st.cls).map(function(q){ return q.id; }), spells:(x.st.spells||[]).filter(function(q){ return q; }).map(function(q){ return q.id+q.lv; })}; }), save:JSON.parse(JSON.stringify(LO_s()))}; } }; }
+/* ---------- 68 CLASS SKILLS (owned by the skills agent). Design + numbers: design/SKILLS.md ----------
+   Every hero ALWAYS has two class skills, on A / E (KeyQ / KeyE), from wave 1. They are picked per class in the Armoury (Skills tab) and saved in
+   save.skills = {eq:{cls:[id,id]}, auto:{c0,c1}}. Run spells (Offerings, Kindled Sigil, Daily) keep P.spells and move to F / T (small slots above).
+   Offerings: solo gifts can rank a class skill up (I -> III, +35% power, -15% cooldown each); party offers "Honed Arts" with a hero picker.
+   PUBLIC API (same IIFE scope):
+     CSKILL.pool(cls, slot)        -> unlocked skill ids that may go in that slot (all unlocked skills of the class)
+     CSKILL.all(cls)               -> every skill id of the class (locked ones too)
+     CSKILL.equipped(cls)          -> [id, id] saved picks
+     CSKILL.equip(cls, slot, id, st) -> true/false; swaps if id is in the other slot; updates live heroes of that class (rank stays with the slot)
+     CSKILL.def(id)                -> {id, name, icon(svg html), desc, el, role, cd, party, lv[3], unlock}
+     CSKILL.of(st)                 -> st.csk = [{id, lv, cd}, {id, lv, cd}] (created on first use)
+     CSKILL.cast(heroOrSt, slot)   -> true if cast (runs in that hero's context; aim = aimPoint() / the AI aim)
+     CSKILL.aiWants(heroOrSt)      -> null | {slot, x, z}: the first ready skill worth casting now (call in the hero's context)
+     CSKILL.rankUp(st, slot)       -> rank a class skill up (slot omitted: the lower one) */
+var CSK = {tune:{pw:1, cd:1, abs:0.2}, off:false, zones:[], rings:[], beams:[], aiT:0, autoT:0, hud:null, H:[]};
+KL.KeyF = KL.KeyF || 'F'; KL.KeyT = KL.KeyT || 'T';
+var CSK_POOL = {mage:['mend','kiln','nova','well'], blade:['vow','vault','shackles'], archer:['rime','longdraw','lance']};
+var CSK_START = {mage:['mend','kiln'], blade:['vow','vault'], archer:['rime','longdraw']};
+function CSK_best(c){ return (save.best && save.best[c])|0; }
+var CSK_DEF = {
+  mend:{cls:'mage', name:'Hearthmend', el:'flame', role:'HEAL', c:'#8fe07a', cd:18,
+    d:'Heal 18% of your max HP at once and 12% more over 3 s.',
+    lv:['Heal 18% of max HP at once and 12% more over 3 s.', 'Heals 35% more and burns away 1 Brand.', 'For 4 s after, every absorb heals 3 HP.'],
+    party:'Heals every hero within 9 u, you included (downed heroes are not revived).'},
+  kiln:{cls:'mage', name:'Kiln Shell', el:'flame', role:'SHIELD', c:'#ffb347', cd:15,
+    d:'For 6 s a kiln-hot shell blocks the next 2 hits you fail to absorb.',
+    lv:['For 6 s, block the next 2 hits you fail to absorb.', '3 blocks for 7 s (allies get 2).', 'Each block scorches foes within 2.5 u for 30.'],
+    party:'Every ally within 9 u gets a 1-block shell too.'},
+  nova:{cls:'mage', base:'nova', unlock:{t:'Reach round 6 as the Mage', ok:function(){ return CSK_best('mage') >= 6; }}, party:'Also slows the foes chasing your allies.'},
+  well:{cls:'mage', base:'well', unlock:{t:'Earn 1,000 Glory in total', ok:function(){ return (save.earned|0) >= 1000; }}, party:'Packs pulled together are easy prey for the Blade and the Archer.'},
+  vow:{cls:'blade', name:'Iron Vow', el:'frost', role:'GUARD · TAUNT', c:'#7fd8ff', cd:14,
+    d:'Plant your sabre for 3.5 s: foes within 7 u are dragged toward you, hits you fail to absorb deal 50% less, and absorbs give 50% more Overload.',
+    lv:['3.5 s vow: foes within 7 u are drawn in, unabsorbed hits −50%, absorbs +50% Overload.', 'Lasts 4.5 s; unabsorbed hits −60%.', 'When the vow ends, a frost wave hits foes within 3.5 u for 50 and slows them.'],
+    party:'Taunt: every foe within 7 u turns on you for the whole vow, so your allies can breathe.'},
+  vault:{cls:'blade', name:'Crowdbreaker', el:'flame', role:'LEAP · TAUNT', c:'#ff8a3d', cd:9,
+    d:'Leap up to 7 u to your aim (untouchable in the air) and slam: 40 damage in 2.8 u, ×1.5 to foes of your ward colour.',
+    lv:['Leap and slam: 40 damage in 2.8 u, ×1.5 vs your ward colour.', '+35% power.', 'The landing leaves burning ground for 2.5 s.'],
+    party:'Every foe hit is taunted onto you for 3 s.'},
+  shackles:{cls:'blade', base:'shackles', unlock:{t:'Reach round 6 as the Blade', ok:function(){ return CSK_best('blade') >= 6; }}, party:'Rooted foes stop chasing your allies.'},
+  rime:{cls:'archer', name:'Rimefall', el:'frost', role:'SLOW · AREA', c:'#8fe6ff', cd:11,
+    d:'Frost arrows rain on a 4.2 u zone at your aim for 4 s: foes inside are slowed 55% and take 6 damage every 0.5 s.',
+    lv:['A 4 s frost rain: foes inside are slowed 55% and take 6 damage every 0.5 s.', 'Lasts 5 s and hits 35% harder.', 'Foes still inside when it ends freeze for 1 s.'],
+    party:'Drop it between the pack and your allies: slowed melee never reaches them.'},
+  longdraw:{cls:'archer', name:'Longdraw', el:'storm', role:'SNIPE', c:'#c890ff', cd:8,
+    d:'Draw for 0.5 s, then loose a piercing shot 28 u long: 95 damage to every foe on the line, ×1.5 to foes of your ward colour. It shatters bolts of your ward colour in its path.',
+    lv:['0.5 s draw, then a 28 u piercing shot: 95 damage, ×1.5 vs your ward colour.', '+35% power.', 'The first foe hit takes a critical hit (×2).'],
+    party:'Taunted foes stand still around the Blade: line them up.'},
+  lance:{cls:'archer', base:'lance', unlock:{t:'Reach round 6 as the Archer', ok:function(){ return CSK_best('archer') >= 6; }}, party:'Clears same-colour bolts heading for your allies.'}
+};
+/* icons, VX style (accent fill = currentColor, dark outline, bone highlights) */
+if(typeof VX_ICON!=='undefined'){
+  VX_ICON.mend = '<path d="M24 44C10 34 4 26 4 17 4 10 9 5 15 5c4 0 7 2 9 5 2-3 5-5 9-5 6 0 11 5 11 12 0 9-6 17-20 27z"/><path class="h" d="M21 14h6v7h7v6h-7v7h-6v-7h-7v-6h7z"/>';
+  VX_ICON.kiln = '<path d="M24 3l18 7v12c0 11-8 18-18 23C14 40 6 33 6 22V10z"/><path class="d" d="M24 9l12 4.5v8.5c0 7-5 12-12 16-7-4-12-9-12-16v-8.5z"/><path d="M24 15c2 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 3 3 3 0-3-1-5 0-7z"/><path class="h" d="M24 24c1 2 3 3 3 5a3 3 0 0 1-6 0c0-2 2-3 3-5z"/>';
+  VX_ICON.vow = '<path d="M22 2h4l1 28h-6z"/><path d="M12 30h24v4H12z"/><path d="M22 34h4v8h-4z"/><circle cx="24" cy="44" r="3"/>'+VX_st('M5 40c4-6 10-9 19-9s15 3 19 9', 2.6)+'<path class="h" d="M23 5h2l.6 22h-3.2z" opacity=".7"/>';
+  VX_ICON.vault = '<path d="M6 44h36l-4-6H10z"/><path d="M14 38l4-9 6 5 6-5 4 9z" opacity=".8"/>'+VX_st('M10 26C12 12 22 6 36 6', 3)+'<path d="M36 1l7 5-7 6z"/><circle class="h" cx="24" cy="36" r="2.4"/>';
+  VX_ICON.rime = '<path d="M8 20h32c0-8-7-13-16-13S8 12 8 20z"/>'+VX_st('M12 24l-3 9M20 24l-3 13M28 24l-3 9M36 24l-3 13', 2.6)+'<path d="'+VX_star(24,41,6,5.5,2.2)+'"/><path class="h" d="M14 15h20v2.4H14z" opacity=".55"/>';
+  VX_ICON.longdraw = '<path d="M10 3c13 5 20 12 20 21S23 40 10 45l-1-4c10-4 17-10 17-17S19 11 9 7z"/>'+VX_st('M10 5v38', 1.6)+'<path d="M4 23h34l6-2v6l-6-2H4z"/><path class="h" d="M38 21.5l6-1.5v8l-6-1.5z"/>'; }
+function CSK_def(id){ var D = CSK_DEF[id]; if(!D) return null; var b = D.base, M = b && typeof VX_meta==='function' ? VX_meta(b) : null, S = b ? SPELLS[b] : null;
+  return {id:id, cls:D.cls, base:b || null, name:D.name || (S && S.name) || id, icon:typeof VX_icon==='function' ? VX_icon(VX_ICON && VX_ICON[id] ? id : (b || 'plus')) : '✦', emoji:S ? S.icon : '✦',
+    desc:D.d || (M && M.lv[0]) || (S && S.desc) || '', el:D.el || (b==='nova' ? 'frost' : b==='well' ? 'storm' : b==='shackles' ? 'flame' : 'storm'), role:D.role || (M && M.role) || 'SPELL', c:D.c || (M && M.c) || '#ffd27a',
+    cd:D.cd || (S && S.cd) || 8, lv:D.lv || (M && M.lv) || [], party:D.party || '', unlock:D.unlock || null}; }
+function CSK_unlocked(id){ var D = CSK_DEF[id]; if(!D) return false; try{ return !D.unlock || !!D.unlock.ok(); }catch(e){ return false; } }
+
+/* ---------- save ---------- */
+function CSK_s(){ var s = save.skills; if(!s || typeof s!=='object' || Array.isArray(s)) s = save.skills = {}; if(!s.eq || typeof s.eq!=='object') s.eq = {}; if(!s.auto || typeof s.auto!=='object') s.auto = {}; return s; }
+function CSK_eq(cls){ var pool = CSK_POOL[cls]; if(!pool) return []; var e = CSK_s().eq[cls], a = Array.isArray(e) ? e : [], out = [];
+  for(var i=0;i<2;i++){ var id = a[i]; if(pool.indexOf(id) < 0 || !CSK_unlocked(id) || out.indexOf(id) >= 0) id = null; out.push(id); }
+  for(var j=0;j<2;j++) if(!out[j]){ var c = CSK_START[cls].concat(pool).filter(function(x){ return out.indexOf(x) < 0 && CSK_unlocked(x); })[0]; out[j] = c; }
+  return out; }
+
+/* ---------- per-hero state ---------- */
+function CSK_of(st){ if(!st || !CSK_POOL[st.cls]) return null; if(!st.csk || st.cskCls !== st.cls){ var e = CSK_eq(st.cls); st.csk = [{id:e[0], lv:1, cd:0}, {id:e[1], lv:1, cd:0}]; st.cskCls = st.cls; st.cskBlk = 0; st.cskBlkT = 0; st.cskVowT = 0; } return st.csk; }
+function CSK_heroes(){ var H = CSK.H; H.length = 0; if(typeof PTY!=='undefined' && PTY.on && typeof HEROES!=='undefined' && HEROES.length){ for(var i=0;i<HEROES.length;i++) H.push(HEROES[i].st); } else if(P) H.push(P); return H; }
+function CSK_ctl(){ return (typeof PTY!=='undefined' && PTY.on && PTY.ctl) ? PTY.ctl.st : P; }
+function CSK_hOf(st){ return (typeof PTY!=='undefined' && PTY.on && typeof PTY_of==='function') ? PTY_of(st) : null; }
+function CSK_as(st, fn){ if(!st || st===P) return fn(); var h = CSK_hOf(st); if(h && typeof withHero==='function') return withHero(h, fn); return fn(); }
+function CSK_near(st, R){ var o = [], L = CSK_heroes(); for(var i=0;i<L.length;i++){ var q = L[i]; if(q.dead) continue; if(q===st || Math.hypot(q.x-st.x, q.z-st.z) <= R) o.push(q); } return o; }
+function CSK_pw(s){ return Math.pow(1.35, s.lv-1)*CSK.tune.pw; }
+function CSK_cdOf(st, s){ return CSK_def(s.id).cd*Math.pow(0.85, s.lv-1)*(G.mods ? G.mods.cd : 1)*(1 - (st.GR_cd||0))*CSK.tune.cd; }
+function CSK_equip(cls, slot, id, st){ slot = slot|0; var pool = CSK_POOL[cls]; if(slot < 0 || slot > 1 || !pool || pool.indexOf(id) < 0 || !CSK_unlocked(id)) return false;
+  var e = CSK_eq(cls), o = 1-slot; if(e[slot]===id) return true; var sw = e[o]===id; if(sw) e[o] = e[slot]; e[slot] = id; CSK_s().eq[cls] = e.slice(); persist();
+  var L = CSK_heroes().slice(); if(st && L.indexOf(st) < 0) L.push(st);
+  L.forEach(function(h){ if(h.cls!==cls || !h.csk) return; var k = h.csk; if(sw){ var t = k[slot]; k[slot] = k[o]; k[o] = t; } else k[slot] = {id:id, lv:k[slot].lv, cd:0}; });
+  if(P && typeof refreshSkills==='function') refreshSkills(); return true; }
+function CSK_rankUp(st, slot){ var k = CSK_of(st); if(!k) return false; if(slot==null) slot = k[0].lv <= k[1].lv ? 0 : 1; var s = k[slot]; if(!s || s.lv >= 3) return false; s.lv++; if(typeof refreshSkills==='function') refreshSkills(); return true; }
+function CSK_heal(by, o, n){ if(!o || o.dead || n <= 0) return 0; var h0 = o.hp; o.hp = Math.min(o.maxHp, o.hp + n*(G.mods ? G.mods.recov : 1)); var d = o.hp - h0;
+  if(d > 0 && typeof PTY!=='undefined' && PTY.on && PTY.stats){ var h = CSK_hOf(by); if(h) PTY.stats.heal[h.i] += d; } return d; }
+function CSK_taunt(st, x, z, R, T, thr){ var h = CSK_hOf(st); if(st.tauntT!=null || h) st.tauntT = Math.max(st.tauntT||0, T);
+  for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.nc || e.type==='boss' || e.type==='heart' || e.type==='stalker') continue; if(Math.hypot(e.x-x, e.z-z) > R+e.r) continue;
+    e.ptyTg = st; e.ptyT = G.t + T; e.ptyLock = G.t + T; if(h){ (e.thr || (e.thr = [0,0,0]))[h.i] += thr||40; } } }
+
+/* ---------- casting ---------- */
+function CSK_cast(x, slot){ var st = x && x.st ? x.st : (x || P); if(!st) return false; if(st !== P) return CSK_as(st, function(){ return CSK_castP(slot|0); }); return CSK_castP(slot|0); }
+function CSK_castP(slot){ if(CSK.off || !P || P.dead || P.stun > 0 || G.timestop || G.state!=='play') return false; var k = CSK_of(P); if(!k) return false; var s = k[slot];
+  if(!s || s.cd > 0 || P.cskLeap || P.cskDraw) return false; var D = CSK_DEF[s.id]; if(!D) return false;
+  var ap = aimPoint(), dx = ap.x-P.x, dz = ap.z-P.z, d = Math.hypot(dx, dz) || 1;
+  if(D.base){ var tmp = {id:D.base, lv:s.lv, cd:0}, sp = P.spells || (P.spells = [null, null]); sp[2] = tmp; try{ castSpell(2); } finally { sp.splice(2); }
+    if(!(tmp.cd > 0)) return false; s.cd = tmp.cd*CSK.tune.cd; }
+  else { if(CSK_FN[s.id](P, s, ap, dx/d, dz/d, d) === false) return false; s.cd = CSK_cdOf(P, s); P.castT = 0.3; P.castSlot = slot; P.castId = null; }
+  G.castOnce = true; CSK.casts = (CSK.casts||0) + 1; if(P === CSK_ctl()) CSK_pulse(slot); return true; }
+function CSK_key(slot){ if(!CSK_cast(P, slot) && P && !P.dead && G.state==='play'){ var s = CSK_of(P); if(s && s[slot] && s[slot].cd > 0 && lim('cskNo', 0.4)) SFX.click(); } }
+function CSK_clampAim(st, ap, R){ var dx = ap.x-st.x, dz = ap.z-st.z, d = Math.hypot(dx, dz); if(d > R){ ap = {x:st.x+dx/d*R, z:st.z+dz/d*R}; } return clampArena({x:ap.x, z:ap.z}, 0.5); }
+var CSK_SFX = {
+  mend:function(){ tone(523,0.35,'sine',0.07,784); tone(659,0.4,'triangle',0.05,988,0.08); tone(784,0.5,'sine',0.04,1175,0.16); },
+  kiln:function(){ tone(196,0.3,'triangle',0.09,294); noise(0.35,0.08,1800,'bandpass'); tone(392,0.3,'sine',0.05,523,0.1); },
+  block:function(){ if(!lim('cskBlk',0.06)) return; tone(330,0.12,'triangle',0.08,247); noise(0.1,0.08,2400,'bandpass'); },
+  vow:function(){ tone(110,0.6,'sawtooth',0.06,82); tone(220,0.5,'triangle',0.06,330,0.05); noise(0.4,0.1,900,'lowpass'); },
+  leap:function(){ noise(0.3,0.08,1600,'bandpass',0,null,600); tone(300,0.3,'triangle',0.05,600); },
+  slam:function(){ tone(70,0.5,'sine',0.3,35); noise(0.35,0.22,1400,'lowpass'); },
+  rime:function(){ noise(0.6,0.08,6000,'highpass'); tone(1046,0.3,'triangle',0.04,784); },
+  draw:function(){ tone(220,0.5,'triangle',0.05,440); noise(0.45,0.04,3000,'bandpass',0,null,5000); },
+  loose:function(){ noise(0.25,0.18,5000,'highpass',0,null,1200); tone(880,0.25,'sawtooth',0.04,330); tone(140,0.3,'sine',0.12,70); }
+};
+var CSK_FN = {
+  mend:function(st, s){ var pw = CSK_pw(s), L = CSK_near(st, 9);
+    L.forEach(function(o){ CSK_heal(st, o, o.maxHp*0.18*pw); o.cskHot = {r:o.maxHp*0.04*pw, t:3, by:st}; if(s.lv >= 2 && o.ruin > 0){ o.ruin--; if(o===CSK_ctl() && typeof updateRuinHud==='function') updateRuinHud(); }
+      ringBurst(o.x, o.z, 1.3, 16, 0x7dff9a, 0.4); burst(o.x, 1.2, o.z, 12, 0x8fe07a, 3, 0.6, 1.0, 3); });
+    if(s.lv >= 3) st.cskAbsH = 4; CSK_ring(st.x, st.z, L.length > 1 ? 9 : 2.6, 0x7dff9a, 0.7); dmgText(st.x, 2.7, st.z, 'HEARTHMEND', '#9be37a', 18); CSK_SFX.mend(); },
+  kiln:function(st, s){ var n = s.lv >= 2 ? 3 : 2, na = s.lv >= 2 ? 2 : 1, T = s.lv >= 2 ? 7 : 6;
+    CSK_near(st, 9).forEach(function(o){ var m = o===st ? n : na; o.cskBlk = Math.max(o.cskBlk||0, m); o.cskBlkT = T; o.cskBlkLv = s.lv; o.cskBlkPw = CSK_pw(s); o.cskBlkBy = st; ringBurst(o.x, o.z, 1.4, 14, 0xffb347, 0.9); });
+    CSK_ring(st.x, st.z, 2.2, 0xffb347, 0.9); CSK_SFX.kiln(); },
+  vow:function(st, s){ var T = s.lv >= 2 ? 4.5 : 3.5; st.cskVowT = T; st.cskVowMax = T; st.cskVowLv = s.lv; st.cskVowPw = CSK_pw(s); st.cskVowTk = 0;
+    CSK_taunt(st, st.x, st.z, 7, T, 60); CSK_ring(st.x, st.z, 7, 0x45d6ff, 0.2); burst(st.x, 1, st.z, 18, 0x7fd8ff, 5, 0.5, 1.2); dmgText(st.x, 3.0, st.z, 'IRON VOW', '#7fd8ff', 20); shake(0.2); CSK_SFX.vow(); },
+  vault:function(st, s, ap, ux, uz, d){ var L = Math.min(7, Math.max(1.5, d)), o = clampArena({x:st.x+ux*L, z:st.z+uz*L}, 0.6);
+    st.cskLeap = {sx:st.x, sz:st.z, tx:o.x, tz:o.z, t:0, dur:0.38, lv:s.lv, pw:CSK_pw(s)}; st.inv = Math.max(st.inv||0, 0.48); burst(st.x, 0.4, st.z, 12, 0xff8a3d, 5, 0.4, 1.0); CSK_SFX.leap(); },
+  rime:function(st, s, ap){ ap = CSK_clampAim(st, ap, 12); var Z = null; for(var i=0;i<CSK.zones.length;i++) if(!CSK.zones[i].on){ Z = CSK.zones[i]; break; } if(!Z) Z = CSK.zones[0];
+    Z.on = true; Z.x = ap.x; Z.z = ap.z; Z.R = 4.2*(G.mods ? G.mods.area : 1); Z.t = 0; Z.dur = s.lv >= 2 ? 5 : 4; Z.tick = 0.05; Z.own = st; Z.lv = s.lv; Z.pw = CSK_pw(s); Z.g.visible = true; Z.g.position.set(Z.x, 0, Z.z);
+    ringBurst(Z.x, Z.z, Z.R*0.6, 18, 0x8fe6ff, 0.5); CSK_SFX.rime(); },
+  longdraw:function(st, s){ st.cskDraw = {t:0.5, lv:s.lv, pw:CSK_pw(s)}; st.chill = Math.max(st.chill||0, 0.5); CSK_SFX.draw(); }
+};
+function CSK_slam(st, L){ var R = 2.8, dmg = 40*L.pw, n = 0;
+  for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT > 0) continue; var dx = e.x-st.x, dz = e.z-st.z, dd = Math.hypot(dx, dz); if(dd > R+e.r) continue;
+    hurtEnemy(e, dmg*(e.el===st.ward ? 1.5 : 1), dx/(dd||1), dz/(dd||1), {kb:3}); n++; }
+  CSK_taunt(st, st.x, st.z, R+0.5, 3, 40);
+  if(L.lv >= 3 && typeof spawnHazard==='function') for(var k=0;k<5;k++){ var a = k*TAU/5; spawnHazard('trail', st.x+Math.cos(a)*1.6, st.z+Math.sin(a)*1.6); }
+  CSK_ring(st.x, st.z, R, 0xff8a3d, 0.5); burst(st.x, 0.5, st.z, 26, 0xff8a3d, 8, 0.6, 1.4); rocks(st.x, 0.3, st.z, 10, 0x4a3a3c, 7); shake(0.3); CSK_SFX.slam(); return n; }
+function CSK_loose(st, D){ var ap = aimPoint(), dx = ap.x-st.x, dz = ap.z-st.z, d = Math.hypot(dx, dz) || 1, ux = dx/d, uz = dz/d, L = 28, x0 = st.x+ux*0.5, z0 = st.z+uz*0.5, x1 = st.x+ux*L, z1 = st.z+uz*L, el = st.ward, hits = [];
+  for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT > 0) continue; if(segDist(e.x, e.z, x0, z0, x1, z1) < 0.45+e.r) hits.push(e); }
+  hits.sort(function(a, b){ return Math.hypot(a.x-st.x, a.z-st.z) - Math.hypot(b.x-st.x, b.z-st.z); });
+  hits.forEach(function(e, k){ var m = e.el===el, dmg = 95*D.pw*(m ? 1.5 : 1)*(D.lv >= 3 && k===0 ? 2 : 1); hurtEnemy(e, dmg, ux, uz, {kb:2.5, nocrit:true}); burst(e.x, 1.2, e.z, m ? 12 : 6, ELC[el], 5, 0.4, 1.1); });
+  for(var j=eprojs.length-1;j>=0;j--){ var p = eprojs[j]; if(p.el===el && segDist(p.x, p.z, x0, z0, x1, z1) < 0.6){ burst(p.x, 1, p.z, 5, ELC[el], 4, 0.3, 1); killEProj(j); } }
+  CSK_beam(x0, z0, ux, uz, L, ELC[el]); shake(0.18); CSK_SFX.loose(); }
+
+/* ---------- hits / absorbs: Kiln Shell blocks, Iron Vow cuts damage and feeds Overload, absorbs cool class skills ---------- */
+var CSK_hp0 = hitPlayer;
+hitPlayer = function(dmg, el, src, o){ var st = P;
+  if(st && !st.dead && !G.god && !CSK.off && (st.cskBlk > 0 || st.cskVowT > 0)){ var oo = o || {};
+    var abs = !!el && (el===st.ward || (st.prevT > 0 && el===st.prevWard)) || (typeof SPL!=='undefined' && SPL.attT > 0 && st===CSK_ctl() && !!el);
+    var free = (st.dashT > 0 && !oo.noDodge) || abs || (st.inv > 0 && !oo.noInv);
+    if(!free && st.cskBlk > 0 && !oo.noGuard){ st.cskBlk--; dmgText(st.x, 2.3, st.z, 'SHELLED', '#ffc070', 17); ringBurst(st.x, st.z, 1.4, 16, 0xffb347, 0.9); CSK_SFX.block();
+      if(st.cskBlkLv >= 3){ var pw = st.cskBlkPw || 1, by = st.cskBlkBy || st; CSK_as(by, function(){ aoe(st.x, st.z, 2.5, 30*pw, {kb:3, noArea:true}); }); burst(st.x, 0.8, st.z, 14, 0xff8a3d, 6, 0.4, 1.1); }
+      return 'guard'; }
+    if(!free && st.cskVowT > 0) arguments[0] = dmg*(st.cskVowLv >= 2 ? 0.4 : 0.5); }
+  return CSK_hp0.apply(this, arguments); };
+var CSK_ab0 = absorb;
+absorb = function(el, src){ var st = P, o0 = st ? st.over : 0; var r = CSK_ab0.apply(this, arguments);
+  if(st && !CSK.off){ if(st.cskVowT > 0 && st.over > o0) st.over = Math.min(100, st.over + (st.over-o0)*0.5);
+    if(st.cskAbsH > 0) CSK_heal(st, st, 3); var k = st.csk; if(k) for(var i=0;i<2;i++) if(k[i] && k[i].cd > 0) k[i].cd = Math.max(0, k[i].cd - CSK.tune.abs); }
+  return r; };
+
+/* ---------- AI / auto-cast targeting (call with P === the hero) ---------- */
+function CSK_cluster(x, z, R, r2){ var best = null, bn = 0; for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT > 0 || e.invuln || e.type==='heart' || Math.hypot(e.x-x, e.z-z) > R) continue; var n = 0;
+    for(var j=0;j<enemies.length;j++){ var o = enemies[j]; if(!o.dead && !(o.spawnT > 0) && Math.hypot(o.x-e.x, o.z-e.z) < r2) n += (o.elite || o.type==='brute' || o.type==='boss') ? 2 : 1; } if(n > bn){ bn = n; best = e; } }
+  return best ? {x:best.x, z:best.z, n:bn} : null; }
+function CSK_count(x, z, r){ var n = 0; for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(!e.dead && !(e.spawnT > 0) && e.type!=='heart' && Math.hypot(e.x-x, e.z-z) < r+e.r) n++; } return n; }
+function CSK_threat(st, R){ var n = 0; for(var i=0;i<eprojs.length;i++){ var p = eprojs[i], dx = st.x-p.x, dz = st.z-p.z, d = Math.hypot(dx, dz); if(d > R || p.el===st.ward) continue; if(d > 1.2 && (p.vx*dx+p.vz*dz) <= 0) continue; n++; } return n; }
+function CSK_line(st){ var best = null, bs = 0; for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT > 0 || e.invuln || e.type==='heart') continue; var d = Math.hypot(e.x-st.x, e.z-st.z); if(d > 24 || d < 1) continue;
+    var ux = (e.x-st.x)/d, uz = (e.z-st.z)/d, sc = 0; for(var j=0;j<enemies.length;j++){ var o = enemies[j]; if(o.dead || o.spawnT > 0) continue; if(segDist(o.x, o.z, st.x, st.z, st.x+ux*28, st.z+uz*28) < 0.45+o.r) sc += (o.elite || o.type==='brute' || o.type==='boss') ? 3 : 1; }
+    if(sc > bs){ bs = sc; best = e; } } return best && bs >= 2 ? {x:best.x, z:best.z} : null; }
+function CSK_wantId(st, id){ var me = {x:st.x, z:st.z}, c, L, i;
+  switch(id){
+    case 'mend': L = CSK_near(st, 9); for(i=0;i<L.length;i++) if(L[i].hp < L[i].maxHp*(L[i]===st ? 0.6 : 0.55)) return me; return null;
+    case 'kiln': if(st.cskBlk > 0) return null; if(CSK_threat(st, 4.5) >= 1 || CSK_count(st.x, st.z, 2.6) >= 2) return me;
+      L = CSK_near(st, 9); for(i=0;i<L.length;i++) if(L[i]!==st && L[i].hp < L[i].maxHp*0.5 && CSK_count(L[i].x, L[i].z, 3) >= 1) return me; return null;
+    case 'vow': if(CSK_count(st.x, st.z, 6) >= 3) return me; L = CSK_near(st, 7); for(i=0;i<L.length;i++) if(L[i]!==st && CSK_count(L[i].x, L[i].z, 3.5) >= 2) return me; return null;
+    case 'vault': c = CSK_cluster(st.x, st.z, 7.5, 2.8); return c && c.n >= 3 ? c : null;
+    case 'rime': c = CSK_cluster(st.x, st.z, 12, 4); if(c && c.n >= 3) return c; c = nearestEnemy(st.x, st.z, 4.5); return c && c.type!=='heart' ? {x:c.x, z:c.z} : null;
+    case 'longdraw': return CSK_line(st);
+  }
+  if(CSK_DEF[id] && CSK_DEF[id].base && typeof VX_target==='function'){ var t = VX_target(CSK_DEF[id].base); return t ? {x:t.x, z:t.z} : null; } return null; }
+function CSK_aiWants(x){ var st = x && x.st ? x.st : (x || P); if(!st || st.dead || CSK.off || !G.waveActive || st.cskLeap || st.cskDraw) return null; var k = CSK_of(st); if(!k) return null;
+  var f = function(){ for(var s=0;s<2;s++){ if(!k[s] || k[s].cd > 0) continue; var t = CSK_wantId(st, k[s].id); if(t) return {slot:s, x:t.x, z:t.z}; } return null; };
+  return st===P ? f() : CSK_as(st, f); }
+
+/* ---------- auto-cast (controlled hero): save.skills.auto.c0/c1 (unset: on for touch, off for desktop). Hold A / E or right-click a skill slot to toggle ---------- */
+function CSK_autoOn(s){ var v = CSK_s().auto['c'+s]; return v==null ? !!G.touch : !!v; }
+function CSK_toggleAuto(s){ var on = !CSK_autoOn(s); CSK_s().auto['c'+s] = on ? 1 : 0; persist(); CSK_autoUi(); if(G.state==='play' && P && !P.dead) dmgText(P.x, 2.6, P.z, 'AUTO-CAST '+kl(s ? 'KeyE' : 'KeyQ')+(on ? ' ON' : ' OFF'), on ? '#ffd27a' : '#b9a79a', 16); SFX.click(); }
+if(typeof VX_toggleAuto==='function'){ var CSK_vta0 = VX_toggleAuto; VX_toggleAuto = function(s){ if(typeof VX!=='undefined' && VX.kd && ((s===0 && VX.kd.KeyQ) || (s===1 && VX.kd.KeyE))) return CSK_toggleAuto(s); return CSK_vta0.apply(this, arguments); }; }
+function CSK_autoUi(){ var row = $('vxAutoRow'); if(row && !$('cskA0')){ for(var i=1;i>=0;i--){ (function(s){ var b = document.createElement('button'); b.id = 'cskA'+s; b.addEventListener('click', function(){ CSK_toggleAuto(s); }); row.insertBefore(b, row.firstChild); })(i); } }
+  for(var s=0;s<2;s++){ var b2 = $('cskA'+s); if(b2){ var on = CSK_autoOn(s); b2.textContent = 'Skill auto-cast '+kl(s ? 'KeyE' : 'KeyQ')+': '+(on ? 'ON' : 'OFF'); b2.classList.toggle('on', on); } var c = $('cs'+s); if(c) c.classList.toggle('vx-auto', CSK_autoOn(s)); }
+  if($('vxA0')) $('vxA0').textContent = $('vxA0').textContent.replace(/^Auto-cast \S+/, 'Spell auto-cast '+kl('KeyF'));
+  if($('vxA1')) $('vxA1').textContent = $('vxA1').textContent.replace(/^Auto-cast \S+/, 'Spell auto-cast '+kl('KeyT')); }
+if(typeof VX_autoUi==='function'){ var CSK_vau0 = VX_autoUi; VX_autoUi = function(){ var r = CSK_vau0.apply(this, arguments); CSK_autoUi(); return r; }; }
+window.addEventListener('mousedown', function(e){ if(e.button!==2 || G.state!=='play' || G.paused || !P) return; var s = CSK_slotAt(locked ? mouseX : e.clientX, locked ? mouseY : e.clientY); if(s < 0) return; e.stopPropagation(); e.preventDefault(); CSK_toggleAuto(s); }, true);
+function CSK_slotAt(x, y){ for(var s=0;s<2;s++){ var el = $('cs'+s); if(!el) continue; var r = el.getBoundingClientRect(); if(r.width && x >= r.left-4 && x <= r.right+4 && y >= r.top-8 && y <= r.bottom+4) return s; } return -1; }
+CSK.lp = null;
+window.addEventListener('pointerdown', function(e){ if(e.pointerType!=='touch') return; var s = CSK_slotAt(e.clientX, e.clientY); if(s < 0) return; clearTimeout(CSK.lp); CSK.lpId = e.pointerId; CSK.lp = setTimeout(function(){ CSK.lp = null; if(G.state==='play' && !G.paused) CSK_toggleAuto(s); }, 450); }, true);
+function CSK_lpEnd(e){ if(CSK.lp && e.pointerId===CSK.lpId){ clearTimeout(CSK.lp); CSK.lp = null; } }
+window.addEventListener('pointerup', CSK_lpEnd, true); window.addEventListener('pointercancel', CSK_lpEnd, true);
+
+/* ---------- per-step ---------- */
+STEP_HOOKS.push(function CSK_step(dt){ if(!P) return; var L = CSK_heroes().slice(), i;
+  for(i=0;i<L.length;i++){ var st = L[i], k = CSK_of(st); if(!k) continue;
+    for(var s=0;s<2;s++) if(k[s].cd > 0) k[s].cd -= dt;
+    if(st.cskAbsH > 0) st.cskAbsH -= dt;
+    if(st.cskBlkT > 0){ st.cskBlkT -= dt; if(st.cskBlkT <= 0) st.cskBlk = 0; }
+    if(st.cskHot){ var H = st.cskHot; H.t -= dt; CSK_heal(H.by, st, H.r*dt); if(H.t <= 0 || st.dead) st.cskHot = null; }
+    if(st.dead){ st.cskLeap = null; st.cskDraw = null; st.cskVowT = 0; continue; }
+    if(st.cskVowT > 0){ st.cskVowT -= dt; st.cskVowTk -= dt;
+      if(st.cskVowTk <= 0){ st.cskVowTk = 0.25; CSK_taunt(st, st.x, st.z, 7, Math.min(0.6, st.cskVowT+0.1), 8); var unst = CT('unstop') > 0;
+        if(!unst) for(var j=0;j<enemies.length;j++){ var e = enemies[j]; if(e.dead || e.spawnT > 0 || e.type==='boss' || e.type==='heart' || e.type==='stalker' || e.spRoot) continue; var dx = st.x-e.x, dz = st.z-e.z, d = Math.hypot(dx, dz);
+          if(d < 7+e.r && d > 1.6){ var pull = Math.min(d-1.5, 0.55*(e.type==='brute' ? 0.4 : 1)); e.x += dx/d*pull; e.z += dz/d*pull; } } }
+      if(st.cskVowT <= 0 && st.cskVowLv >= 3){ var vp = st.cskVowPw||1; CSK_as(st, function(){ aoe(P.x, P.z, 3.5, 50*vp, {kb:4, slow:2}); }); CSK_ring(st.x, st.z, 3.5, 0x45d6ff, 0.5); burst(st.x, 0.6, st.z, 24, 0x7fd8ff, 7, 0.5, 1.2); } }
+    if(st.cskLeap){ var Lp = st.cskLeap; Lp.t += dt; var f = Math.min(1, Lp.t/Lp.dur); st.x = lerp(Lp.sx, Lp.tx, f); st.z = lerp(Lp.sz, Lp.tz, f); st.vx = st.vz = 0;
+      glowP.emit(st.x, 0.6+Math.sin(f*Math.PI)*1.6, st.z, rnd(-1,1), rnd(0,1), rnd(-1,1), 0.35, 1.2, 0xff8a3d, 0, 2);
+      if(f >= 1){ st.cskLeap = null; CSK_as(st, function(){ CSK_slam(P, Lp); }); } }
+    if(st.cskDraw){ var Dr = st.cskDraw; Dr.t -= dt; if(Math.random() < 0.7) glowP.emit(st.x+rnd(-0.3,0.3), 1.2, st.z+rnd(-0.3,0.3), 0, 0.4, 0, 0.3, 0.8, ELC[st.ward]||0xc06bff, 0, 1);
+      if(Dr.t <= 0){ st.cskDraw = null; if(!(st.stun > 0)) CSK_as(st, function(){ CSK_loose(P, Dr); }); } } }
+  /* frost rain zones */
+  for(i=0;i<CSK.zones.length;i++){ var Z = CSK.zones[i]; if(!Z.on) continue; Z.t += dt; Z.tick -= dt;
+    if(Z.tick <= 0){ Z.tick = 0.5; CSK_as(Z.own && !Z.own.dead ? Z.own : P, function(){ aoe(Z.x, Z.z, Z.R, 6*Z.pw, {nocrit:true, kb:0.01, noArea:true, slow:0.65}); }); }
+    if(Z.t >= Z.dur){ if(Z.lv >= 3 && !CT('unstop')) for(var q=0;q<enemies.length;q++){ var e2 = enemies[q]; if(e2.dead || e2.type==='boss' || e2.type==='heart') continue; if(Math.hypot(e2.x-Z.x, e2.z-Z.z) < Z.R+e2.r){ e2.vxFrz = 1.0; e2.vxFx = e2.x; e2.vxFz = e2.z; e2.slowT = Math.max(e2.slowT, 2); } }
+      Z.on = false; Z.g.visible = false; } }
+  /* auto-cast for the controlled hero */
+  var C = CSK_ctl(); CSK.autoT -= dt;
+  if(C && !C.dead && G.waveActive && CSK.autoT <= 0 && (CSK_autoOn(0) || CSK_autoOn(1))){ CSK.autoT = 0.1;
+    CSK_as(C, function(){ for(var s2=0;s2<2;s2++){ if(!CSK_autoOn(s2)) continue; var k2 = CSK_of(P); if(!k2[s2] || k2[s2].cd > 0) continue; var t = CSK_wantId(P, k2[s2].id); if(!t) continue;
+      var saved = typeof VX!=='undefined' ? VX.aimO : null; if(typeof VX!=='undefined') VX.aimO = {x:t.x, z:t.z}; try{ if(CSK_castP(s2)) break; } finally { if(typeof VX!=='undefined') VX.aimO = saved; } } }); }
+  /* AI allies: the party AI calls CSKILL.aiWants / cast itself (60-party PTY_aiSkill); this is only a fallback for builds without it */
+  if(typeof PTY!=='undefined' && PTY.on && typeof PTY_aiSkill!=='function' && G.waveActive){ CSK.aiT -= dt; if(CSK.aiT <= 0){ CSK.aiT = 0.5;
+    HEROES.forEach(function(h){ if(h===PTY.ctl || h.st.dead) return; withHero(h, function(){ var w = CSK_aiWants(h.st); if(!w) return; var A = h.ai, ax = A.aim.x, az = A.aim.z; A.aim.x = w.x; A.aim.z = w.z+0.001; try{ CSK_castP(w.slot); } finally { A.aim.x = ax; A.aim.z = az; } }); }); } }
+});
+
+/* ---------- visuals (pooled; coloured, no white flashes) ---------- */
+var CSK_ringGeo = new THREE.RingGeometry(0.9, 1, 56).rotateX(-Math.PI/2), CSK_discGeo = new THREE.CircleGeometry(1, 40).rotateX(-Math.PI/2);
+for(var cri=0; cri<6; cri++){ var crm = addMat(0xffffff, 0), crg = new THREE.Mesh(CSK_ringGeo, crm); crg.visible = false; crg.position.y = 0.07; scene.add(crg); CSK.rings.push({m:crg, mat:crm, t:1, dur:0.5, R:1}); }
+function CSK_ring(x, z, R, col, dur){ var r = CSK.rings[0]; for(var i=0;i<CSK.rings.length;i++) if(CSK.rings[i].t >= CSK.rings[i].dur){ r = CSK.rings[i]; break; } r.t = 0; r.dur = dur||0.5; r.R = R; r.mat.color.setHex(col); r.m.position.set(x, 0.07, z); r.m.visible = true; }
+for(var czi=0; czi<3; czi++){ (function(){ var g = new THREE.Group(), dm = addMat(0x45d6ff, 0.14), disc = new THREE.Mesh(CSK_discGeo, dm); disc.position.y = 0.04; g.add(disc);
+  var rm = addMat(0x8fe6ff, 0.55), rim = new THREE.Mesh(CSK_ringGeo, rm); rim.position.y = 0.06; g.add(rim); var arr = [];
+  var am = addMat(0xbff2ff, 0.75); for(var a=0;a<14;a++){ var m = new THREE.Mesh(GEO.box, am); m.scale.set(0.05, 0.9, 0.05); g.add(m); arr.push({m:m, ph:Math.random(), r:Math.sqrt(Math.random()), a:Math.random()*TAU}); }
+  g.visible = false; scene.add(g); CSK.zones.push({on:false, g:g, dm:dm, rm:rm, disc:disc, rim:rim, arr:arr, x:0, z:0, R:4, t:0, dur:4}); })(); }
+for(var cbi=0; cbi<2; cbi++){ (function(){ var g = new THREE.Group(), cm = addMat(0xc06bff, 0.9), core = mesh(GEO.box, cm, 0, 1.0, 0), gm = addMat(0xc06bff, 0.3), glow = mesh(GEO.box, gm, 0, 1.0, 0);
+  g.add(glow); g.add(core); g.visible = false; scene.add(g); CSK.beams.push({g:g, core:core, cm:cm, glow:glow, gm:gm, t:1, L:28}); })(); }
+function CSK_beam(x0, z0, ux, uz, L, col){ var B = CSK.beams[0].t < CSK.beams[1].t ? CSK.beams[1] : CSK.beams[0]; B.t = 0; B.L = L; B.cm.color.setHex(col); B.gm.color.setHex(col);
+  B.g.position.set(x0+ux*L/2, 0, z0+uz*L/2); B.g.rotation.set(0, Math.atan2(ux, uz), 0); B.g.visible = true; }
+var CSK_shells = [], CSK_vows = [];
+for(var csi=0; csi<3; csi++){ (function(){ var g = new THREE.Group(), lm = new THREE.MeshBasicMaterial({color:0xffb347, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide});
+  var lat = new THREE.Mesh(typeof SP_hexGeo!=='undefined' ? SP_hexGeo : new THREE.IcosahedronGeometry(1, 1), lm), fm = addMat(0xff8a3d, 0.07), fill = new THREE.Mesh(GEO.sph, fm); g.add(fill); g.add(lat);
+  g.visible = false; scene.add(g); CSK_shells.push({g:g, lat:lat, lm:lm, fm:fm});
+  var v = new THREE.Group(), vr = addMat(0x45d6ff, 0.22), outer = new THREE.Mesh(CSK_ringGeo, vr); outer.position.y = 0.05; v.add(outer);
+  var hm = addMat(0x7fd8ff, 0.7), hex = new THREE.Mesh(new THREE.RingGeometry(0.95, 1.25, 6).rotateX(-Math.PI/2), hm); hex.position.y = 0.08; v.add(hex);
+  var cm2 = addMat(0x45d6ff, 0.12), col = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.05, 2.4, 18, 1, true), cm2); col.position.y = 1.2; v.add(col);
+  v.visible = false; scene.add(v); CSK_vows.push({g:v, outer:outer, vr:vr, hex:hex, hm:hm, col:col, cm:cm2}); })(); }
+RENDER_HOOKS.push(function CSK_render(t, adt){ var live = !!(P && G.state!=='menu'), i;
+  for(i=0;i<CSK.rings.length;i++){ var r = CSK.rings[i]; if(r.t >= r.dur){ r.m.visible = false; continue; } r.t += adt||0; var k = Math.min(1, r.t/r.dur); r.m.scale.setScalar(0.3*r.R + 0.7*r.R*Math.sqrt(k)); r.mat.opacity = 0.6*(1-k); if(k >= 1) r.m.visible = false; }
+  for(i=0;i<CSK.beams.length;i++){ var B = CSK.beams[i]; if(B.t >= 0.35){ B.g.visible = false; continue; } B.t += adt||0; var bk = Math.min(1, B.t/0.35); B.core.scale.set(0.14*(1-bk), 0.14*(1-bk), B.L); B.glow.scale.set(0.7*(1-bk*0.6), 0.5*(1-bk*0.6), B.L); B.cm.opacity = 0.85*(1-bk); B.gm.opacity = 0.3*(1-bk); }
+  for(i=0;i<CSK.zones.length;i++){ var Z = CSK.zones[i]; if(!Z.on || !live){ Z.g.visible = false; continue; } Z.g.visible = true; var fin = Math.min(1, Z.t/0.25), fo = Math.min(1, (Z.dur-Z.t)/0.4);
+    Z.disc.scale.setScalar(Z.R); Z.rim.scale.setScalar(Z.R); Z.dm.opacity = 0.14*fin*fo; Z.rm.opacity = (0.45+0.15*Math.sin(t*8))*fin*fo;
+    for(var a=0;a<Z.arr.length;a++){ var A = Z.arr[a]; A.ph += (adt||0)*1.6; if(A.ph >= 1){ A.ph -= 1; A.r = Math.sqrt(Math.random()); A.a = Math.random()*TAU; if(Math.random() < 0.5) glowP.emit(Z.x+Math.cos(A.a)*A.r*Z.R, 0.15, Z.z+Math.sin(A.a)*A.r*Z.R, 0, 1.2, 0, 0.35, 0.8, 0x8fe6ff, 0, 1); }
+      A.m.position.set(Math.cos(A.a)*A.r*Z.R*0.95, 6.5*(1-A.ph)+0.3, Math.sin(A.a)*A.r*Z.R*0.95); A.m.visible = fo > 0.2; } }
+  var L = live ? CSK_heroes() : [], si = 0, vi = 0;
+  for(i=0;i<L.length;i++){ var st = L[i]; if(st.dead) continue;
+    if(st.cskBlk > 0 && si < CSK_shells.length){ var S = CSK_shells[si++], bl = st.cskBlkT < 0.8 && Math.floor(t*12)%2 ? 0.4 : 1; S.g.visible = true; S.g.position.set(st.x, 1.0, st.z); S.g.scale.setScalar(1.25+Math.sin(t*6)*0.03); S.lat.rotation.y += (adt||0)*0.6; S.lat.rotation.x = Math.sin(t*0.8)*0.3;
+      S.lm.opacity = (0.32+0.08*st.cskBlk)*bl; S.fm.opacity = 0.06*bl; }
+    if(st.cskVowT > 0 && vi < CSK_vows.length){ var V = CSK_vows[vi++], vk = Math.min(1, (st.cskVowMax-st.cskVowT)/0.2), vb = st.cskVowT < 0.6 && Math.floor(t*12)%2 ? 0.4 : 1; V.g.visible = true; V.g.position.set(st.x, 0, st.z);
+      V.outer.scale.setScalar(7*(0.94+0.06*Math.sin(t*4))); V.vr.opacity = 0.2*vk*vb; V.hex.rotation.y = t*1.5; V.hm.opacity = 0.65*vk*vb; V.cm.opacity = (0.1+0.04*Math.sin(t*9))*vk*vb;
+      if(Math.random() < (adt||0)*24){ var ra = Math.random()*TAU; glowP.emit(st.x+Math.cos(ra)*6.6, 0.2, st.z+Math.sin(ra)*6.6, -Math.cos(ra)*6, 0.4, -Math.sin(ra)*6, 0.8, 0.8, 0x7fd8ff, 0, 1); } } }
+  for(; si<CSK_shells.length; si++) CSK_shells[si].g.visible = false; for(; vi<CSK_vows.length; vi++) CSK_vows[vi].g.visible = false;
+  CSK_hudTick(); });
+function CSK_reset(){ CSK.zones.forEach(function(Z){ Z.on = false; Z.g.visible = false; }); CSK_heroes().forEach(function(st){ st.cskLeap = null; st.cskDraw = null; st.cskVowT = 0; st.cskBlk = 0; st.cskHot = null; }); }
+var CSK_cw0 = clearWorld; clearWorld = function(){ CSK_reset(); return CSK_cw0.apply(this, arguments); };
+var CSK_ob0 = openBargain; openBargain = function(){ CSK_reset(); return CSK_ob0.apply(this, arguments); };
+
+/* ---------- HUD: class skills on A / E; run spells (P.spells) shrink to F / T above them and hide while empty ---------- */
+(function(){ var sk = $('skills'), skD = $('skD'); if(!sk || !skD || $('cs0')) return; CSK.hud = [];
+  for(var i=0;i<2;i++){ var col = document.createElement('div'); col.className = 'cskCol'; var run = $('sk'+i); run.classList.add('cskRun'); var kk = run.querySelector('.k'); if(kk){ kk.setAttribute('data-key', i ? 'KeyT' : 'KeyF'); kk.textContent = kl(i ? 'KeyT' : 'KeyF'); }
+    var c = document.createElement('div'); c.className = 'sk cskSlot'; c.id = 'cs'+i;
+    c.innerHTML = '<i class="vx-rim"></i><i class="vx-pl"></i><span class="k" data-key="'+(i ? 'KeyE' : 'KeyQ')+'">'+kl(i ? 'KeyE' : 'KeyQ')+'</span><span class="ico"></span><i class="cdv"></i><i class="vx-fx"></i><i class="vx-sw"></i><b class="vx-cd"></b><b class="vx-lv"></b><span class="vx-au" title="Auto-cast">'+(typeof VX_icon==='function' ? VX_icon('auto') : '')+'</span>';
+    col.appendChild(run); col.appendChild(c); sk.insertBefore(col, skD);
+    CSK.hud.push({el:c, ico:c.querySelector('.ico'), sw:c.querySelector('.vx-sw'), cd:c.querySelector('.vx-cd'), lv:c.querySelector('.vx-lv'), id:null, p:-1, txt:'', lvT:'', rd:null}); }
+  var css = document.createElement('style'); css.textContent =
+    '#skills .cskCol{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:13px}'+
+    '#skills .sk.cskRun{--s:clamp(34px,5.2vh,46px)}#skills .sk.cskRun.empty{display:none!important}#skills .sk.cskRun .vx-lv{font-size:8px}'+
+    'body.touch #skills .sk.cskRun{--s:clamp(38px,6.4vh,50px)}'+
+    '#skills .cskSlot .vx-rim{background:linear-gradient(160deg,#c9a26a,#5a3a22 38%,#24160f 62%,#a07a4c)}'+
+    '#skills .cskSlot.vx-ready{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ic) 65%,transparent))}';
+  document.head.appendChild(css); })();
+function CSK_pulse(s){ var H = CSK.hud && CSK.hud[s]; if(!H) return; H.el.classList.add('vx-cast'); setTimeout(function(){ H.el.classList.remove('vx-cast'); }, 110); }
+function CSK_hudTick(){ if(!CSK.hud || !P) return; var k = CSK_of(P); if(!k) return;
+  for(var s=0;s<2;s++){ var H = CSK.hud[s], sk = k[s]; if(!sk) continue;
+    if(H.id !== sk.id){ H.id = sk.id; var D = CSK_def(sk.id); H.ico.innerHTML = D.icon; H.el.style.setProperty('--ic', D.c); H.el.title = D.name+' · '+D.role+' · '+Math.round(D.cd)+' s\n'+D.desc+'\nRight-click or hold the key: auto-cast'; }
+    var lvT = ROMAN[sk.lv] || ''; if(lvT !== H.lvT){ H.lvT = lvT; H.lv.textContent = lvT; }
+    var full = CSK_cdOf(P, sk), f = sk.cd > 0 ? Math.min(1, sk.cd/full) : 0, q = Math.round(f*240)/240; if(q !== H.p){ H.p = q; H.el.style.setProperty('--p', q); }
+    var tx = sk.cd > 0 ? (sk.cd < 1 ? sk.cd.toFixed(1) : String(Math.ceil(sk.cd))) : ''; if(tx !== H.txt){ H.txt = tx; H.cd.textContent = tx; }
+    var rd = f <= 0; if(rd !== H.rd){ H.rd = rd; H.el.classList.toggle('vx-wait', !rd); H.el.classList.toggle('vx-ready', rd); if(rd){ H.el.classList.remove('vx-rdy'); void H.el.offsetWidth; H.el.classList.add('vx-rdy'); } } } }
+var CSK_rs0 = refreshSkills; refreshSkills = function(){ var r = CSK_rs0.apply(this, arguments); if(CSK.hud) CSK.hud.forEach(function(H){ H.id = null; H.lvT = null; }); CSK_autoUi(); return r; };
+var CSK_kh0 = keysHelp; keysHelp = function(){ var k = CSK_kh0.apply(this, arguments); return G.touch ? k : k.replace(kl('KeyQ')+'/'+kl('KeyE')+': spells', kl('KeyQ')+'/'+kl('KeyE')+': class skills • '+kl('KeyF')+'/'+kl('KeyT')+': spells'); };
+var CSK_br0 = beginRun; beginRun = function(){ var r = CSK_br0.apply(this, arguments); CSK_heroes().forEach(CSK_of); refreshSkills(); CSK_autoUi();
+  if(typeof HINTS!=='undefined' && P && !save.hints.cskill){ var k = CSK_of(P); HINTS.cskill = function(){ var a = CSK_def(k[0].id), b = CSK_def(k[1].id); return G.touch ? 'Your class skills: <b>'+a.name+'</b> and <b>'+b.name+'</b>. Tap them to cast.' : 'Class skills: <b class="kc">'+kl('KeyQ')+'</b> '+a.name+' · <b class="kc">'+kl('KeyE')+'</b> '+b.name+'. Change them in the Armoury.'; }; after(7, function(){ hintOnce('cskill'); }); }
+  return r; };
+
+/* ---------- Offerings: rank-up cards for class skills; spell cards skip a spell you already hold as a class skill; run-spell keys read F / T ---------- */
+var CSK_sc0 = spellCards;
+spellCards = function(){ var out = CSK_sc0.apply(this, arguments) || [], pty = typeof PTY!=='undefined' && PTY.on && typeof HEROES!=='undefined' && HEROES.length > 1;
+  out = out.filter(function(c){ if(!c.spell) return true; if(c.hs){ c.hs = c.hs.filter(function(t){ var k = CSK_of(t.h.st), j = k ? (k[0].id===c.spell ? 0 : k[1].id===c.spell ? 1 : -1) : -1; if(j < 0) return true; if(k[j].lv >= 3) return false; t.up = true; t.lv = k[j].lv; t.csk = j; return true; }); return c.hs.length > 0; }
+    var k = CSK_of(P); return !k || (k[0].id!==c.spell && k[1].id!==c.spell); });
+  out.forEach(function(c){ if(c.tag){ c.tag = c.tag.replace(' • '+kl('KeyQ'), ' • '+kl('KeyF')).replace(' • '+kl('KeyE'), ' • '+kl('KeyT')); } });
+  if(!pty && P && !CSK.off){ var k = CSK_of(P); if(k) k.forEach(function(s, i){ if(s.lv >= 3) return; var D = CSK_def(s.id);
+    out.push({id:'csk_up'+i, r:1, name:D.name+' '+ROMAN[s.lv+1], icon:D.icon, desc:(D.lv[s.lv] || 'Stronger')+' (+35% power, −15% cooldown)', tag:'CLASS SKILL • '+kl(i ? 'KeyE' : 'KeyQ'), up:true, ap:function(){ CSK_rankUp(P, i); }}); }); }
+  return out; };
+/* party: "Honed Arts" goes to one hero you pick (the Offering's hero chips) and ranks up that hero's lower class skill */
+BOONS.push({id:'cskup', r:1, name:'Honed Arts', icon:'⚔️', desc:'One hero\'s lower-rank class skill ranks up (max III): +35% power, −15% cooldown',
+  ok:function(){ if(!(typeof PTY!=='undefined' && PTY.on)) return false; var k = CSK_of(P); return !!k && (k[0].lv < 3 || k[1].lv < 3); }, ap:function(){ CSK_rankUp(P); }});
+if(typeof OF_HEROB!=='undefined') OF_HEROB.cskup = 1;
+/* party spell gift for a spell a hero holds as a class skill: rank that class skill up instead (63-offerings hook) */
+if(typeof OF!=='undefined' && OF){ OF.onSpellGift = function(card, h, t){ var st = h && h.st, k = CSK_of(st); if(!k || !card || !card.spell) return false; var j = k[0].id===card.spell ? 0 : k[1].id===card.spell ? 1 : -1; if(j < 0) return false; return CSK_rankUp(st, j); }; }
+
+/* ---------- Armoury "Skills" tab (rendered for 31-relics GR_render / GR_detail) ---------- */
+function CSK_armSel(cls, id){ var pool = CSK_POOL[cls] || []; return pool.indexOf(id) >= 0 ? id : CSK_eq(cls)[0]; }
+function CSK_armBoard(cls, sel){ var e = CSK_eq(cls), pool = CSK_POOL[cls] || [], h = '', un = save.cls[cls];
+  h += '<div class="sec"><span class="lbl">Equipped · '+CLASSES[cls].name+'</span><span class="note">Two class skills, always · '+kl('KeyQ')+' and '+kl('KeyE')+' in a run</span></div><div class="sockets cskEq">';
+  e.forEach(function(id, i){ var D = CSK_def(id); h += '<button class="sock iron full'+(sel===id ? ' sel' : '')+'" data-a="sel:s:'+id+'"><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><span>Slot '+kl(i ? 'KeyE' : 'KeyQ')+' · '+D.role+'</span><b>'+D.name+'</b></div></button>'; });
+  h += '</div><div class="sec"><span class="lbl">Skill pool · '+pool.length+'</span><span class="note">Starters are free · deeds unseal the rest · never bought, never random</span></div><div class="grid cskGrid">';
+  pool.forEach(function(id){ var D = CSK_def(id), ok = un && CSK_unlocked(id), slot = e.indexOf(id), ft = slot >= 0 ? GR_ft('t', 'Equipped · '+kl(slot ? 'KeyE' : 'KeyQ'), 'worn') : ok ? GR_ft('t', 'Free swap') : GR_ft('deed', D.unlock ? D.unlock.t : 'Unlock the hero');
+    h += '<button class="tile iron'+(sel===id ? ' sel' : '')+(ok ? '' : ' lock dim')+(slot >= 0 ? ' wornT' : '')+'" data-a="sel:s:'+id+'"><div class="cat"><span>'+D.role+'</span><em>'+D.el+'</em></div><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><div class="nm">'+D.name+'</div><div class="ef">'+Math.round(D.cd)+' s cooldown</div></div>'+ft+'</button>'; });
+  return h+'</div>'; }
+function CSK_armDetail(cls, sel){ var D = CSK_def(sel), e = CSK_eq(cls), ok = save.cls[cls] && CSK_unlocked(sel), slot = e.indexOf(sel), h = '';
+  h += '<div class="dh"><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><div class="lbl">'+CLASSES[cls].name.split(' ')[1]+' skill · '+D.el+'</div><h2>'+D.name+'</h2><div class="rk">'+D.role+' · <b>'+Math.round(D.cd)+' s</b> cooldown</div></div></div>';
+  h += '<p class="mwr dsc">'+D.desc+'</p><table class="cmp"><tr><th>In a run</th><th></th><th>Effect</th></tr>'+[0,1,2].map(function(i){ return '<tr'+(i ? ' class="opt"' : '')+'><td>Rank '+ROMAN[i+1]+'</td><td></td><td class="nx" style="text-align:left;font-weight:400">'+(i ? (D.lv[i]||'Stronger')+' (+35%, −15% cd)' : 'Equipped from wave 1')+'</td></tr>'; }).join('')+
+    '<tr><td>In a party</td><td></td><td class="nx" style="text-align:left;font-weight:400">'+D.party+'</td></tr></table>';
+  if(D.unlock) h += GR_deed({t:D.unlock.t, ok:CSK_unlocked(sel)});
+  h += '<p class="mwr">Offerings can rank an equipped skill up to III during a run. Keys here: ←/→ choose, '+kl('KeyQ')+' / '+kl('KeyE')+' equip into that slot.</p><div class="fill"></div>';
+  if(!ok) h += GR_go(save.cls[cls] ? 'Sealed · '+(D.unlock ? D.unlock.t : '') : 'Unlock the '+CLASSES[cls].name, null, true, 'none');
+  else [0,1].forEach(function(i){ var cur = CSK_def(e[i]); h += slot===i ? '<button class="go2 cskOn" data-a="none">Equipped in slot '+kl(i ? 'KeyE' : 'KeyQ')+'</button>' : '<button class="go2" data-a="csk:'+i+'">Equip in slot '+kl(i ? 'KeyE' : 'KeyQ')+(slot >= 0 ? ' (swap)' : ' · replaces '+cur.name)+'</button>'; });
+  return h+'<div class="sub2">Free · saved per hero · used by allies in a party too</div>'; }
+function CSK_armEquip(slot){ var cls = GR_cls(), s = GRU.sel; if(!s || s.k!=='s') return; if(CSK_equip(cls, slot, s.id)){ SFX.pick(); GR_say(CSK_def(s.id).name+' equipped in slot '+kl(slot ? 'KeyE' : 'KeyQ')+'.'); } else { SFX.click(); GR_say('Sealed: '+((CSK_def(s.id).unlock||{}).t||'unlock the hero')+'.'); } GR_render(); }
+(function(){ var css = document.createElement('style'); css.textContent = '#relicP .sockets.cskEq{grid-template-columns:repeat(2,minmax(0,1fr))}#relicP .cskI .vxi{width:100%;height:100%}#relicP .tile .cskI{padding:4px}#relicP .sock .cskI{padding:2px}'+
+  '#relicP[data-tab=skills] .grid{grid-template-columns:repeat(4,minmax(0,1fr))}#relicP .go2.cskOn{color:var(--arm-ember);cursor:default;box-shadow:inset 0 0 0 1px #5a3d2c}'; document.head.appendChild(css); })();
+window.addEventListener('keydown', function(e){ var r = $('relicP'); if(!r || r.hidden || typeof GRU==='undefined' || GRU.tab!=='skills' || e.repeat) return; var cls = GR_cls(), pool = CSK_POOL[cls] || [], cur = GRU.sel && GRU.sel.k==='s' ? GRU.sel.id : CSK_eq(cls)[0], i = pool.indexOf(cur);
+  if(e.code==='ArrowRight' || e.code==='ArrowDown' || e.code==='ArrowLeft' || e.code==='ArrowUp'){ e.preventDefault(); var d = (e.code==='ArrowRight' || e.code==='ArrowDown') ? 1 : -1; GRU.sel = {k:'s', id:pool[(i+d+pool.length)%pool.length]}; SFX.click(); GR_render(); }
+  else if(e.code==='KeyQ' || e.code==='Digit1'){ e.preventDefault(); CSK_armEquip(0); } else if(e.code==='KeyE' || e.code==='Digit2'){ e.preventDefault(); CSK_armEquip(1); } });
+
+var CSKILL = {pool:function(cls){ return (CSK_POOL[cls]||[]).filter(CSK_unlocked); }, all:function(cls){ return (CSK_POOL[cls]||[]).slice(); }, equipped:CSK_eq, equip:CSK_equip, def:CSK_def, of:CSK_of,
+  cast:CSK_cast, aiWants:CSK_aiWants, rankUp:CSK_rankUp, want:CSK_wantId};
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.skills = {CSK:CSK, API:CSKILL, off:function(b){ CSK.off = b!==false; return CSK.off; }, auto:function(on){ var s = CSK_s(); s.auto.c0 = s.auto.c1 = on ? 1 : 0; CSK_autoUi(); return on; },
+  state:function(){ return CSK_heroes().map(function(st){ var k = CSK_of(st); return {cls:st.cls, sk:k ? k.map(function(s){ return s.id+s.lv+':'+s.cd.toFixed(1); }) : null, blk:st.cskBlk||0, vow:+(st.cskVowT||0).toFixed(2)}; }); },
+  cast:function(slot, x, z){ if(x!=null){ G.touch = false; mouseW.x = x; mouseW.z = z; } return CSK_cast(P, slot); }, ready:function(){ CSK_heroes().forEach(function(st){ var k = CSK_of(st); if(k) k.forEach(function(s){ s.cd = 0; }); }); }}; }
 /* ---------- 69 hub UI readability (owned by the hub-UI agent). Prefix HUI_. ----------
    The Vigil overlay in the "Pit Ledger" style: #lbFoot chips become solid dark-iron buttons (icon + label, hover / focus / active),
    the Glory pill is a plain stat readout, test tools (Pages / dev only) sit in a small secondary "Testing" row,
@@ -15350,7 +15703,7 @@ function HUI_svg(id){ var p = HUI_IC[id]; return p ? '<svg class="hi" viewBox="0
 '#hbKeys{position:absolute;left:0;top:0;display:none;align-items:center;flex-wrap:wrap;gap:4px 0;padding:5px 6px;max-width:calc(100vw - 24px);z-index:2;pointer-events:none;',
 '  background:linear-gradient(180deg,rgba(28,21,23,.94),rgba(14,10,11,.94));box-shadow:inset 0 0 0 1px #5a4434,0 4px 14px rgba(0,0,0,.45);font:600 11px/1 Rubik,sans-serif;color:#eadfd2;text-transform:uppercase;letter-spacing:.1em}',
 '#hbKeys.on{display:flex}',
-'#hbKeys .g{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;white-space:nowrap;border-left:1px solid rgba(160,130,100,.25)}',
+'#hbKeys .g{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;white-space:nowrap;border-left:1px solid rgba(160,130,100,.25)}',
 '#hbKeys .g:first-of-type{border-left:0}',
 '#hbKeys .g.ctx i{color:#ffcf8a}',
 '#hbKeys i{font-style:normal;color:#eadfd2}',
@@ -15361,6 +15714,7 @@ function HUI_svg(id){ var p = HUI_IC[id]; return p ? '<svg class="hi" viewBox="0
 '#hbKeysT b{font-weight:700;font-size:12px;line-height:1;transition:transform .15s}#hbKeys.col #hbKeysT b{transform:rotate(180deg)}',
 '#hbKeys.col{padding:0;background:none;box-shadow:none}#hbKeys.col .g{display:none}',
 '#menu.lobby.hub.lbOut #hbKeys,#menu.lobby.hub.lbDos #hbKeys{opacity:0;pointer-events:none}#menu.lobby.hub.lbDos #hbKeysT{pointer-events:none}',
+'@media (orientation:portrait){#menu.lobby.hub .lbGoal{max-width:calc(100vw - 200px)}#menu.lobby.hub .lbFoot{max-width:40vw;top:calc(var(--sat) + 74px)}}',
 '@media (max-height:500px){#hbKeys{font-size:10px}#hbKeys .g{padding:2px 7px}}'
 ].join('\n'); document.head.appendChild(st); })();
 
@@ -15394,7 +15748,7 @@ function HUI_items(){ var touch = !!G.touch, f = HUB.focus || (!touch && HUB.hov
   h += HUI_g(HUI_k(0, kl('KeyW')+kl('KeyA')+kl('KeyS')+kl('KeyD')), 'Move');
   if(f && f===HUB.focus) h += HUI_g(HUI_k('KeyE'), f.comp ? (f.locked ? 'Unlock' : 'Swap') : 'Interact', true);
   h += HUI_g(HUI_k(0, 'Click'), 'Shoot');
-  if(swapOK && !(f && f.comp)) h += HUI_g(HUI_k(0, 'Click'), 'Champion: swap');
+  if(swapOK && !(f && f.comp)) h += HUI_g(HUI_k(0, 'Click')+'<i>a hero</i>', 'Swap');
   if(bring) h += HUI_g(HUI_k('KeyF'), HUB_bringing(f.cls) ? 'Leave behind' : 'Bring', true);
   h += HUI_g(HUI_k(0, 'Enter'), 'Enter the Pit');
   return h; }
@@ -15440,8 +15794,8 @@ var HINTS = {
   pillar:function(){ return 'Pillars block bolts for a while, but enemies wear them down. Keep moving!'; },
   dash:function(){ return G.touch ? 'Tap 💨 to dash through attacks' : '<b class="kc">Space</b> dash: you can\'t be hit while dashing'; },
   ult:function(){ return G.touch ? 'Overload full! Tap '+CLASSES[P.cls].ultIco : 'Overload full! Press <b class="kc">'+kl('KeyR')+'</b> for '+CLASSES[P.cls].ult; },
-  spell:function(){ return G.touch ? 'New spell! Tap its button to cast' : 'New spell! Press <b class="kc">'+kl('KeyQ')+'</b> to cast at your cursor'; },
-  spell2:function(){ return G.touch ? 'Second spell ready!' : 'Second spell! Press <b class="kc">'+kl('KeyE')+'</b>'; },
+  spell:function(){ return G.touch ? 'New spell! Tap its button to cast' : 'New spell! Press <b class="kc">'+kl('KeyF')+'</b> to cast at your cursor'; },
+  spell2:function(){ return G.touch ? 'Second spell ready!' : 'Second spell! Press <b class="kc">'+kl('KeyT')+'</b>'; },
   survive:function(){ return 'Survive until the timer runs out. You don\'t have to kill anything!'; },
   circles:function(){ return 'Stand inside each <b style="color:#4fd8ff">stone circle</b> until it lights up.'; },
   altar:function(){ return 'Foes attack the <b style="color:#ffd27a">altar</b> in the middle. Kill them before it falls!'; },
@@ -15491,7 +15845,7 @@ var keys = {}, mouseDown = false, mouseX = innerWidth/2, mouseY = innerHeight/2,
 var joy = {on:false, id:null, ox:0, oy:0, x:0, y:0};
 window.addEventListener('keydown', function(e){ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].indexOf(e.code)>=0) e.preventDefault(); if(e.repeat){ keys[e.code]=true; return; } keys[e.code]=true; audioInit(); setTouch(false);
   if(G.state==='play' && !G.paused && P && !P.dead){ if(e.code==='Digit1'||e.code==='Numpad1') setWard('flame'); else if(e.code==='Digit2'||e.code==='Numpad2') setWard('frost'); else if(e.code==='Digit3'||e.code==='Numpad3') setWard('storm');
-    else if(e.code==='KeyQ') castSpell(0); else if(e.code==='KeyE') castSpell(1); else if(e.code==='KeyR') castUlt(); else if(e.code==='Space'||e.code==='ShiftLeft') doDash(); }
+    else if(e.code==='KeyQ'){ if(typeof CSK_key==='function') CSK_key(0); else castSpell(0); } else if(e.code==='KeyE'){ if(typeof CSK_key==='function') CSK_key(1); else castSpell(1); } else if(e.code==='KeyF') castSpell(0); else if(e.code==='KeyT') castSpell(1); else if(e.code==='KeyR') castUlt(); else if(e.code==='Space'||e.code==='ShiftLeft') doDash(); }
   if(e.code==='KeyP'){ if(G.state==='play') pause(!G.paused); }
   if(G.state==='bargain' && G.cardList && /^Digit[1-3]$/.test(e.code)){ var i=+e.code.slice(5)-1; if(G.cardList[i]) choose(G.cardList[i], G.cardCurse); } }, {passive:false});
 window.addEventListener('keyup', function(e){ keys[e.code]=false; });
@@ -15514,7 +15868,7 @@ function endTouch(e){ for(var i=0;i<e.changedTouches.length;i++){ if(e.changedTo
 canvas.addEventListener('touchend', endTouch); canvas.addEventListener('touchcancel', endTouch);
 function tapBtn(el, fn){ el.addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); audioInit(); if(e.pointerType==='touch') setTouch(true); if(G.state==='play'&&!G.paused&&P&&!P.dead) fn(); }); }
 var wEls = document.querySelectorAll('.ward'); for(var wi=0; wi<wEls.length; wi++) (function(w){ tapBtn(w, function(){ setWard(w.getAttribute('data-el')); }); })(wEls[wi]);
-tapBtn($('sk0'), function(){ castSpell(0); }); tapBtn($('sk1'), function(){ castSpell(1); }); tapBtn($('skR'), castUlt); tapBtn($('skD'), doDash);
+tapBtn($('sk0'), function(){ castSpell(0); }); if($('cs0')){ tapBtn($('cs0'), function(){ CSK_key(0); }); tapBtn($('cs1'), function(){ CSK_key(1); }); } tapBtn($('sk1'), function(){ castSpell(1); }); tapBtn($('skR'), castUlt); tapBtn($('skD'), doDash);
 $('pauseBtn').addEventListener('click', function(){ audioInit(); pause(true); });
 $('resumeBtn').addEventListener('click', function(){ SFX.click(); if(G.state==='play') pause(false); else showScreen(G.state==='menu'?'menu':null); });
 $('quitBtn').addEventListener('click', function(){ SFX.click(); if(G.state==='play'){ G.paused=false; P.deathReason='quit'; showOver(); } else showMenu(); });
