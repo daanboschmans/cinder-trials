@@ -13432,10 +13432,10 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hit = {
 var PARTY = {max:3, CLS:['mage','blade','archer'], _subs:[],
   /* tuning (design/PARTY.md); every party number lives here */
   glory:[1, 0.4, 0.28], maxAlive:[1, 1.25, 1.55], quota:[1, 1.2, 1.45], boltCap:[1, 1.15, 1.25], bossHp:[1, 2.0, 2.8],
-  swapCd:1.0, swapInv:0.4, glideT:0.25, holdT:2.0, pitCd:8, sinCd:8, perfectT:0.2, anchorR:4, anchorMul:0.8, catchR:2.6, catchCd:0.6, volleyN:4, tauntedMul:1.2, mageHeal:2, novaHeal:0.2, flareHeal:0.08, rainN:7, rainSlow:1.5, pitTaunt:3, pitR:6, pitLeap:6,
-  aiDmg:[1, 0.6, 0.5], aiTaken:0.7, aiOver:0.5, aiDecide:0.2, aiReact:[0.25, 0.4], leash:9, rallyLeash:3.5,
+  swapCd:1.0, swapInv:0.4, glideT:0.25, holdT:1.0, pitCd:8, sinCd:8, perfectT:0.2, anchorR:4, anchorMul:0.8, catchR:2.6, catchCd:0.6, volleyN:4, tauntedMul:1.2, mageHeal:2, novaHeal:0.2, flareHeal:0.08, rainN:7, rainSlow:1.5, pitTaunt:3, pitR:6, pitLeap:6,
+  aiDmg:[1, 0.8, 0.7], aiTaken:0.7, aiCastT:0.5, roleCd:10, roleFirst:4, aiDashP:0.6, aiOver:0.5, aiDecide:0.2, aiReact:[0.25, 0.4], leash:9, rallyLeash:3.5,
   bladeThreat:3, meleePull:1, rangedPull:0.3, aiBias:1.2, repick:1.2, hyst:2, ctlShare:0.6, tauntU:8,
-  bleed:15, reviveR:1.6, reviveT:2.0, reviveMage:1.2, reviveHp:0.35, returnHp:0.30,
+  bleed:15, reviveR:1.6, reviveSafeR:3, reviveHpMin:0.4, reviveT:2.0, reviveMage:1.2, reviveHp:0.35, returnHp:0.30,
   get:function(){ var l = (save.party && save.party.list) || []; return l.slice(); },
   set:function(list){ var out = []; (list||[]).forEach(function(c){ if(PARTY.CLS.indexOf(c)>=0 && out.indexOf(c)<0 && out.length<PARTY.max) out.push(c); });
     save.party = save.party || {}; save.party.list = out; persist(); for(var i=0;i<PARTY._subs.length;i++){ try{ PARTY._subs[i](out.slice()); }catch(err){ if(DEV) console.warn(err); } } return out.slice(); },
@@ -13455,7 +13455,7 @@ var HEROES = [];
    ===================================================================================================================== */
 var PTY = {on:false, ctl:null, cur:null, stk:[], hum:{moveO:null, md:false, mw:null, touch:false}, swapCd:0, glide:0, pitCd:0, mode:'press', needSwap:false, boltCap0:null,
   stats:null, dom:null, gl:1};
-function PTY_resetStats(){ PTY.stats = {swaps:0, downs:0, revives:0, bleeds:0, wipes:0, meleeT:0, meleeBladeT:0, rangedWind:0, rangedWindCtl:0, ctlHits:0, aiHits:0, dmg:[0,0,0], ctlT:[0,0,0], pits:0}; }
+function PTY_resetStats(){ PTY.stats = {heal:[0,0,0], aiCasts:0, aiRoles:0, aiDashes:0, casts:[0,0,0], roles:[0,0,0], swaps:0, downs:0, revives:0, bleeds:0, wipes:0, meleeT:0, meleeBladeT:0, rangedWind:0, rangedWindCtl:0, ctlHits:0, aiHits:0, dmg:[0,0,0], ctlT:[0,0,0], pits:0}; }
 PTY_resetStats();
 function PTY_n(){ return HEROES.length; }
 function PTY_f(tab){ return tab[Math.min(tab.length, Math.max(1, HEROES.length))-1]; }
@@ -13524,6 +13524,9 @@ function PTY_aiHit(dmg, el, src, o){ if(!P || P.dead || G.god) return 'none'; o 
   if(P.dashT>0 && !o.noDodge) return 'dodge';
   if(el && el!=='pure' && (el===P.ward || (P.prevT>0 && el===P.prevWard))){ absorb(el, src); return 'absorb'; }
   if(PTY_perfect(P)) return 'none';
+  if(P.GR_amw && el && el!=='pure'){ // Armoury masterworks, exactly as 31-relics applies them to a solo hero
+    if(P.GR_amw==='stormweave' && P.dashT>0 && el===P.ward && !P.GR_ssU && !o.noDodge){ P.GR_ssU = 1; absorb(el, src); return 'absorb'; }
+    if(P.GR_amw==='ashplate' && src && src.vx!=null && !(src.src && src.src.type==='boss') && P.dashT<=0) dmg *= 0.85; }
   if(el==='pure' && P.guard>0 && !o.noGuard){ P.guard--; PM.bubS = 1.6; dmgText(P.x,2.2,P.z,'GUARDED','#ffd27a',15); ringBurst(P.x,P.z,1.4,16,0xffd27a,0.8); return 'guard'; }
   if(P.inv>0 && !o.noInv) return 'none';
   if(P.whirl>0) dmg *= 0.4; if(P.cls==='blade') dmg *= 0.75;
@@ -13536,7 +13539,7 @@ function PTY_aiHit(dmg, el, src, o){ if(!P || P.dead || G.god) return 'none'; o 
   if(P.hp<=0){ P.hp=0; playerDie('slain'); return 'hit'; }
   if(o.ruin){ P.ruin = Math.min(7, P.ruin+o.ruin); dmgText(P.x,2.5,P.z,'BRAND +'+o.ruin,'#ff6b8a',16); if(P.ruin>=7) playerDie('ruin'); }
   return 'hit'; }
-function PTY_aiAbsorb(el, src){ var gain = 9*P.surge*(P.cls==='mage'?1.3:1)*PARTY.aiOver; P.over = Math.min(100, P.over+gain); P.absorbs++;
+function PTY_aiAbsorb(el, src){ if(P.GR_mw==='b' && P.cls==='blade') P.GR_weT = G.t + 1; var gain = 9*P.surge*(P.cls==='mage'?1.3:1)*PARTY.aiOver; P.over = Math.min(100, P.over+gain); P.absorbs++;
   if(P.siphon>0) heal(P.siphon); if(P.cls==='archer') P.empower = Math.min(6, P.empower+1);
   if(PM) PM.bubS = 1.45; for(var i=0;i<5;i++){ var a=Math.random()*TAU; glowP.emit(P.x+Math.cos(a)*1.3,1,P.z+Math.sin(a)*1.3,-Math.cos(a)*5,rnd(-1,1),-Math.sin(a)*5,0.28,1.0,ELC[el],0,1); }
   if(P.backlash && src && src.vx!=null){ var sp=Math.hypot(src.vx,src.vz)||1; spawnPProj(src.x,src.z,-src.vx/sp,-src.vz/sp,Math.max(14,sp*1.6),(src.dmg||10)*2.2,1,'bolt',el,false); } }
@@ -13694,12 +13697,15 @@ function PTY_think(h){ var me = h.st, C = PTY.ctl.st, melee = me.cls==='blade', 
   for(i=0;i<teles.length;i++){ var te = teles[i]; if(!te.hostile) continue; d = Math.hypot(te.x-me.x, te.z-me.z); if(d < te.r+0.6 && d < dd){ dd = d; danger = te; } }
   for(i=0;i<eprojs.length;i++){ var p = eprojs[i]; if(p.el!=='pure' && p.el===me.ward) continue; var rx = me.x-p.x, rz = me.z-p.z, rd = Math.hypot(rx, rz); if(rd > 3.2) continue;
     var vs = Math.hypot(p.vx, p.vz)||1; if((p.vx*rx + p.vz*rz)/(vs*rd||1) > 0.85){ var sx = -p.vz/vs, sz = p.vx/vs; if(sx*rx + sz*rz < 0){ sx = -sx; sz = -sz; } dx += sx*1.6; dz += sz*1.6; } }
-  var downed = null; for(i=0;i<HEROES.length;i++){ var o = HEROES[i].st; if(o!==me && o.downed && !o.out){ downed = o; break; } }
+  /* revive only when it is safe and the player is not far away (owner bug 2026-10-10: an ally parked at a body forever while the player kited off) */
+  var downed = null; for(i=0;i<HEROES.length;i++){ var o = HEROES[i].st; if(o!==me && o.downed && !o.out && o!==C){ downed = o; break; } }
+  if(downed){ var bodyC = Math.hypot(downed.x-C.x, downed.z-C.z), foeB = nearestEnemy(downed.x, downed.z, PARTY.reviveSafeR), go = (downed.revT||0) > 0.35 && !foeB;
+    if(!(go || (!foeB && me.hp > me.maxHp*PARTY.reviveHpMin)) || (!go && bodyC > leash && !C.dead && nearestEnemy(C.x, C.z, 8))) downed = null; }
   var mx = 0, mz = 0;
   var sw = (typeof SW!=='undefined' && SW && SW.on) ? SW : null;
   if(sw && sw.vd && sw.eye){ out.state = 'Shelter'; mx = sw.eye.x-me.x; mz = sw.eye.z-me.z; if(Math.hypot(mx, mz) < 0.6){ mx = mz = 0; } } // Verdict warning: into the Eye
   else if(h.ai.holdT > 0){ out.state = 'Anchor'; mx = (h.ai.hx-me.x); mz = (h.ai.hz-me.z); if(Math.hypot(mx, mz) < 0.4){ mx = mz = 0; } }
-  else if(downed && (Math.hypot(downed.x-me.x, downed.z-me.z) < 2.2 || !nearestEnemy(downed.x, downed.z, 2.5) || me.hp > me.maxHp*0.6)){ out.state = 'Revive'; var rdx = downed.x-me.x, rdz = downed.z-me.z; if(Math.hypot(rdx, rdz) > 0.8){ mx = rdx; mz = rdz; } }
+  else if(downed){ out.state = 'Revive'; out.revTg = downed; var rdx = downed.x-me.x, rdz = downed.z-me.z; if(Math.hypot(rdx, rdz) > 0.8){ mx = rdx; mz = rdz; } }
   else if(dC > leash && !C.dead){ out.state = 'Regroup'; mx = (C.x-me.x); mz = (C.z-me.z); }
   else if(danger){ out.state = 'Evade'; var ax = me.x-danger.x, az = me.z-danger.z, al = Math.hypot(ax, az)||1; mx = ax/al*2 + (C.x-me.x)*0.08; mz = az/al*2 + (C.z-me.z)*0.08; }
   else if(me.hp < me.maxHp*0.35){ out.state = 'Recover'; if(near && nd < 6){ mx = (me.x-near.x); mz = (me.z-near.z); } mx += (C.x-me.x)*0.3; mz += (C.z-me.z)*0.3;
@@ -13710,16 +13716,19 @@ function PTY_think(h){ var me = h.st, C = PTY.ctl.st, melee = me.cls==='blade', 
       if(melee){ if(el > 1.3){ mx = ex; mz = ez; } }
       else { if(el < 4.5){ mx = -ex; mz = -ez; } else if(el > 8){ mx = ex*0.6; mz = ez*0.6; } else { mx = -ez*0.5*(h.i%2?1:-1); mz = ex*0.5*(h.i%2?1:-1); } mx += (C.x-me.x)*0.12; mz += (C.z-me.z)*0.12; } }
     else if(dC > 3){ mx = C.x-me.x; mz = C.z-me.z; } }
-  mx += dx; mz += dz; var r = Math.hypot(me.x, me.z); if(r > AR()-1.4){ mx -= me.x*0.6; mz -= me.z*0.6; }
+  if(out.state!=='Revive'){ mx += dx; mz += dz; } var r = Math.hypot(me.x, me.z); if(r > AR()-1.4){ mx -= me.x*0.6; mz -= me.z*0.6; }
   if(G.act===2 && typeof A2_unsafe==='function'){ var ml = Math.hypot(mx, mz)||1; if(A2_unsafe(me.x+mx/ml*1.3, me.z+mz/ml*1.3)){ mx = C.x-me.x; mz = C.z-me.z; } } // Act II: never walk into the holes
-  var l = Math.hypot(mx, mz); if(l > 0.25){ out.mv.x = mx/l; out.mv.z = mz/l; }
-  out.tgt = tgt && Math.hypot(tgt.x-me.x, tgt.z-me.z) < range+tgt.r ? tgt : (near && nd < range+near.r ? near : null); out.fire = !!out.tgt && out.state!=='Revive';
+  out.dd = danger ? dd : 99; var l = Math.hypot(mx, mz); if(l > 0.25){ out.mv.x = mx/l; out.mv.z = mz/l; }
+  out.tgt = tgt && Math.hypot(tgt.x-me.x, tgt.z-me.z) < range+tgt.r ? tgt : (near && nd < range+near.r ? near : null); out.fire = !!out.tgt;
   return out; }
 function PTY_ai(h, dt){ var A = h.ai; if(A.holdT > 0) A.holdT -= dt;
   A.dec -= dt; if(A.dec <= 0){ A.dec = PARTY.aiDecide; var D = PTY_think(h); D.at = G.t + rnd(PARTY.aiReact[0], PARTY.aiReact[1]); if(!A.pend) A.pend = D; else A.pq = D; }
-  if(A.pend && G.t >= A.pend.at){ var X = A.pend; A.pend = A.pq || null; A.pq = null; A.mv.x = X.mv.x; A.mv.z = X.mv.z; A.tgt = X.tgt; A.fire = X.fire; A.state = X.state; }
+  if(A.pend && G.t >= A.pend.at){ var X = A.pend; A.pend = A.pq || null; A.pq = null; A.mv.x = X.mv.x; A.mv.z = X.mv.z; A.tgt = X.tgt; A.fire = X.fire; A.state = X.state; A.revTg = X.revTg || null; A.dd = X.dd; }
+  if(A.state==='Revive' && A.revTg && A.revTg.downed && !A.revTg.out){ var rx = A.revTg.x-h.st.x, rz = A.revTg.z-h.st.z, rl = Math.hypot(rx, rz); // steer onto the body every frame (no reaction lag: no overshoot)
+    if(rl > 0.7){ A.mv.x = rx/rl; A.mv.z = rz/rl; } else { A.mv.x = A.mv.z = 0; } }
   if(A.tgt && (A.tgt.dead)){ A.tgt = null; A.fire = false; }
-  if(A.tgt){ A.aim.x = A.tgt.x; A.aim.z = A.tgt.z; } else { A.aim.x = h.st.x + A.mv.x*3; A.aim.z = h.st.z + A.mv.z*3 + 0.001; } }
+  if(A.tgt){ A.aim.x = A.tgt.x; A.aim.z = A.tgt.z; } else { A.aim.x = h.st.x + A.mv.x*3; A.aim.z = h.st.z + A.mv.z*3 + 0.001; }
+  if(G.waveActive && !h.st.dead && h.st.stun <= 0) PTY_aiAct(h, dt); }
 
 /* ---- per-step party sim: every hero runs the unchanged hero code under its own context ---- */
 var PTY_up0 = updatePlayer;
@@ -13843,9 +13852,9 @@ function PTY_catch(p, h){ if(h.st.cls==='blade' || !p.el || p.el==='pure') retur
   zapLine([{x:p.x, z:p.z}, {x:b.x, z:b.z}]); dmgText(b.x, 2.5, b.z, 'CAUGHT', '#ffd27a', 15); PTY.stats.catches = (PTY.stats.catches||0)+1;
   PTY_hit(b, p.dmg, p.el, p, {ruin:p.ruin}); return true; }
 /* Mage, the catalyst: absorbs mend the other heroes */
-function PTY_mageMend(st){ for(var i=0;i<HEROES.length;i++){ var o = HEROES[i].st; if(o===st || o.dead) continue; o.hp = Math.min(o.maxHp, o.hp + PARTY.mageHeal*G.mods.recov); if(Math.random()<0.5) glowP.emit(o.x, 1.4, o.z, 0, 1.2, 0, 0.4, 0.8, 0x7dff9a, 0, 1); } }
+function PTY_mageMend(st){ var me = PTY_of(st); for(var i=0;i<HEROES.length;i++){ var o = HEROES[i].st; if(o===st || o.dead) continue; var h0 = o.hp; o.hp = Math.min(o.maxHp, o.hp + PARTY.mageHeal*G.mods.recov); if(me) PTY.stats.heal[me.i] += o.hp - h0; if(Math.random()<0.5) glowP.emit(o.x, 1.4, o.z, 0, 1.2, 0, 0.4, 0.8, 0x7dff9a, 0, 1); } }
 function PTY_healAll(frac, x, z, r, revive){ for(var i=0;i<HEROES.length;i++){ var h = HEROES[i], o = h.st; if(r && Math.hypot(o.x-x, o.z-z) > r) continue;
-    if(o.downed && !o.out){ if(revive) PTY_revive(h, PARTY.reviveHp, false); continue; } if(o.dead) continue; o.hp = Math.min(o.maxHp, o.hp + o.maxHp*frac*G.mods.recov); burst(o.x, 1.2, o.z, 8, 0x7dff9a, 3, 0.4, 0.9); } }
+    if(o.downed && !o.out){ if(revive) PTY_revive(h, PARTY.reviveHp, false); continue; } if(o.dead) continue; var h0 = o.hp; o.hp = Math.min(o.maxHp, o.hp + o.maxHp*frac*G.mods.recov); PTY.stats.heal[(PTY.cur||PTY.ctl||h).i] += o.hp - h0; burst(o.x, 1.2, o.z, 8, 0x7dff9a, 3, 0.4, 0.9); } }
 /* Perfect Swap: the hero you just left dodges a non-absorbable hit that lands within 0.2 s of the swap */
 function PTY_perfect(st){ if(st.swOut==null || G.t - st.swOut > PARTY.perfectT) return false; st.swOut = null;
   dmgText(st.x, 2.9, st.z, 'PERFECT', '#fff2d6', 30); ringBurst(st.x, st.z, 1.8, 26, 0xffffff, 0.6); burst(st.x, 1.2, st.z, 20, 0xffd27a, 6, 0.5, 1.2); G.hitstop = Math.max(G.hitstop, 0.06); shake(0.25);
@@ -14754,7 +14763,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 00:48',h:'3234135'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:10',h:'ec3f6ef'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -14810,6 +14819,7 @@ setInterval(VER_sync, 250);   /* catches state changes that don't go through sho
 VER_sync();
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.ver = {BUILD:BUILD, shown:function(){ return !VER_tag.hidden; },
   place:function(){ return VER_place(); }, rect:function(){ var b = VER_tag.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom)]; }}; }
+/* ---------- 67 party loadout: per-hero starting skills / perks at run start and each act change (owned by the loadout agent) ---------- */
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
