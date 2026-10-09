@@ -9355,7 +9355,7 @@ SPIRE.rodAngle = function(i){ var r = SPIRE.rods[i]; return r ? Math.atan2(-r.z,
 /* el (optional, 'flame'|'frost'|'storm'): tints the charge, line, grounding ring and strike of that rod (the Stormwright's coloured Storm Rods) */
 SPIRE.setRod = function(i, state, k, el){ var r = SP.rod[i]; if(!r) return; k = k == null ? 0 : clamp(k, 0, 1); r.el = (el && typeof ELC!=='undefined' && ELC[el]!=null) ? el : null;
   if(state !== r.st){ r.st = state; r.t = 0; r.k = k; if(state === 'strike' && SP.active) SP_strikeFx(i); } else r.k = (state === 'grounding') ? k : Math.max(r.k, k); };
-function SP_strikeFx(i){ var R0 = SPIRE.rods[i]; shake(0.32); burst(R0.x, 5.4, R0.z, 18, 0xdfe8ff, 7, 0.4, 1.2); ringBurst(R0.x, R0.z, 1.6, 18, 0xdfe8ff, 0.3);
+function SP_strikeFx(i){ var R0 = SPIRE.rods[i]; shake(0.32); burst(R0.x, 5.4, R0.z, 18, 0x9fb4ff, 7, 0.4, 1.2); ringBurst(R0.x, R0.z, 1.6, 18, 0x9fb4ff, 0.3);
   if(lim('spstrike', 0.25)){ SFX.zap(); noise(1.4, 0.3, 380, 'lowpass', 0.04, null, 50); tone(62, 1.0, 'sine', 0.24, 30, 0.02); } SP.flI = -1; SP.flK = 1.2; }
 function SP_rodUpd(t, adt){ var tipOn = false, lineOn = false, boltOn = false, ringOn = false, i, j;
   var tc = SP.rodTip.geometry.attributes.color, ta = tc.array, W = SP.rtW, LQ = SP.lq, GQ = SP.gq, BQ = SP.bq;
@@ -13727,8 +13727,8 @@ function PTY_aiHit(dmg, el, src, o){ if(!P || P.dead || G.god) return 'none'; o 
   if(P.GR_amw && el && el!=='pure'){ // Armoury masterworks, exactly as 31-relics applies them to a solo hero
     if(P.GR_amw==='stormweave' && P.dashT>0 && el===P.ward && !P.GR_ssU && !o.noDodge){ P.GR_ssU = 1; absorb(el, src); return 'absorb'; }
     if(P.GR_amw==='ashplate' && src && src.vx!=null && !(src.src && src.src.type==='boss') && P.dashT<=0) dmg *= 0.85; }
-  if(el==='pure' && P.guard>0 && !o.noGuard){ P.guard--; PM.bubS = 1.6; dmgText(P.x,2.2,P.z,'GUARDED','#ffd27a',15); ringBurst(P.x,P.z,1.4,16,0xffd27a,0.8); return 'guard'; }
-  if(P.inv>0 && !o.noInv) return 'none';
+    if(P.inv>0 && !o.noInv) return 'none';
+  if(P.guard>0 && !o.noGuard){ P.guard--; PM.bubS = 1.6; dmgText(P.x,2.2,P.z,'GUARDED','#ffd27a',15); ringBurst(P.x,P.z,1.4,16,0xffd27a,0.8); return 'guard'; }
   if(P.whirl>0) dmg *= 0.4; if(P.cls==='blade') dmg *= 0.75;
   dmg *= G.mods.edmg * (1 + (G.escDmg||0)) * PARTY.aiTaken * PTY_anchor(P); dmg = Math.max(1, Math.round(dmg));
   P.hp -= dmg; if(!o.noInv) P.inv = 0.4; P.hurtT = 0.3; P.flawless = false;
@@ -14058,9 +14058,9 @@ function PTY_healAll(frac, x, z, r, revive){ for(var i=0;i<HEROES.length;i++){ v
     if(o.downed && !o.out){ if(revive) PTY_revive(h, PARTY.reviveHp, false); continue; } if(o.dead) continue; var h0 = o.hp; o.hp = Math.min(o.maxHp, o.hp + o.maxHp*frac*G.mods.recov); PTY.stats.heal[(PTY.cur||PTY.ctl||h).i] += o.hp - h0; burst(o.x, 1.2, o.z, 8, 0x7dff9a, 3, 0.4, 0.9); } }
 /* Perfect Swap: the hero you just left dodges a non-absorbable hit that lands within 0.2 s of the swap */
 function PTY_perfect(st){ if(st.swOut==null || G.t - st.swOut > PARTY.perfectT) return false; st.swOut = null;
-  dmgText(st.x, 2.9, st.z, 'PERFECT', '#fff2d6', 30); ringBurst(st.x, st.z, 1.8, 26, 0xffffff, 0.6); burst(st.x, 1.2, st.z, 20, 0xffd27a, 6, 0.5, 1.2); G.hitstop = Math.max(G.hitstop, 0.06); shake(0.25);
+  dmgText(st.x, 2.9, st.z, 'PERFECT', '#ffcf7a', 30); ringBurst(st.x, st.z, 1.8, 26, 0xffa642, 0.6); burst(st.x, 1.2, st.z, 20, 0xffd27a, 6, 0.5, 1.2); G.hitstop = Math.max(G.hitstop, 0.06); shake(0.25);
   if(PTY.ctl){ PTY.ctl.st.over = Math.min(100, PTY.ctl.st.over + 15); } PTY.swapCd = 0; PTY.stats.perfect = (PTY.stats.perfect||0)+1; if(SFX.cheer) SFX.cheer(); PTY_flash(); return true; }
-function PTY_flash(){ var f = $('ptyFlash'); if(!f){ f = document.createElement('div'); f.id = 'ptyFlash'; f.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:7;opacity:0;background:radial-gradient(ellipse at center,rgba(255,242,214,.0) 40%,rgba(255,226,170,.55));transition:opacity .35s'; document.body.appendChild(f); }
+function PTY_flash(){ var f = $('ptyFlash'); if(!f){ f = document.createElement('div'); f.id = 'ptyFlash'; f.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:7;opacity:0;background:radial-gradient(ellipse at center,rgba(255,140,60,0) 45%,rgba(200,90,30,.32));transition:opacity .35s'; document.body.appendChild(f); }
   f.style.transition = 'none'; f.style.opacity = '1'; void f.offsetWidth; f.style.transition = 'opacity .45s'; f.style.opacity = '0'; }
 /* Phoenix Ash in a party: once per run, the whole party rises from a wipe */
 function PTY_phoenix(){ PTY.phx = 0; for(var i=0;i<HEROES.length;i++){ var h = HEROES[i]; PTY_revive(h, 0.4, true); h.st.inv = Math.max(h.st.inv, 2.5); } var c = PTY.ctl.st;
@@ -15114,7 +15114,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:45',h:'0c6feb6'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:52',h:'96ee2d5'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -15180,6 +15180,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.ver = {BUILD:BUILD, 
    - Save: save.party.lo = {pick:{cls:{pk,wd}}}  (save.party is a predeclared save key). Skills live in CSKILL's own save.
    - Automation: headless webdriver sessions apply the picks without the screen. DEV: __feat.loadout = {auto, open, state, fight, pick, perks}.
    - No paid or random rewards. */
+var LO_ENABLED = false;   /* owner 2026-10-10: "too much choice": no loadout screen, no perks or ward affinity; class skills are chosen in the Armoury only */
 var LO = {auto:!!(navigator && navigator.webdriver), on:false, kind:'start', el:null, sel:0, heroes:[], firstSkip:false};
 var LO_WARD = {mage:'flame', blade:'frost', archer:'storm'};
 var LO_PERKS = [
@@ -15220,6 +15221,7 @@ function LO_applyAll(start){ var L = LO_list(); L.forEach(function(x){ var k = x
 var LO_br0 = beginRun;
 beginRun = function(cls){ var first = (save.runs|0) === 0; var r = LO_br0.apply(this, arguments);
   if(!P || G.state!=='play') return r;
+  if(!LO_ENABLED) return r;
   LO.firstSkip = first; if(first) return r;                       /* the very first run: classic start, no kit, no screen */
   LO_applyAll(true); if(!LO.auto) LO_open('start'); return r; };
 /* Kindled: +15 Overload at each round start */
@@ -15229,7 +15231,7 @@ startWave = function(n){ var r = LO_sw0.apply(this, arguments); LO_list().forEac
 var LO_ab0 = absorb;
 absorb = function(el, src){ var st = P, o0 = st ? st.over : 0; var r = LO_ab0.apply(this, arguments); if(st && st.LO_aff===el && st.over > o0) st.over = Math.min(100, st.over + (st.over - o0)*0.25); return r; };
 /* act change: re-spec when the hero lands on the Spire (the ascent agent's A2_onLanded hook when it exists, else after A2_finishAscent) */
-function LO_actChange(){ if(!P || G.state!=='play' || P.dead) return; if(!P.LO) LO_applyAll(false); if(!LO.auto) LO_open('act'); }
+function LO_actChange(){ if(!LO_ENABLED) return; if(!P || G.state!=='play' || P.dead) return; if(!P.LO) LO_applyAll(false); if(!LO.auto) LO_open('act'); }
 if(typeof A2_onLanded==='function') A2_onLanded(LO_actChange);
 else if(typeof A2_finishAscent==='function'){ var LO_fa0 = A2_finishAscent; A2_finishAscent = function(){ var had = typeof A2!=='undefined' && A2.asc && !A2.asc.done; var r = LO_fa0.apply(this, arguments); if(had) LO_actChange(); return r; }; }
 
