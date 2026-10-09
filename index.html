@@ -13083,8 +13083,8 @@ function HUB_headY(f){ if(f.v) return 3.7; if(f.D) return f.id==='pit' ? (f.st==
 function HUB_uiFrame(t, dt){ var U = HUB.ui; if(!U) return; var touch = !!G.touch, P0 = HUB.P, f = HUB.focus || (!touch && HUB_input() ? HUB.hover : null), hide = $('menu').classList.contains('lbOut'), hideP = hide || !!HUB.swap;
   HUB.hudT -= dt; if(HUB.hudT <= 0 || !HUB.hud){ HUB.hudT = 0.5; HUB_hudRects(); }
   /* prompt pill on the focus (or the champion under the mouse) */
-  var lab = HUB_label(f), kb = touch ? '' : (f===HUB.focus ? 'E' : 'Click'), A = HUB.partyApi, br = (f && f.comp && !f.locked && A && (f===HUB.focus || !touch)) ? (HUB_bringing(f.cls) ? 1 : 2) : 0, key = (f && !hideP && lab) ? kb+'|'+lab+'|'+br : '';
-  if(key!==U.k){ U.k = key; if(key){ U.pill.innerHTML = lab + (br && !touch ? ' <kbd>F</kbd> '+(br===1 ? 'Leave behind' : 'Bring into the arena') : ''); U.kbd.textContent = kb; U.kbd.style.display = touch ? 'none' : ''; U.pillEl.className = 'hbPill' + (f.comp ? ' champ'+(f.locked ? ' locked' : '') : f.D && f.st!=='locked' ? (f.id==='sw' ? ' storm' : ' go') : ''); U.prompt.style.opacity = '1'; } else { U.prompt.style.opacity = '0'; } }
+  var lab = HUB_label(f), kb = touch ? '' : (f===HUB.focus ? kl('KeyE') : 'Click'), A = HUB.partyApi, br = (f && f.comp && !f.locked && A && (f===HUB.focus || !touch)) ? (HUB_bringing(f.cls) ? 1 : 2) : 0, key = (f && !hideP && lab) ? kb+'|'+lab+'|'+br : '';
+  if(key!==U.k){ U.k = key; if(key){ U.pill.innerHTML = lab + (br && !touch ? ' <kbd>'+kl('KeyF')+'</kbd> '+(br===1 ? 'Leave behind' : 'Bring into the arena') : ''); U.kbd.textContent = kb; U.kbd.style.display = touch ? 'none' : ''; U.pillEl.className = 'hbPill' + (f.comp ? ' champ'+(f.locked ? ' locked' : '') : f.D && f.st!=='locked' ? (f.id==='sw' ? ' storm' : ' go') : ''); U.prompt.style.opacity = '1'; } else { U.prompt.style.opacity = '0'; } }
   if(key){ if(U.pk!==key){ U.pk = key; U.pw = U.pillEl.offsetWidth||200; } var hy = HUB_headY(f), pj = HUB_proj2(f.pos[0], hy, f.pos[1]); U.py0 = Math.max(pj.y, f.D ? 190 : 120); HUB_place(U.prompt, U, HUB_cl(pj.x, U.pw/2 + 8, innerWidth - U.pw/2 - 8), U.py0, 'px', 'py'); }
   /* bark bubble on the speaker */
   var b = HUB.bark; if(b && !hide){ if(U.bt!==b.text){ U.bt = b.text; var who = b.who && (b.who.name || (b.who.D && b.who.D.name)) || ''; U.barkT.innerHTML = (who ? '<small>'+who+'</small>' : '')+'“'+b.text+'”'; U.bark.style.opacity = '1'; U.bw = U.barkT.offsetWidth||300; } var w = b.who, by = w.v || w.D ? HUB_headY(w) + (key && f===w ? 0.95 : 0.25) : (w.h||4), pb = HUB_proj2(w.pos[0], by, w.pos[1]); var byy = (key && f===w) ? U.py0 - 38 : Math.max(pb.y, 150); HUB_place(U.bark, U, HUB_cl(pb.x, U.bw/2 + 8, innerWidth - U.bw/2 - 8), byy, 'bx', 'by'); if(b.t < 0.4) U.bark.style.opacity = (b.t/0.4).toFixed(2); }
@@ -13112,7 +13112,7 @@ function HUB_uiFrame(t, dt){ var U = HUB.ui; if(!U) return; var touch = !!G.touc
   var bk = touch && br && !hide ? (br===1 ? 'Leave behind' : 'Bring along') : ''; if(bk!==U.bk){ U.bk = bk; U.bringB.textContent = bk; U.bringB.style.display = bk ? 'flex' : 'none'; }
   var fk = touch && !hide && !$('menu').classList.contains('lbDos') ? 'on' : ''; if(fk!==U.fk){ U.fk = fk; U.fireB.style.display = fk ? 'flex' : 'none'; if(!fk) HUB.fire = false; }
   var wk = touch && HUB.inRange && !hide ? P0.ward : ''; if(wk!==U.wk){ U.wk = wk; U.ward.style.display = wk ? 'flex' : 'none'; if(wk) U.ward.style.setProperty('--wc', ELCSS[wk]); }
-  var rk = HUB.inRange && !hide && !f ? (touch ? 'Tap the ward · mix colours for a reaction' : '<kbd>Q</kbd> switch ward · hold <kbd>click</kbd> to shoot · mix colours for a reaction')
+  var rk = HUB.inRange && !hide && !f ? (touch ? 'Tap the ward · mix colours for a reaction' : '<kbd>'+kl('KeyQ')+'</kbd> switch ward · hold <kbd>click</kbd> to shoot · mix colours for a reaction')
     : (!hide && !f && !HUB_s().shot && !$('menu').classList.contains('lbDos')) ? (touch ? 'Hold <b>Fire</b> to shoot · try the target range →' : 'Hold <kbd>click</kbd> to shoot anywhere · try the target range →') : '';   /* one-time hint until the first shot */ if(rk!==U.rk){ U.rk = rk; U.range.innerHTML = rk; U.range.style.opacity = rk ? '1' : '0'; } }
 function HUB_goalText(){ var g = $('lbGoal'); if(!g) return; var st = HUB.st || HUB_states(), cur = HUB_cur(), B = HUB_BOSS[cur], s = st[cur];
   var html = s==='current' ? '<small>Your trial · round '+B.round+'</small><b>'+B.name+'</b><span>'+B.goal.current+'</span>' : '<small>The Vigil</small><b>The deeper trials</b><span>The ladder goes deeper. Practise in the light, or enter the Pit.</span>';
@@ -13235,7 +13235,7 @@ function HUB_bringToggle(c){ var A = HUB.partyApi; if(!A || !c || !c.comp || c.l
   A.set(L); if(typeof HUB.onPartyChange==='function'){ try{ HUB.onPartyChange(L.slice()); }catch(err){ if(DEV) console.warn(err); } }
   if(SFX.click) SFX.click(); HUB_say(c, on ? 'I\'ll walk in beside you.' : 'I\'ll keep the fire.', 2.6); if(HUB.ui) HUB.ui.k = '-'; return true; }
 /* HUD rects the in-world tags must stay out of (refreshed twice a second) */
-function HUB_hudRects(){ var L = HUB.hud || (HUB.hud = []), sel = ['#menu .lbLogo', '#lbFoot', '#lbPlate', '#lbGo', '#menu .lbHint'], i; L.length = 0;
+function HUB_hudRects(){ var L = HUB.hud || (HUB.hud = []), sel = ['#menu .lbLogo', '#lbFoot', '#lbPlate', '#lbGo', '#menu .lbHint', '#hbKeys'], i; L.length = 0;
   function add(el){ if(!el || el.hidden) return; var r = el.getBoundingClientRect(); if(r.width < 2 || r.height < 2) return; L.push([r.left - 8, r.top - 6, r.right + 8, r.bottom + 6]); }
   for(i=0;i<sel.length;i++) add(document.querySelector(sel[i])); if(typeof DLY_box!=='undefined') add(DLY_box);
   if(HUB.ui && HUB.ui.gk) add(HUB.ui.guideT);
@@ -13274,7 +13274,7 @@ var HUB_render0 = render;
 render = function(dt, alpha){ var set = G.state==='menu' && HUB.built && G.animDt==null; if(set) G.animDt = Math.min(dt, 0.05); try{ return HUB_render0(dt, alpha); } finally { if(set) G.animDt = null; } };
 if(typeof DLY_fit==='function'){ var HUB_dlyFit0 = DLY_fit; DLY_fit = function(){ if(!HUB.built) return HUB_dlyFit0.apply(this, arguments); var B = typeof DLY_box!=='undefined' ? DLY_box : null; if(!B) return; B.classList.add('compact'); B.classList.remove('mini'); B.style.top = ''; B.classList.toggle('open', !!DLY.open); }; }
 if(typeof DT_lobbyGod==='function'){ var HUB_dtGod0 = DT_lobbyGod; DT_lobbyGod = function(t){ if(HUB.built){ if(typeof DT_hintOff==='function') DT_hintOff(); return; } return HUB_dtGod0.apply(this, arguments); }; }
-function HUB_chips(){ var f = $('lbFoot'); if(!f || !LB_HUB) return; var B = f.querySelectorAll('.btn');
+function HUB_chips(){ var f = $('lbFoot'); if(!f || !LB_HUB) return; if(typeof HUI_chips==='function') return HUI_chips(); var B = f.querySelectorAll('.btn');
   for(var i=0;i<B.length;i++){ var b = B[i]; if(b.querySelector('.ci')) continue; var t = (b.textContent||'').trim(), sp = t.indexOf(' ');
     if(sp > 0 && sp <= 3){ b.innerHTML = '<i class="ci">'+t.slice(0, sp)+'</i><span class="cl">'+t.slice(sp + 1)+'</span>'; b.title = t.slice(sp + 1); } } }
 LOBBY_EXTRAS.push(function HUB_extras(){ HUB_goalText(); HUB_chips(); });
@@ -15108,7 +15108,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:35',h:'e9cf955'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:41',h:'6ccccfe'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -15145,12 +15145,12 @@ function VER_obstacles(){ var W = innerWidth, H = innerHeight, out = [], all = d
 function VER_place(){ var W = innerWidth, H = innerHeight; VER_tag.style.left = ''; VER_tag.style.bottom = ''; VER_tag.style.visibility = 'hidden';
   var cs = getComputedStyle(VER_tag), sab = parseFloat(cs.bottom) || 5, sal = parseFloat(cs.left) || 8;   /* the CSS (safe-area) default spot */
   var tw = VER_tag.offsetWidth + 6, th = VER_tag.offsetHeight + 2, obs = VER_obstacles(), ys = [H - sab], xs = [sal];
-  obs.forEach(function(r){ if(r.right + 8 + tw < W) xs.push(Math.ceil(r.right + 8)); if(r.top - 4 > H*0.55) ys.push(Math.floor(r.top - 4)); });
+  obs.forEach(function(r){ if(r.right + 8 + tw < W) xs.push(Math.ceil(r.right + 12)); if(r.top - 8 > H*0.55) ys.push(Math.floor(r.top - 8)); });
   xs.sort(function(a, b){ return a - b; }); ys.sort(function(a, b){ return b - a; });
   ys = ys.filter(function(v, i){ return i===0 || v!==ys[i-1]; }).slice(0, 24);
   for(var yi=0; yi<ys.length; yi++) for(var xi=0; xi<xs.length; xi++){ var x = xs[xi], yb = ys[yi];
     if(x > W*0.5) break;   /* stay on the left half */
-    var hit = false; for(var o=0;o<obs.length && !hit;o++){ var r = obs[o]; hit = x - 3 < r.right && r.left < x + tw && yb - th < r.bottom && r.top < yb + 2; }
+    var hit = false; for(var o=0;o<obs.length && !hit;o++){ var r = obs[o]; hit = x - 8 < r.right && r.left < x + tw + 6 && yb - th - 6 < r.bottom && r.top < yb + 6; }
     if(!hit){ VER_tag.style.left = x + 'px'; VER_tag.style.bottom = (H - yb) + 'px'; VER_tag.style.visibility = ''; return true; } }
   return false; }
 function VER_sync(){ var s = VER_show();
@@ -15303,6 +15303,134 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.loadout = { LO:LO, p
   open:function(kind){ if(P && !P.LO && G.state==='play') LO_applyAll(kind!=='act'); return LO_open(kind); }, fight:function(){ LO_fight(); return G.state+(G.paused ? '/paused' : ''); },
   pick:function(i, what, v){ LO_set(i, what, v); return LO.heroes[i] && LO.heroes[i].k; },
   state:function(){ return {on:LO.on, kind:LO.kind, auto:LO.auto, firstSkip:LO.firstSkip, heroes:LO_list().map(function(x){ return {cls:x.st.cls, lo:x.st.LO || null, aff:x.st.LO_aff || null, skills:LO_skills(x.st.cls).map(function(q){ return q.id; }), spells:(x.st.spells||[]).filter(function(q){ return q; }).map(function(q){ return q.id+q.lv; })}; }), save:JSON.parse(JSON.stringify(LO_s()))}; } }; }
+/* ---------- 69 hub UI readability (owned by the hub-UI agent). Prefix HUI_. ----------
+   The Vigil overlay in the "Pit Ledger" style: #lbFoot chips become solid dark-iron buttons (icon + label, hover / focus / active),
+   the Glory pill is a plain stat readout, test tools (Pages / dev only) sit in a small secondary "Testing" row,
+   and the old one-line key hint becomes a grouped controls legend (#hbKeys) on a backing plate, placed between the champion plate
+   and Enter the Pit (or above the plate when the band is too narrow), context-aware (Interact / Bring only with a focus),
+   touch hints on touch, collapsible (auto-collapsed after a few visits; save.hub.keys remembers the player's choice).
+   Key labels go through kl() so AZERTY shows ZQSD. Nothing here touches Escape. */
+if(KL && !KL.KeyF) KL.KeyF = 'F';
+var HUI = {el:null, sig:'', t:0, vis:false, col:false, counted:false};
+var HUI_IC = {
+  relicBtn:'<path d="M4 9h11l3-3h2v4h-3l-2 2v2h2v3H7v-3h2v-2L4 11z"/>',
+  codexBtn:'<path d="M5 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5zM19 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+  setBtn:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+  howBtn:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.6V14"/><path d="M12 17.2v.3"/>',
+  wpBtn:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/>' };
+var HUI_TEST = ['wpBtn', 'bossBtn', 'a2TrialBtn', 'swTrialBtn'];
+function HUI_svg(id){ var p = HUI_IC[id]; return p ? '<svg class="hi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>' : ''; }
+(function(){ var st = document.createElement('style'); st.id = 'hbuiCss'; st.textContent = [
+/* chip row: solid plates, bronze edge, legible bone text (>= 11px), icon + label */
+'#menu.lobby.hub .lbFoot{gap:6px;row-gap:6px;align-items:stretch}',
+'#menu.lobby.hub .lbFoot .btn{--ch:5px;order:0;display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 13px 0 10px;font:600 11.5px/1 Rubik,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#f0e4d4;cursor:pointer;',
+'  background:linear-gradient(180deg,rgba(255,236,210,.06),transparent 45%),linear-gradient(180deg,#2c2124,#191315);box-shadow:inset 0 0 0 1px #9a7448,inset 0 0 0 2px rgba(0,0,0,.55),inset 0 -10px 16px rgba(0,0,0,.35);text-shadow:0 1px 1px #000;filter:none;transition:background .12s,box-shadow .12s,color .12s}',
+'#menu.lobby.hub .lbFoot .btn .hi{flex:none;width:16px;height:16px;color:#f0b878}',
+'#menu.lobby.hub .lbFoot .btn .ci{font-style:normal;font-size:13px;color:#f0b878}',
+'#menu.lobby.hub .lbFoot .btn:hover{color:#fff6ea;filter:none;background:linear-gradient(180deg,rgba(255,170,100,.12),transparent 55%),linear-gradient(180deg,#3d2a22,#211715);box-shadow:inset 0 0 0 1px #ff8a3d,inset 0 0 0 2px rgba(0,0,0,.5),inset 0 0 16px rgba(255,122,46,.18)}',
+'#menu.lobby.hub .lbFoot .btn:active{background:linear-gradient(180deg,#1a1213,#241a17);transform:translateY(1px)}',
+'#menu.lobby.hub .lbFoot .btn:focus{outline:none}',
+'#menu.lobby.hub .lbFoot .btn:focus-visible{color:#fff6ea;box-shadow:inset 0 0 0 2px #ffd08a,inset 0 0 0 4px rgba(0,0,0,.6),inset 0 0 18px rgba(255,180,90,.28)}',
+/* Glory: a stat readout, not a button */
+'#menu.lobby.hub .lbFoot .pill{order:-1;--ch:0px;min-height:36px;padding:0 12px;gap:7px;cursor:default;background:linear-gradient(90deg,rgba(10,7,8,.92),rgba(16,12,10,.86));box-shadow:inset 2px 0 0 #e2b46a,inset 0 0 0 1px rgba(120,96,64,.45)}',
+'#menu.lobby.hub .lbFoot .pill b{font-size:15px;color:#ffdca0;text-shadow:0 1px 2px #000}#menu.lobby.hub .lbFoot .pill small{font-size:10px;color:#d9bf94}',
+'#menu.lobby.hub .lbFoot .pill em{font-size:10px;color:#c9b8a4;border-left-color:#4a3a30}',
+/* testing tools: own row, small, dashed, visibly secondary */
+'#hbTest{order:9;flex-basis:100%;display:flex;justify-content:flex-end;align-items:center;gap:5px}',
+'#hbTest>span{font:700 9.5px/1 Rubik,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#c9b8a4;padding:5px 7px;background:rgba(10,7,8,.85);text-shadow:0 1px 1px #000}',
+'#menu.lobby.hub #hbTest .btn{min-height:28px;padding:0 9px 0 7px;font-size:10px;letter-spacing:.1em;color:#ddd0c0;background:#141012;box-shadow:inset 0 0 0 1px #6d625b}',
+'#menu.lobby.hub #hbTest .btn .hi{width:13px;height:13px;color:#b9a68e}',
+'#swTrialBtn{display:none!important}',   /* test-only (TEST_BOSS): the wave picker covers wave 20; hidden everywhere, as build.py intended for Pages */
+/* trial block: readable backing over the 3D */
+'#menu.lobby.hub .lbGoal{padding:8px 13px 9px 12px;max-width:330px;background:linear-gradient(90deg,rgba(11,8,9,.9),rgba(11,8,9,.74));box-shadow:inset 0 0 0 1px rgba(110,84,60,.35);text-shadow:0 1px 2px #000}',
+'#menu.lobby.hub .lbGoal small{font-size:10px;color:#ffa060}#menu.lobby.hub .lbGoal span{color:#ddd0bf;font-size:clamp(11.5px,1.6vh,13px)}',
+/* old hint line replaced by the legend */
+'#menu.lobby.hub .lbHint{display:none!important}',
+/* controls legend */
+'#hbKeys{position:absolute;left:0;top:0;display:none;align-items:center;flex-wrap:wrap;gap:4px 0;padding:5px 6px;max-width:calc(100vw - 24px);z-index:2;pointer-events:none;',
+'  background:linear-gradient(180deg,rgba(28,21,23,.94),rgba(14,10,11,.94));box-shadow:inset 0 0 0 1px #5a4434,0 4px 14px rgba(0,0,0,.45);font:600 11px/1 Rubik,sans-serif;color:#eadfd2;text-transform:uppercase;letter-spacing:.1em}',
+'#hbKeys.on{display:flex}',
+'#hbKeys .g{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;white-space:nowrap;border-left:1px solid rgba(160,130,100,.25)}',
+'#hbKeys .g:first-of-type{border-left:0}',
+'#hbKeys .g.ctx i{color:#ffcf8a}',
+'#hbKeys i{font-style:normal;color:#eadfd2}',
+'#menu.lobby.hub #hbKeys kbd{min-width:20px;padding:3px 5px;font:700 10.5px/1 Rubik,sans-serif;letter-spacing:.06em;color:#1a1214;background:#eadfd2;box-shadow:0 2px 0 #7d7064}',
+'#hbKeys .tch{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;font:700 10px/1 Rubik,sans-serif;color:#1a1214;background:#ffcf8a}',
+'#hbKeysT{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 9px;border:0;font:700 10px/1 Rubik,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#d9c9b4;background:#141012;box-shadow:inset 0 0 0 1px #6d625b;cursor:pointer;pointer-events:auto}',
+'#hbKeysT:hover{color:#fff6ea;box-shadow:inset 0 0 0 1px #ff8a3d}#hbKeysT:focus{outline:none}#hbKeysT:focus-visible{box-shadow:inset 0 0 0 2px #ffd08a;color:#fff6ea}',
+'#hbKeysT b{font-weight:700;font-size:12px;line-height:1;transition:transform .15s}#hbKeys.col #hbKeysT b{transform:rotate(180deg)}',
+'#hbKeys.col{padding:0;background:none;box-shadow:none}#hbKeys.col .g{display:none}',
+'#menu.lobby.hub.lbOut #hbKeys,#menu.lobby.hub.lbDos #hbKeys{opacity:0;pointer-events:none}#menu.lobby.hub.lbDos #hbKeysT{pointer-events:none}',
+'@media (max-height:500px){#hbKeys{font-size:10px}#hbKeys .g{padding:2px 7px}}'
+].join('\n'); document.head.appendChild(st); })();
+
+/* chips: icon + label, test tools into their own row (idempotent; runs after 31-relics rewrites the Armoury text each render) */
+function HUI_chips(){ var f = $('lbFoot'); if(!f || !LB_HUB) return;
+  var T = $('hbTest'), any = false; HUI_TEST.forEach(function(id){ var b = $(id); if(b) any = true; });
+  if(any && !T){ T = document.createElement('div'); T.id = 'hbTest'; T.className = 'pe'; T.setAttribute('role', 'group'); T.setAttribute('aria-label', 'Testing tools'); T.innerHTML = '<span>Testing</span>'; f.appendChild(T); }
+  if(T){ HUI_TEST.forEach(function(id){ var b = $(id); if(b && b.parentNode!==T) T.appendChild(b); }); if(T.parentNode!==f || f.lastChild!==T) f.appendChild(T); }
+  var B = f.querySelectorAll('.btn');
+  for(var i=0;i<B.length;i++){ var b = B[i]; if(b.querySelector('.cl')) continue; var t = (b.textContent||'').trim(), sp = t.indexOf(' '), lab = t, gl = '';
+    if(sp > 0 && sp <= 3){ gl = t.slice(0, sp); lab = t.slice(sp + 1); }
+    var ic = HUI_svg(b.id) || (gl ? '<i class="ci" aria-hidden="true">'+gl+'</i>' : '');
+    b.innerHTML = ic+'<span class="cl">'+lab+'</span>'; b.title = lab; b.setAttribute('aria-label', lab); if(!b.type) b.type = 'button'; } }
+
+/* ---------- controls legend ---------- */
+function HUI_build(){ if(HUI.el) return HUI.el; var m = $('menu'); if(!m) return null; var d = document.createElement('div'); d.id = 'hbKeys'; d.setAttribute('role', 'group'); d.setAttribute('aria-label', 'Controls');
+  d.innerHTML = '<button type="button" id="hbKeysT" aria-expanded="true" title="Show or hide the controls">Controls <b>‹</b></button><span class="gs" style="display:contents"></span>';
+  m.appendChild(d); HUI.el = d;
+  d.querySelector('#hbKeysT').addEventListener('click', function(e){ e.stopPropagation(); audioInit(); if(SFX.click) SFX.click(); HUI.col = !HUI.col; var s = HUB_s(); s.keys = HUI.col ? 0 : 1; persist(); HUI.sig = ''; HUI_sync(true); });
+  d.querySelector('#hbKeysT').addEventListener('mousedown', function(e){ e.stopPropagation(); });
+  return d; }
+function HUI_g(keys, verb, ctx){ return '<span class="g'+(ctx ? ' ctx' : '')+'">'+keys+'<i>'+verb+'</i></span>'; }
+function HUI_k(code, txt){ return '<kbd'+(code ? ' data-key="'+code+'"' : '')+'>'+(txt || kl(code))+'</kbd>'; }
+function HUI_items(){ var touch = !!G.touch, f = HUB.focus || (!touch && HUB.hover) || null, A = HUB.partyApi, h = '';
+  var swapOK = HUB.comp && HUB.comp.length, bring = !!(f && f.comp && !f.locked && A);
+  if(touch){ h += HUI_g('<span class="tch">Drag</span>', 'Move');
+    h += HUI_g('<span class="tch">Hold Fire</span>', 'Shoot');
+    if(f) h += HUI_g('<span class="tch">Tap</span>', f.comp ? (f.locked ? 'Unlock' : 'Swap') : 'Interact', true);
+    else if(swapOK) h += HUI_g('<span class="tch">Tap</span>', 'A champion to swap');
+    return h; }
+  h += HUI_g(HUI_k(0, kl('KeyW')+kl('KeyA')+kl('KeyS')+kl('KeyD')), 'Move');
+  if(f && f===HUB.focus) h += HUI_g(HUI_k('KeyE'), f.comp ? (f.locked ? 'Unlock' : 'Swap') : 'Interact', true);
+  h += HUI_g(HUI_k(0, 'Click'), 'Shoot');
+  if(swapOK && !(f && f.comp)) h += HUI_g(HUI_k(0, 'Click'), 'Champion: swap');
+  if(bring) h += HUI_g(HUI_k('KeyF'), HUB_bringing(f.cls) ? 'Leave behind' : 'Bring', true);
+  h += HUI_g(HUI_k(0, 'Enter'), 'Enter the Pit');
+  return h; }
+function HUI_vis(r){ return r && r.width > 1 && r.height > 1; }
+function HUI_rect(el){ if(!el || el.hidden) return null; var cs = getComputedStyle(el); if(cs.display==='none' || cs.visibility==='hidden' || +cs.opacity===0) return null; var r = el.getBoundingClientRect(); return HUI_vis(r) ? r : null; }
+/* place: centred in the band between the champion plate and Enter the Pit; else just above the plate, wrapping short of the right-hand buttons */
+function HUI_place(){ var d = HUI.el; if(!d) return; var W = innerWidth, H = innerHeight, P = HUI_rect($('lbPlate')), Go = HUI_rect($('lbGo'));
+  d.style.maxWidth = ''; d.style.left = '0px'; d.style.top = '0px';
+  var w = d.offsetWidth, h = d.offsetHeight, gap = 12, x, y, sal = 12;
+  if(!P || !Go){ x = (W - w)/2; y = H - h - 16; }
+  else { var l0 = P.right + gap, r0 = Go.left - gap;
+    if(Go.top > P.top - 4 && w <= r0 - l0){ x = Math.round(l0 + (r0 - l0 - w)/2); y = Math.round(Math.max(P.bottom, Go.bottom) - h - Math.max(0, (Math.min(P.height, Go.height) - h)/2)); }
+    else { var lim = W - sal, obs = [Go, HUI_rect($('ptyGoTag')), HUI_rect(document.querySelector('.hbFire')), HUI_rect(document.querySelector('.hbAct')), HUI_rect(document.querySelector('.hbBring'))];
+      x = Math.round(P.left);
+      for(var pass=0; pass<2; pass++){ var yb = P.top - 8, yt = yb - h;
+        lim = W - sal; for(var i=0;i<obs.length;i++){ var o = obs[i]; if(o && o.top < yb && o.bottom > yt && o.left > x) lim = Math.min(lim, o.left - gap); }
+        d.style.maxWidth = Math.max(120, lim - x)+'px'; h = d.offsetHeight; }
+      y = Math.round(P.top - 8 - h); } }
+  d.style.left = x+'px'; d.style.top = y+'px';
+  /* the one-time shooting hint (.hbRange) goes just above the legend when they would meet */
+  var rg = HUB.ui && HUB.ui.range; if(rg){ rg.style.bottom = ''; var rr = rg.getBoundingClientRect(), lr = d.getBoundingClientRect();
+    if(rr.left < lr.right && lr.left < rr.right && rr.bottom > lr.top - 6) rg.style.bottom = Math.round(H - lr.top + 8)+'px'; } }
+function HUI_show(){ return LB_HUB && HUB.built && G.state==='menu' && !$('menu').hidden; }
+function HUI_sync(force){ var s = HUI_show(), d = HUI_build(); if(!d) return;
+  if(!s){ if(HUI.vis){ HUI.vis = false; d.classList.remove('on'); } return; }
+  if(!HUI.counted){ HUI.counted = true; var hs = HUB_s(); hs.kv = (hs.kv|0) + 1; persist(); HUI.col = hs.keys===0 || (hs.keys!==1 && hs.kv > 5); }
+  var items = HUI.col ? '' : HUI_items(), sig = (HUI.col ? 'c' : 'o')+'|'+items+'|'+innerWidth+'x'+innerHeight;
+  if(!HUI.vis){ HUI.vis = true; d.classList.add('on'); force = true; }
+  if(sig!==HUI.sig){ HUI.sig = sig; d.querySelector('.gs').innerHTML = items; d.classList.toggle('col', HUI.col);
+    var t = d.querySelector('#hbKeysT'); t.setAttribute('aria-expanded', HUI.col ? 'false' : 'true'); force = true; }
+  if(force) HUI_place(); }
+RENDER_HOOKS.push(function(t, dt){ HUI.t -= (dt || 0.016); if(HUI.t > 0) return; HUI.t = 0.2; HUI_sync(false); HUI_place(); });
+window.addEventListener('resize', function(){ HUI.sig = ''; HUI.t = 0; });
+LOBBY_EXTRAS.push(function HUI_extras(){ HUI_chips(); HUI.sig = ''; });
+HUI_chips();
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.hubui = {HUI:HUI, sync:function(){ HUI.sig = ''; HUI_sync(true); return HUI.el && HUI.el.getBoundingClientRect(); }, collapse:function(on){ HUI.col = !!on; HUI.sig = ''; HUI_sync(true); }}; }
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
