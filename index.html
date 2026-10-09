@@ -8718,10 +8718,10 @@ function A2_safeSpot(x, z){ var r = Math.hypot(x, z)||0.01, ux = x/r, uz = z/r, 
   if(s && s.st!=='solid') tr = Math.min(tr, A2_inR()-0.9); return {x:ux*tr, z:uz*tr}; }
 function A2_playerFall(){ if(A2.pf || !P || P.dead) return; P.dashT = 0; P.vx = P.vz = 0; P.stun = Math.max(P.stun, 0.6); P.inv = Math.max(P.inv, 1.6);
   A2.pf = {t:0, x:P.x, z:P.z}; var dmg = Math.max(1, Math.round(P.maxHp*A2_FALL_HP));
-  burst(P.x, 0.6, P.z, 26, 0xdfe8ff, 7, 0.6, 1.3); for(var k=0;k<14;k++) glowP.emit(P.x+rnd(-0.6,0.6), rnd(-1,1), P.z+rnd(-0.6,0.6), rnd(-1,1), rnd(-6,-2), rnd(-1,1), 0.6, 1.0, 0xdfe8ff, 0, 1);
+  burst(P.x, 0.6, P.z, 26, 0x8aa6ff, 7, 0.6, 1.3); for(var k=0;k<14;k++) glowP.emit(P.x+rnd(-0.6,0.6), rnd(-1,1), P.z+rnd(-0.6,0.6), rnd(-1,1), rnd(-6,-2), rnd(-1,1), 0.6, 1.0, 0x8aa6ff, 0, 1);
   SFX.zap(); tone(900, 0.5, 'sine', 0.08, 200); shake(0.5); A2_call('crowd', 'gasp'); A2.streak = 0;
-  if(!G.god){ P.hp -= dmg; P.flawless = false; P.hurtT = 0.3; dmgText(P.x, 1.9, P.z, '-'+dmg, '#ffffff', 20); if(P.hp<=0){ P.hp = 0; A2.pf = null; playerDie('fell'); return; } }
-  dmgText(P.x, 2.8, P.z, 'CAUGHT BY THE STORM', '#dfe8ff', 18); after(0.4, function(){ A2_hint('a2_fall'); }); }
+  /* owner 2026-10-10: being thrown to the edge costs no HP (only the short catch and reset) */
+  dmgText(P.x, 2.8, P.z, 'CAUGHT BY THE STORM', '#a8bcff', 18); after(0.4, function(){ A2_hint('a2_fall'); }); }
 function A2_stepFall(dt){ var F = A2.pf; if(!F) return; F.t += dt; P.x = P.px = F.x; P.z = P.pz = F.z; P.vx = P.vz = 0;
   if(Math.random()<dt*40){ var a = Math.random()*TAU; glowP.emit(F.x+Math.cos(a)*0.9, rnd(0.2,1.8), F.z+Math.sin(a)*0.9, -Math.sin(a)*3, 1, Math.cos(a)*3, 0.35, 0.9, 0xdfe8ff, 0, 1); }
   if(F.t>=0.6){ var o = A2_safeSpot(F.x, F.z); zapLine([{x:F.x, z:F.z}, {x:o.x, z:o.z}]); P.x = P.px = o.x; P.z = P.pz = o.z; P.inv = 1.0; A2.pf = null;
@@ -14181,7 +14181,7 @@ function PTY_a2Ally(h, dt, ctl){ var st = h.st, c = ctl.st;
     if(typeof SW!=='undefined' && SW && SW.on && G.waveActive && P.dashT<=0){ var T = SW.tilt, gl = SW.gale; if(T && T.on){ P.x += T.dx*SW_HEAVE*dt; P.z += T.dz*SW_HEAVE*dt; } // Heave and Gale Breath push allies too
       if(gl){ var gx = P.x-gl.x, gz = P.z-gl.z, gd = Math.hypot(gx, gz); if(gd < 14 && gd > 0.5 && Math.abs(angDiff(Math.atan2(gx, gz), gl.ang)) < 25*Math.PI/180 && !losBlocked(gl.x, gl.z, P.x, P.z)){ P.x += gl.dx*SW_GALE*dt; P.z += gl.dz*SW_GALE*dt; } } }
     if(!P.dead && typeof A2_unsafe==='function' && A2_unsafe(P.x, P.z)){ burst(P.x,0.5,P.z,14,0xc27cff,5,0.4,1); P.x = P.px = c.x + (h.i===1 ? 1.1 : -1.1); P.z = P.pz = c.z + 0.9; if(A2_unsafe(P.x, P.z)){ P.x = P.px = c.x; P.z = P.pz = c.z; }
-      P.hp = Math.max(1, P.hp - P.maxHp*0.1); dmgText(P.x, 2.2, P.z, 'PULLED BACK', '#d9b8ff', 14); } }); PTY_leap(h, dt); }
+      dmgText(P.x, 2.2, P.z, 'PULLED BACK', '#d9b8ff', 14); } }); PTY_leap(h, dt); }
 
 /* Act II entry (ascent, wave picker ≥11, start-at-11): allies carry over with HP, spells and gear; downed / bled-out allies come back at 30%;
    everyone stands on the Spire platform beside the controlled hero; the arena scale is re-applied (A2_enterAct recomputes mods). */
@@ -15134,7 +15134,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:55',h:'f789d13'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:57',h:'608d34e'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
