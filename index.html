@@ -14692,7 +14692,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hit = {
    Party runs are Act I only. The Daily seeds its own party size (50% solo / 25% pair / 25% trio) and lends locked heroes. Solo (size 1) plays as without this file. */
 var PARTY = {max:3, CLS:['mage','blade','archer'], _subs:[],
   /* tuning (design/PARTY.md); every party number lives here */
-  glory:[1, 0.4, 0.28], maxAlive:[1, 1.25, 1.55], quota:[1, 1.2, 1.45], boltCap:[1, 1.15, 1.25], bossHp:[1, 2.0, 2.8],
+  glory:[1, 0.4, 0.28], maxAlive:[1, 1.25, 1.55], quota:[1, 1.2, 1.45], boltCap:[1, 1.15, 1.25], bossHp:[1, 1, 1],   /* bossHp: boss fights are solo duels (84-duel.js), so bosses keep solo HP in every party size */
   swapCd:1.0, swapInv:0.4, glideT:0.25, holdT:1.0, pitCd:8, sinCd:8, perfectT:0.2, anchorR:4, anchorMul:0.8, catchR:2.6, catchCd:0.6, volleyN:4, tauntedMul:1.2, mageHeal:2, novaHeal:0.2, flareHeal:0.08, rainN:7, rainSlow:1.5, pitTaunt:3, pitR:6, pitLeap:6,
   aiDmg:[1, 0.8, 0.7], aiTaken:0.7, aiCastT:0.5, roleCd:10, roleFirst:4, aiDashP:0.6, aiOver:0.5, aiDecide:0.2, aiReact:[0.25, 0.4], leash:9, rallyLeash:3.5,
   bladeThreat:3, meleePull:1, rangedPull:0.3, aiBias:1.2, repick:1.2, hyst:2, ctlShare:0.6, tauntU:8,
@@ -14866,7 +14866,7 @@ startWave = function(n){ var r = PTY_sw0.apply(this, arguments); if(!PTY.on) ret
   for(var i=0;i<HEROES.length;i++){ var st = HEROES[i].st; if(st.out) PTY_revive(HEROES[i], PARTY.returnHp, true); if(HEROES[i]!==PTY.ctl){ st.guard = st.guardMax; st.flawless = true; } }
   return r; };
 var PTY_sb0 = spawnBoss;
-spawnBoss = function(){ var b = PTY_sb0.apply(this, arguments); if(PTY.on && b){ var k = PTY_f(PARTY.bossHp); b.hp *= k; b.maxHp *= k; } return b; };
+spawnBoss = function(){ return PTY_sb0.apply(this, arguments); };   /* no party boss HP: bosses are solo duels (84-duel.js) */
 
 /* ---- shared ward: 1/2/3 apply to every hero (AI allies absorb with it; SAVED/primes/Tide-Turn stay with the controlled hero) ---- */
 function PTY_syncWard(h, el, silent){ var st = h.st; if(st.ward===el) return; if(!silent){ st.prevWard = st.ward; st.prevT = CMB.glow + (st.afterglow||0); } st.ward = el;
@@ -15207,12 +15207,16 @@ function PTY_codex(){ var p = typeof CX_p==='function' ? CX_p : function(s){ ret
   return [
     {id:'pty_size', g:'shield', cat:'Party', name:'Alone, Pair, Familia', sub:'More heroes, less Glory', known:true, body:function(){
       return p('At the campfire, press F beside a companion to bring them into the arena. Every hero stands in the fight as a body of their own: you control one, the others fight on their own.')+
-        tb([1,2,3].map(function(n){ return [PARTY.label(n), 'Glory ×'+PARTY.glory[n-1]+(n>1 ? ' · foes ×'+PARTY.maxAlive[n-1]+' · boss HP ×'+PARTY.bossHp[n-1] : ' · the prestige path')]; }))+
+        tb([1,2,3].map(function(n){ return [PARTY.label(n), 'Glory ×'+PARTY.glory[n-1]+(n>1 ? ' · foes ×'+PARTY.maxAlive[n-1]+' · bosses are duels' : ' · the prestige path')]; }))+
         tb([1,2,3].map(function(n){ return ['Best · '+PARTY.label(n), (PTY_bestFor(n) ? 'Round '+PTY_bestFor(n) : '–')+' · title '+PTY_TITLES[n-1]+(T[n] ? ' (earned)' : '')]; }))+
         tip('Beat the Pitmaster at a party size to earn its title.'); }},
     {id:'pty_swap', g:'dash', cat:'Party', name:'Swapping', sub:tab+' to take another hero', known:true, body:function(){
       return p((G.touch ? 'Tap a portrait' : 'Press <b>Tab</b> or click a portrait')+' to take control of another hero. One second between swaps; you arrive untouchable for 0.4 s.')+
         tb([['Perfect Swap', 'Swap just before a hit you cannot absorb: the hero you leave dodges it'], ['Press / Rally', (G.touch ? 'The button' : 'G')+' sends allies at foes or calls them to your side'], ['Shared ward', '1 / 2 / 3 set the ward for the whole party']]); }},
+    {id:'pty_duel', g:'boss', cat:'Party', name:'Boss duels', sub:'One champion, the rest in the stands', known:true, body:function(){
+      return p('Bosses are duels: pick your champion; the rest watch from the stands and can swap in. The boss asks who dares, and you pick one hero. The others wait on the Champions\' Ledge, out of reach, and slowly recover HP there (1% per second).')+
+        tb([['Swap in', (G.touch ? 'Tap a portrait' : 'Tab or a portrait')+': the hero from the stands lands on your spot (3 s cooldown)'], ['Who\'s next?', 'If your champion falls, pick the next one. The boss keeps the damage he took'], ['Boss HP', 'Solo HP and solo mechanics at every party size'], ['Glory', 'The party factor still applies']])+
+        tip('A fallen champion cannot return that fight. Lose every hero and the run ends.'); }},
     {id:'pty_roles', g:'over', cat:'Party', name:'Roles', sub:'Anchor, volley, catalyst', known:true, body:function(){
       return tb([['Ward Blade · anchor', 'Draws melee foes. Allies within 4 u take −20%. Catches matching bolts aimed at a nearby ally. Whirlwind taunts.'],
         ['Storm Archer · volley', 'Every 4th shot is a 3-arrow volley. +20% against taunted foes.'], ['Ember Mage · catalyst', 'Absorbs mend allies. Revives faster. Inferno Nova heals and revives the party.']]); }},
@@ -16304,7 +16308,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 15:40',h:'aac4b9f'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 16:25',h:'f64aa85'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -18108,7 +18112,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.act3 = { A3:A3, PLAN
    follows the UI scale --uiM). Acts II/III keep the short #tutBox page (also zoomed by --uiM).
    Save: save.tut = {a1, a2, a3} (1 = seen). The key is predeclared here, before loadSave runs, so it survives loadSave.
    The briefing replaces the pre-run auto-open of the field manual (save.hints.howto is set while a1 is unseen); How to play stays in the camp.
-   Every party number is read from PARTY (60-party.js): PARTY.glory, PARTY.bossHp, PARTY.label, PARTY.swapCd.
+   Every party number is read from PARTY (60-party.js): PARTY.glory, PARTY.label, PARTY.swapCd. Bosses are duels (84-duel.js).
    Wraps (each calls the original): loadSave. Hooks: RENDER_HOOKS (detects arena entry), ESC.register('tutorial'), a capture-phase keydown.
    The How-to Party card (built in 60-party.js) gets its text/keys refreshed here. DEV: window.__feat.tut / window.__TUT_OFF = true for bots. */
 var TUT = {open:false, act:0, since:0, el:null, mode:''};
@@ -18176,11 +18180,12 @@ function TUT_partyHtml(){ if(typeof PARTY==='undefined') return ''; var T = G.to
   ['blade','mage','archer'].forEach(function(c){ if(order.indexOf(c) < 0) order.push(c); });
   var tiles = [1,2,3].map(function(n){ var lock = n===3 && !(save.cls && save.cls.archer), ic = order.slice(0, n).map(function(c){ return CLASSES[c] ? CLASSES[c].icon : ''; }).join('');
     return '<div class="tT'+(n===n0 ? ' on' : '')+(lock ? ' lock' : '')+'">'+(n===n0 ? '<em>This run</em>' : '')+'<div class="hs">'+ic+'</div><div class="nm">'+PARTY.label(n)+'</div>'+
-      '<div class="v">Glory <b>'+TUT_x(PARTY.glory[n-1])+'</b><br>Boss HP <i>'+TUT_x(PARTY.bossHp[n-1])+'</i>'+(lock ? '<br>Needs the Archer' : n===1 ? '<br>Prestige path' : '')+'</div></div>'; }).join('');
+      '<div class="v">Glory <b>'+TUT_x(PARTY.glory[n-1])+'</b><br>Bosses <i>'+(n>1 ? 'duel' : 'solo')+'</i>'+(lock ? '<br>Needs the Archer' : n===1 ? '<br>Prestige path' : '')+'</div></div>'; }).join('');
   return '<div class="tSec">Party size</div><div class="tPt">'+tiles+'</div>'+
     TUT_r(T ? TUT_ic(ICON('tap')) : TUT_k('Tab'), (T ? '<b>Tap a portrait</b>' : '<b>Tab</b> or <b>click a portrait</b>')+' to swap the hero you control ('+PARTY.swapCd+' s cooldown).')+
     TUT_r(TUT_ic(ICON('shield')), '<b>Allies are AI</b> and fight on their own.'+(T ? '' : ' '+TUT_k(kl('KeyG'))+' sends them in or calls them back.'))+
-    TUT_r(TUT_ic(ICON('glory')), 'More heroes: <b>less Glory</b>, and bosses get <b>more HP</b>, hunt your top damage dealer and Brand heroes.')+
+    TUT_r(TUT_ic(ICON('glory')), 'More heroes: <b>less Glory</b>, but more champions for the bosses.')+
+    TUT_r(TUT_ic(ICON('helm')), '<b>Bosses are duels</b>: pick your champion; the rest watch from the stands and can swap in'+(T ? '' : ' ('+TUT_k('Tab')+')')+'. If your champion falls, the next one steps in.')+
     TUT_r(TUT_ic(ICON('campfire')), T ? 'Pick your party at the campfire: tap <b>Bring</b> beside a companion.' : 'Pick your party at the campfire: '+TUT_k(kl('KeyF'))+' beside a companion.'); }
 function TUT_page(act){ var T = G.touch;
   if(act===2) return {kick:'Act II · first ascent', title:'The Storm Spire', note:'Each new hazard gets its own hint the first time.', body:
@@ -18242,13 +18247,13 @@ window.addEventListener('keydown', function(e){ if(!TUT.open) return; if(e.key==
   else if(e.code==='Tab') e.preventDefault(); }, true);
 if(typeof ESC!=='undefined') ESC.register('tutorial', function(){ return TUT.open; }, function(){ TUT_close(); }, 90);
 
-/* ---------- How to play: the Party card (built in 60-party.js) explains sizes, swapping, AI allies, Glory and boss HP ---------- */
+/* ---------- How to play: the Party card (built in 60-party.js) explains sizes, swapping, AI allies, Glory and boss duels ---------- */
 if(typeof HX_CARDS!=='undefined' && typeof PARTY!=='undefined') HX_CARDS.forEach(function(c){ if(c.id!=='party') return;
   c.title = 'Alone, Pair or Familia';
-  c.text = function(){ return 'You control <b>one hero</b>; the others are <b>AI allies</b>. '+(G.touch ? '<b>Tap a portrait</b>' : 'Press <b>Tab</b> or click a portrait')+' to swap. More heroes, <b>less Glory</b> and <b>tougher bosses</b>. Solo is the prestige path.'; };
-  c.keys = function(){ var g = PARTY.glory.map(function(v){ return TUT_x(v).slice(1); }).join(' / '), h = PARTY.bossHp.map(function(v){ return TUT_x(v).slice(1); }).join(' / ');
+  c.text = function(){ return 'You control <b>one hero</b>; the others are <b>AI allies</b>. '+(G.touch ? '<b>Tap a portrait</b>' : 'Press <b>Tab</b> or click a portrait')+' to swap. More heroes, <b>less Glory</b>. <b>Bosses are duels</b>: pick your champion; the rest watch from the stands and can swap in. Solo is the prestige path.'; };
+  c.keys = function(){ var g = PARTY.glory.map(function(v){ return TUT_x(v).slice(1); }).join(' / ');
     return (G.touch ? '' : HX_krow(HX_kc('Tab', true), 'Swap hero')+HX_krow(HX_kc(kl('KeyF')), 'Bring a companion (campfire)')+HX_krow(HX_kc(kl('KeyG')), 'Allies: Press / Rally'))+
-      HX_krow(HX_kc('⚜'), 'Glory ×'+g)+HX_krow(HX_kc('☠'), 'Boss HP ×'+h); }; });
+      HX_krow(HX_kc('⚜'), 'Glory ×'+g)+HX_krow(HX_kc('☠'), 'Bosses: duel, one champion'); }; });
 
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.tut = {TUT:TUT, show:function(a){ return TUT_show(a||1); }, close:function(){ TUT_close(); return TUT.open; },
   seen:function(){ return JSON.parse(JSON.stringify(TUT_s())); }, reset:function(){ save.tut = {}; persist(); return save.tut; }, off:function(v){ window.__TUT_OFF = v!==false; return window.__TUT_OFF; } }; }
@@ -18954,6 +18959,9 @@ var PH = {el:null, top:null, mode:null, row:null, ps:[], sig:'', fitT:0, lay:'',
 var PH_ICON = {mage:ICON('mage'), blade:ICON('blade'), archer:ICON('archer')};
 function PH_svg(cls){ var I = (typeof LB_INFO!=='undefined' && LB_INFO[cls]) ? LB_INFO[cls].svg : '';
   return I ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+I+'</svg>' : '<b class="PH_gl">'+(PH_ICON[cls]||'?')+'</b>'; }
+/* boss duels (84-duel.js): the plates show the whole roster; benched heroes read STANDS, a click/Tab swaps them in */
+function PH_list(){ return (typeof DU!=='undefined' && DU.on && DU.all.length) ? DU.all : HEROES; }
+function PH_swap(i){ if(typeof DU!=='undefined' && DU.on) return DU_tap(i); return PTY_swap(i); }
 function PH_name(cls){ var c = CLASSES[cls]; return c ? c.name.split(' ').pop() : cls; }
 
 (function(){ var oct = function(c){ return 'polygon('+c+' 0,calc(100% - '+c+') 0,100% '+c+',100% calc(100% - '+c+'),calc(100% - '+c+') 100%,'+c+' 100%,0 calc(100% - '+c+'),0 '+c+')'; };
@@ -19020,7 +19028,10 @@ function PH_name(cls){ var c = CLASSES[cls]; return c ? c.name.split(' ').pop() 
 '.PH_pl.out{opacity:.5}.PH_pl.out .rv{display:none}.PH_pl.out .rm{background:#3a2a2a}.PH_pl.out .dn b{color:#8a6a6a}',
 '.PH_pl.brd .rm{background:var(--brc,#ff7a33)}.PH_pl.brd .tg span{display:block;color:#fff0d6;background:var(--brc,#ff7a33)}',
 '@media (hover:hover){.PH_pl:not(.ctl):not(.out):hover .ir{background:linear-gradient(160deg,#a88a5a,#3a2c24 45%,#1c1416 55%,#7a6046)}}',
-'.PH_pl:focus{outline:none}'
+'.PH_pl:focus{outline:none}',
+'#PH_hud.duel .PH_top{display:none}',
+'.PH_pl.std .wl svg,.PH_pl.std .wl .PH_gl{opacity:.7}.PH_pl.std .nm{color:#d9a04e;letter-spacing:.18em}',
+'.PH_pl.std.rdy .ir{background:linear-gradient(160deg,#ffe2a6,#b98a4a 35%,#5a3c1e 60%,#c79a58)}'
 ].join('\n'); document.head.appendChild(st); })();
 
 (function(){ var el = document.createElement('div'); el.id = 'PH_hud'; el.className = 'pe'; el.hidden = true;
@@ -19029,9 +19040,9 @@ function PH_name(cls){ var c = CLASSES[cls]; return c ? c.name.split(' ').pop() 
   PH.mode.addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); audioInit(); if(e.pointerType==='touch') setTouch(true); if(G.state==='play' && !G.paused) PTY_mode(); }); })();
 
 function PH_build(){ var R = PH.row; R.innerHTML = ''; PH.ps = [];
-  HEROES.forEach(function(h, i){ var b = document.createElement('button'); b.type = 'button'; b.className = 'PH_pl'; b.setAttribute('aria-label', 'Swap to '+CLASSES[h.st.cls].name);
+  PH_list().forEach(function(h, i){ var b = document.createElement('button'); b.type = 'button'; b.className = 'PH_pl'; b.setAttribute('aria-label', 'Swap to '+CLASSES[h.st.cls].name);
     b.innerHTML = '<span class="tg"><span>YOU</span><kbd></kbd><em>TAP</em></span><span class="fr"><span class="ir"></span><span class="rm"></span><span class="wl">'+PH_svg(h.st.cls)+'</span><span class="cd"></span><span class="ov"><i></i></span><span class="dn"><b></b></span><span class="rv"><i></i></span></span><span class="hp"><i></i><em></em></span><span class="nm">'+PH_name(h.st.cls).toUpperCase()+'</span>';
-    b.addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); audioInit(); if(e.pointerType==='touch') setTouch(true); if(G.state==='play' && !G.paused) PTY_swap(i); });
+    b.addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); audioInit(); if(e.pointerType==='touch') setTouch(true); if(G.state==='play' && !G.paused) PH_swap(i); });
     R.appendChild(b);
     PH.ps.push({b:b, tg:b.querySelector('.tg span'), kb:b.querySelector('.tg kbd'), hp:b.querySelector('.hp i'), num:b.querySelector('.hp em'), nm:b.querySelector('.nm'), ov:b.querySelector('.ov i'), dn:b.querySelector('.dn b'), rv:b.querySelector('.rv i'), c:{}}); });
   PH.lay = ''; PH.fitT = 0; }
@@ -19055,13 +19066,14 @@ function PH_fit(){ var E = PH.el; if(E.hidden) return; var w = innerWidth, h = i
   var ph = Math.round(bot + (pick[0]==='col' ? M.c.h : M.r.h)*ui*k + 8)+'px'; if(PH.phH !== ph){ PH.phH = ph; document.documentElement.style.setProperty('--phH', ph); } }
 addEventListener('resize', function(){ PH.fitT = 0; });
 
-RENDER_HOOKS.push(function PH_render(t, dt){ var E = PH.el; if(!E) return; var on = !!(PTY.on && HEROES.length > 1 && G.state!=='menu');
+RENDER_HOOKS.push(function PH_render(t, dt){ var E = PH.el; if(!E) return; var LH = PH_list(), du = typeof DU!=='undefined' && DU.on, on = !!(PTY.on && LH.length > 1 && G.state!=='menu');
   if(E.hidden === on){ E.hidden = !on; document.body.classList.toggle('PH_on', on); } if(!on){ PH.sig = ''; return; }
-  var sig = HEROES.map(function(h){ return h.st.cls; }).join(','); if(PH.sig !== sig){ PH.sig = sig; PH_build(); }
-  var nx = PTY_nextIdx(), cdP = Math.round(Math.max(0, PTY.swapCd)/PARTY.swapCd*50)*2, touch = !!G.touch, i;
-  for(i=0;i<HEROES.length;i++){ var h = HEROES[i], st = h.st, o = PH.ps[i]; if(!o) continue; var ctl = h===PTY.ctl, b = o.b;
+  if(E.classList.contains('duel') !== du) E.classList.toggle('duel', du);
+  var sig = LH.map(function(h){ return h.st.cls; }).join(','); if(PH.sig !== sig){ PH.sig = sig; PH_build(); }
+  var nx = du ? DU_nextIdx() : PTY_nextIdx(), cdP = du ? Math.round(Math.max(0, DU.cd)/DU_T.cd*50)*2 : Math.round(Math.max(0, PTY.swapCd)/PARTY.swapCd*50)*2, touch = !!G.touch, i;
+  for(i=0;i<LH.length;i++){ var h = LH[i], st = h.st, o = PH.ps[i]; if(!o) continue; var ctl = h===PTY.ctl, b = o.b, std = du && !ctl && HEROES.indexOf(h) < 0;
     var dn = !!(st.downed && !st.out), hp = st.dead ? 0 : Math.max(0, st.hp/st.maxHp), brd = st.brandT > G.t && !st.out;
-    PH_set(o, 'cls', 'PH_pl'+(ctl?' ctl':'')+(dn?' dwn':'')+(st.out?' dwn out':'')+(!ctl && !st.dead && st.over>=100?' ovl':'')+(!ctl && !st.dead && nx===i?' nx':'')+(!ctl && !st.dead && touch?' tap':'')+(!st.dead && hp<=0.3?' lo':'')+(brd?' brd':''), function(v){ b.className = v; });
+    PH_set(o, 'cls', 'PH_pl'+(ctl?' ctl':'')+(dn?' dwn':'')+(st.out?' dwn out':'')+(!ctl && !st.dead && st.over>=100?' ovl':'')+(!ctl && !st.dead && nx===i?' nx':'')+(!ctl && !st.dead && touch?' tap':'')+(!st.dead && hp<=0.3?' lo':'')+(brd?' brd':'')+(std?' std':'')+(std && !st.dead && cdP===0 && DU.ph==='fight'?' rdy':''), function(v){ b.className = v; });
     PH_set(o, 'hp', Math.round(hp*200)/200, function(v){ o.hp.style.transform = 'scaleX('+v+')'; });
     PH_set(o, 'n', st.dead ? (st.out ? '—' : '0') : Math.max(1, Math.ceil(st.hp))+'', function(v){ o.num.textContent = v; });
     PH_set(o, 'wc', st.ward, function(v){ b.style.setProperty('--wc', ELCSS[v] || '#ff7a33'); });
@@ -19069,7 +19081,7 @@ RENDER_HOOKS.push(function PH_render(t, dt){ var E = PH.el; if(!E) return; var o
     PH_set(o, 'ov', Math.round(Math.min(100, st.over||0))/100, function(v){ o.ov.style.transform = 'scaleX('+v+')'; });
     PH_set(o, 'dt', dn ? Math.ceil(Math.max(0, st.downT))+'' : st.out ? ICON('helm') : '', function(v){ o.dn.innerHTML = v; });
     PH_set(o, 'rv', dn ? Math.round(Math.min(1, st.revT||0)*50)/50 : 0, function(v){ o.rv.style.transform = 'scaleX('+v+')'; });
-    PH_set(o, 'nmT', st.out ? 'FALLEN' : dn ? 'DOWN' : PH_name(st.cls).toUpperCase(), function(v){ o.nm.textContent = v; });
+    PH_set(o, 'nmT', st.out ? 'FALLEN' : dn ? 'DOWN' : std ? 'STANDS' : PH_name(st.cls).toUpperCase(), function(v){ o.nm.textContent = v; });
     PH_set(o, 'tgT', brd ? 'BRAND' : 'YOU', function(v){ o.tg.textContent = v; });
     if(brd) PH_set(o, 'brc', st.brandEl, function(v){ b.style.setProperty('--brc', ELCSS[v] || '#ff7a33'); }); }
   var kt = kl('Tab'); PH.ps.forEach(function(o){ PH_set(o, 'kb', kt, function(v){ o.kb.textContent = v; }); });
@@ -19081,7 +19093,7 @@ RENDER_HOOKS.push(function PH_render(t, dt){ var E = PH.el; if(!E) return; var o
 /* pointer lock: the cursor is virtual, so hit-test the plates and the chip ourselves (capture phase: before the shot) */
 window.addEventListener('mousedown', function(e){ if(!PTY.on || !locked || e.button!==0 || G.state!=='play' || G.paused || PH.el.hidden) return;
   var hit = function(n){ var r = n.getBoundingClientRect(); return mouseX>=r.left && mouseX<=r.right && mouseY>=r.top && mouseY<=r.bottom; };
-  for(var i=0;i<PH.ps.length;i++){ if(hit(PH.ps[i].b)){ PTY_swap(i); e.stopPropagation(); e.preventDefault(); return; } }
+  for(var i=0;i<PH.ps.length;i++){ if(hit(PH.ps[i].b)){ PH_swap(i); e.stopPropagation(); e.preventDefault(); return; } }
   if(hit(PH.mode)){ PTY_mode(); e.stopPropagation(); e.preventDefault(); } }, true);
 if(DEV && window.__feat && window.__feat.party){ window.__feat.party.hud = function(){ return {lay:PH.lay, k:PH.k, hidden:PH.el.hidden, n:PH.ps.length, meas:PH.meas}; }; }
 /* ---------- 77 ICONS: the game's own icon set (inline SVG), replacing phone emoji in UI text. Prefix IC_. ----------
@@ -20189,12 +20201,11 @@ if(DEV){ var LAD = {on:false};
      Cut from the old fight: cyclone, tri-mortar, spikes, omega, the heart tether and the 75%/25% Ultimatum blinks.
      Soft enrage from 3:00: the pit closes 2 u every 20 s and he hits 8% harder per step (never a one-shot).
    OWNER DECISION (2026-10-10): "Risk it" raises the boss stake only (a win pays x2.5 instead of x2) and adds one note per sequence.
-   Party (PTY_size): catching needs 2 bodies in the lane (one body catches but is knocked down, no Disarm; wrong-ward damage is split);
-     a free body can cut a chain by standing on it 1 s; trio = 2 chains; sequences are one per body (same colours, same beats; overlapping
-     circles hit twice). AI allies follow gold job markers (brace / cut / spread). HP x1.6 pair, x2.1 trio.
+   Party: boss fights are solo duels (84-duel.js, owner decision 2026-10-10). He always fights ONE champion with solo HP and solo
+     mechanics; the rest of the party watches from the stands. (The party branches, Crowd Towers and AI job markers were removed.)
    Every hit is flame, frost or storm and booked with CMB_reserve (different colours >= 0.5 s apart). No white, no new keys.
    Wraps (each calls the original otherwise): spawnBoss, updateBoss, hurtEnemy, killEnemy, bossDeath, updateTimestop, clearWorld,
-   roundCleared, PTY_ai. Uses STEP_HOOKS and RENDER_HOOKS.
+   roundCleared. Uses STEP_HOOKS and RENDER_HOOKS.
 
    ------------------------------------------------------------------------------------------------------------------------------
    SHARED SHAPE GRAMMAR (§3): BG_* — reusable by any boss (Hesk 79, Stormwright 81, ...). Same IIFE scope; just call them.
@@ -20312,9 +20323,9 @@ function BG_inWedge(h, x, z, pad){ pad = pad||0; var dx = x-h.x, dz = z-h.z, d =
 function BG_inCircle(h, x, z, pad){ return Math.hypot(x-h.x, z-h.z) < (h.r||1)+(pad||0); }
 
 /* ---------------------------------------------------------------- the Pitmaster: tuning ---------------------------------------------------------------- */
-var PM_T = {hp:8000, party:[1, 1.75, 2.45],   /* ladder pass 2026-10-10: party kill time within ±15% of solo (design/BOSS-LADDER.md) */
+var PM_T = {hp:8000,
   p2:0.65, p3:0.30,
-  throwCd:7, throwCd80:5.5, throwP2:9, throwP3:6, throwParty:[0, 0.5, 1.0], wind:1.1, laneW:2.2, laneL:16, feintLead:0.6, spearSpd:34,
+  throwCd:7, throwCd80:5.5, throwP2:9, throwP3:6, wind:1.1, laneW:2.2, laneL:16, feintLead:0.6, spearSpd:34,
   catchDmg:28, kb:3, disarm:4, disarmMul:1.75, knock:1.5, chip:8,
   fillCd:[3.0, 3.6], wedgeWind:0.8, wedgeR:7, wedgeHalf:Math.PI/6, wedgeDmg:22, wedgeNear:6.5, shockWind:0.7, shockR:9.5, shockT:1.1, shockDmg:24,
   stuckWait:2.5, recallWind:0.6, recallDmg:18,
@@ -20323,7 +20334,9 @@ var PM_T = {hp:8000, party:[1, 1.75, 2.45],   /* ladder pass 2026-10-10: party k
   wagerDur:5, wagerHold:1.5, risk:0.25,
   seqEvery:8, seqLead:1.4, seqGap:0.6, seqR:1.9, seqDmg:18, seqLock:0.6, seqOff:2.7, emberT:4.0, emberTick:0.5, emberDmg:8, emberR:1.7,
   enrageT:180, enrageEvery:20, enrageStep:2, enrageMin:7, enrageDmg:0.08, enrageCd:0.9,
-  roar:1.3, beat:0.5};
+  roar:1.3, beat:0.5,
+  /* ARMED failure state */
+  armed:[1, 0.7, 0.5, 0.35], armHeal:0.03};
 
 /* ---------------------------------------------------------------- helpers ---------------------------------------------------------------- */
 function PM_is(b){ return !!(b && b.type==='boss' && b.stance==='spear' && !b.sw && !b.um && !b.hk && !b.hesk && !b.sw2 && !b.pmOff); }
@@ -20341,16 +20354,17 @@ function PM_setEl(b, el){ if(b.el===el) return; b.el = el; setModelEl(b.M, el); 
 function PM_say(t, s, d){ bossSay(t, s||'', d||1.6); }
 function PM_call(b, el){ dmgText(b.x, 6.2, b.z, ELNAME[el]+'!', ELCSS[el], 26); SFX.tele(); }
 function PM_hit(st, dmg, el, b, o){ if(!st || st.dead) return 'none'; return PTY_hit(st, dmg, el, b, o||{}); }
+/* signatures (spear, chain, kneel notes) */
+function PM_sig(st, dmg, el, b, o){ return PM_hit(st, dmg, el, b, o); }
 function PM_bonusOver(st){ PTY_as(st, function(){ if(P && !P.dead) P.over = Math.min(100, P.over + 9*(P.surge||1)*(P.cls==='mage'?1.3:1)); }); }
 function PM_knock(st, ux, uz, d){ st.x += ux*d; st.z += uz*d; clampArena(st, 0.3); st.px = st.x; st.pz = st.z; }
 function PM_cheer(n){ if(typeof crowdCheer!=='undefined') crowdCheer = Math.max(crowdCheer, n||0.6); }
-function PM_party(){ return PTY_size() > 1; }
 
 /* ---------------------------------------------------------------- spawn / HP ---------------------------------------------------------------- */
-function PM_init(b){ var tier = b.tier||0, hp = PM_T.hp * (G.mods ? G.mods.ehp : 1) * (1 + 0.35*tier) * PTY_per(PM_T.party);
+function PM_init(b){ var tier = b.tier||0, hp = PM_T.hp * (G.mods ? G.mods.ehp : 1) * (1 + 0.35*tier);
   b.hp = b.maxHp = hp; b.ult75 = b.ult25 = b.tempt = true; b.elT = 1e9; b.shifting = 0; b.act = null; b.wind = 0; b.whirl = 0; b.phase = 1;
   b.pm = {ph:1, pend:0, ft:0, act:null, disarm:0, stumble:0, sp:'hand', spEl:null, feintN:0, throwT:3.4, fillT:5.2, chainT:1.6, seqT:1.6, chains:[], embers:[], cutJob:null,
-    retr:null, temptDone:false, risk:false, enr:0, enrT:PM_T.enrageT, strafe:Math.random()<0.5?1:-1, strT:5, face:null, catches:0, snaps:0, seqDis:0, log:{catch:0, step:0, wrong:0, yank:0, snap:0, cut:0, seqCatch:0, held:0}};
+    retr:null, temptDone:false, risk:false, enr:0, enrT:PM_T.enrageT, strafe:Math.random()<0.5?1:-1, strT:5, face:null, catches:0, snaps:0, seqDis:0, arm:0, armH:null, disMul:PM_T.disarmMul, actN:0, log:{armed:0, disarmed:0, catch:0, step:0, wrong:0, yank:0, snap:0, cut:0, seqCatch:0, held:0}};
   G.pmRisk = false; return b; }
 var PM_spawn0 = spawnBoss;
 spawnBoss = function(){ var b = PM_spawn0.apply(this, arguments); if(b && PM_is(b)) PM_init(b); return b; };
@@ -20360,7 +20374,7 @@ var PM_updateBoss0 = updateBoss;
 updateBoss = function(b, dt, d, ux, uz, spd){ if(!b || !b.pm) return PM_updateBoss0.apply(this, arguments);
   if(b.leap || (b.act && b.act.id==='tempt')) return PM_updateBoss0.apply(this, arguments);   /* the 50% Temptation runs on the core code */
   return PM_step(b, dt, spd); };
-function PM_cad(b, base){ var pm = b.pm; return Math.max(2.5, (base - PTY_per(PM_T.throwParty)) * Math.pow(PM_T.enrageCd, pm.enr)); }
+function PM_cad(b, base){ var pm = b.pm; return Math.max(2.5, base * Math.pow(PM_T.enrageCd, pm.enr)); }
 function PM_throwCd(b){ var pm = b.pm; return pm.ph===1 ? PM_cad(b, b.hp/b.maxHp < 0.8 ? PM_T.throwCd80 : PM_T.throwCd) : pm.ph===2 ? PM_cad(b, PM_T.throwP2) : PM_cad(b, PM_T.throwP3); }
 function PM_step(b, dt, spd){ var pm = b.pm, f = PM_fav(b), hpF = b.hp/b.maxHp, mv = [0,0];
   if(!f || f.dead){ b.act = null; return mv; }
@@ -20401,12 +20415,13 @@ function PM_move(b, f, spd){ var pm = b.pm, dx = f.x-b.x, dz = f.z-b.z, d = Math
   for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(p.dead) continue; var px = p.x-b.x, pz = p.z-b.z, pd = Math.hypot(px,pz), lim2 = p.r + b.r + 1.4;
     if(pd < lim2 && pd > 0.01 && (px*mx+pz*mz)/pd > 0.2){ var sx = -pz/pd, sz = px/pd; if(sx*mx+sz*mz < 0){ sx = -sx; sz = -sz; } mx = sx*0.9 - px/pd*0.3; mz = sz*0.9 - pz/pd*0.3; var l2 = Math.hypot(mx,mz)||1; mx /= l2; mz /= l2; } }
   return [mx*spd*k, mz*spd*k]; }
-function PM_start(b, id, f){ var pm = b.pm, A = {id:id, t:0, step:0, f:f}; pm.act = A; PM_ACT[id](b, A, 0, f, true); }
+function PM_start(b, id, f){ var pm = b.pm, A = {id:id, t:0, step:0, f:f, n:++pm.actN}; pm.act = A; PM_ACT[id](b, A, 0, f, true); }
 function PM_rearm(b){ var pm = b.pm; pm.disarm = 0; pm.sp = 'hand'; pm.retr = null; if(G.spear){ damagePillar(G.spear, 99999); G.spear = null; } b.stance = 'spear'; b.act = null; spearStuck.visible = false; if(b.M.extra && b.M.extra.spear) b.M.extra.spear.visible = true;
   burst(b.x, 3, b.z, 18, BG_GOLD, 5, 0.5, 1.2); SFX.blink(); pm.throwT = Math.max(pm.throwT, 1.8); }
-function PM_disarm(b, el, why){ var pm = b.pm; pm.disarm = PM_T.disarm; pm.act = null; b.wind = 0; b.stance = 'glove'; pm.sp = 'caught';
+function PM_disarm(b, el, why){ var pm = b.pm; pm.disarm = PM_T.disarm; pm.disMul = PM_T.disarmMul; pm.act = null; pm.log.disarmed++;
+  if(pm.arm && (why==='seq' || pm.ph < 3)) PM_armClear(b, why);   /* ARMED: any Disarm clears it, except a plain catch in the Final Wager (only a Kneel Sequence does there) */ b.wind = 0; b.stance = 'glove'; pm.sp = 'caught';
   b.act = {id:'spikes', step:1, t:0, n:22}; pm.throwT = PM_T.disarm + PM_throwCd(b)*0.6; pm.fillT = Math.max(pm.fillT, PM_T.disarm + 1.2);
-  PM_say(why==='seq' ? 'SEQUENCE CAUGHT!' : 'CAUGHT!', 'He is Disarmed: strike now (x'+PM_T.disarmMul+')', 2.0); SFX.roar(); shake(0.5); G.hitstop = Math.max(G.hitstop||0, 0.08); PM_cheer(0.9);
+  PM_say(why==='seq' ? 'SEQUENCE CAUGHT!' : 'CAUGHT!', 'He is Disarmed: strike now (x'+PM_T.disarmMul+')'+(pm.arm ? ' · still ARMED' : ''), 2.0); SFX.roar(); shake(0.5); G.hitstop = Math.max(G.hitstop||0, 0.08); PM_cheer(0.9);
   var g = PM_T.chip + 2*(G.wave||10); G.stake += g; stakePop(); dmgText(b.x, 5.5, b.z, '+'+g+' ⚜', '#ffd27a', 22);
   try{ if(typeof RX_apply==='function') RX_apply(b, el, 1); }catch(err){}
   ringBurst(b.x, b.z, 2.6, 26, BG_GOLD); pm.catches++; }
@@ -20415,13 +20430,12 @@ function PM_disarm(b, el, why){ var pm = b.pm; pm.disarm = PM_T.disarm; pm.act =
 var PM_ACT = {
   /* P1 signature: the Spear Throw down a lane at the Favourite (fills outward 1.1 s; the spear head shows the colour from the wind-up) */
   throw:function(b, A, dt, f, init){ var pm = b.pm, wm = PM_wm(b), T = PM_T;
-    if(init){ var ang = Math.atan2(f.x-b.x, f.z-b.z), len = T.laneL, sx = b.x + Math.sin(ang)*1.4, sz = b.z + Math.cos(ang)*1.4;
+    if(init){ f = A.tg = PM_fav(b); var ang = Math.atan2(f.x-b.x, f.z-b.z), len = T.laneL, sx = b.x + Math.sin(ang)*1.4, sz = b.z + Math.cos(ang)*1.4;
         for(var s=0; s<40 && len>4; s++){ var ex = sx+Math.sin(ang)*len, ez = sz+Math.cos(ang)*len; if(Math.hypot(ex,ez) <= AR()-0.4) break; len -= 0.4; }
         var el = PM_pick(G.t+T.wind, PM_prefs(pick(EL.filter(function(e){ return e!==pm.spEl; })), null)); if(!el){ pm.act = null; pm.throwT = 0.3; return true; }
         A.el = el; A.ang = ang; A.x = sx; A.z = sz; A.len = len; A.res = PM_book(T.wind, el); pm.spEl = el; PM_setEl(b, el); PM_call(b, el); b.wind = 1;
         var fp = b.hp/b.maxHp < 0.8 || pm.ph>1; A.feint = pm.ph===1 ? (fp && (pm.feintN++ % 2)===0) : (Math.random() < 0.35);
         A.h = BG_lane({x:sx, z:sz, ang:ang, len:len, w:T.laneW, el:el, dur:T.wind, ttl:0});
-        if(PM_party()) A.mk = BG_mark({follow:f, kind:'stack', r:1.5});
         hintOnce('pmCatch'); return false; }
     var k = Math.min(1, A.t/T.wind); pm.face = A.ang;
     if(A.step===0){ b.act = {id:'throw', step:0, t:k*0.43*0.5*wm/0.5}; if(Math.random()<dt*30) glowP.emit(b.x+Math.sin(A.ang)*0.9, 4.2, b.z+Math.cos(A.ang)*0.9, 0, 1.2, 0, 0.35, 1.0, ELC[A.el], 0, 1);
@@ -20458,7 +20472,7 @@ var PM_ACT = {
     if(A.t >= T.shockT + 0.2){ pm.fillT = rnd(PM_T.fillCd[0], PM_T.fillCd[1]); return true; } return false; },
   /* the spear stuck in the sand: he pulls it back along a line (the existing recall, absorbable) */
   recall:function(b, A, dt, f, init){ var pm = b.pm, T = PM_T, sp = G.spear;
-    if(init){ if(!sp || sp.dead){ PM_rearm(b); pm.act = null; return true; } var len = Math.hypot(b.x-sp.x, b.z-sp.z), ang = Math.atan2(b.x-sp.x, b.z-sp.z);
+    if(init){ if(!sp || sp.dead){ PM_rearm(b); pm.act = null; return true; } if(!A.armd){ A.armd = true; PM_armUp(b, 'recall'); } var len = Math.hypot(b.x-sp.x, b.z-sp.z), ang = Math.atan2(b.x-sp.x, b.z-sp.z);
       var el = PM_pick(G.t+T.recallWind, PM_prefs(b.el, null)); if(!el){ pm.act = null; return true; }
       A.el = el; A.res = PM_book(T.recallWind, el); PM_setEl(b, el); A.sx = sp.x; A.sz = sp.z; A.h = BG_lane({x:sp.x, z:sp.z, ang:ang, len:len, w:1.6, el:el, dur:T.recallWind}); SFX.tele(); A.ang = ang; return false; }
     pm.face = A.ang + Math.PI; b.act = {id:'recall', step:A.step, t:A.t, ang:A.ang};
@@ -20468,13 +20482,13 @@ var PM_ACT = {
     return A.step===2 && A.t > 0.3; },
   /* P2 signature: the hook, then the chain (runs alongside his other moves) */
   hook:function(b, A, dt, f, init){ var pm = b.pm, T = PM_T;
-    if(init){ var tg = [f]; if(PTY_size() >= 3){ var o = PTY_bodyAt(1); if(o && o!==f && !o.dead) tg.push(o); }
+    if(init){ f = PM_fav(b); var tg = [f];
       A.tg = tg; A.hs = tg.map(function(st){ return BG_tether({a:b, b:st, el:b.el, hook:0, ya:3.2, yb:1.0}); }); A.lea = BG_dashed({follow:b, r:T.leash, el:b.el, op:0.55});
       PM_say('THE CHAIN', 'Stay inside the dashed ring. Drag it across a pillar to snap it, or hold it.', 2.2); SFX.roar(); b.wind = 1; hintOnce('pmChain'); return false; }
     b.act = {id:'heart', step:A.t < 0.5 ? 0 : 1, t:A.t < 0.5 ? A.t : A.t-0.5, fireT:9}; pm.face = Math.atan2(f.x-b.x, f.z-b.z);
     for(var i=0;i<A.hs.length;i++) A.hs[i].hook = Math.min(1, A.t/T.hook);
     if(A.t >= T.hook){ b.wind = 0; for(var j=0;j<A.tg.length;j++){ var st = A.tg[j]; if(st.dead){ BG_free(A.hs[j]); continue; }
-        var nx0 = pick(EL); pm.chains.push({st:st, h:A.hs[j], t:0, nextP:0.4, pulse:null, lastEl:null, nx:nx0, taut:0, yankCd:0, snap:0, snapP:null, cut:0}); A.hs[j].el = nx0;
+        var nx0 = pick(EL); pm.chains.push({t0:pm.actN, st:st, h:A.hs[j], t:0, nextP:0.4, pulse:null, lastEl:null, nx:nx0, taut:0, yankCd:0, snap:0, snapP:null, cut:0}); A.hs[j].el = nx0;
         burst(st.x, 1, st.z, 14, ELC[b.el], 5, 0.4, 1.1); SFX.zap(); }
       pm.leash = A.lea; pm.chainT = T.chainEvery; pm.fillT = Math.max(pm.fillT, 2.5); return true; }
     return false; },
@@ -20488,13 +20502,14 @@ var PM_ACT = {
       var H = PTY_heroes().slice(); A.seqs = H.map(function(st){ var hs = [], a0 = Math.random()*TAU;
         for(var k2=0;k2<n;k2++){ var last = k2===n-1, aa = a0 + k2*2.2, o = last ? {follow:st} : {x:st.x+Math.sin(aa)*T.seqOff, z:st.z+Math.cos(aa)*T.seqOff};
           o.r = T.seqR; o.el = els[k2]; o.n = k2+1; o.dur = A.T[k2]; o.ttl = A.T[k2]+0.25; var hh = BG_num(o); if(!last) clampArena(hh, 0.6); hs.push(hh); }
-        return {st:st, hs:hs, landed:0, caught:0, mk:PM_party() ? BG_mark({follow:st, kind:'spread', r:1.1, ttl:A.T[n-1]}) : null}; });
+        return {st:st, hs:hs, landed:0, caught:0, mk:null}; });
       A.i = 0; b.wind = 1; SFX.tele(); PM_say('KNEEL', 'Step into 1 → '+n+' in order with each colour, or stay clear.', 1.6); hintOnce('pmSeq'); return false; }
     pm.face = Math.atan2(f.x-b.x, f.z-b.z); b.act = {id:'trimortar', step:A.t < 0.5 ? 0 : 1, t:A.t < 0.5 ? A.t : A.t-0.5};
     for(var s=0;s<A.seqs.length;s++){ var L = A.seqs[s].hs[A.n-1]; if(!L.lock && A.t >= A.T[A.n-1] - T.seqLock) L.lock = true; }
     while(A.i < A.n && A.t >= A.T[A.i]){ PM_note(b, A, A.i); A.i++; }
     if(A.i >= A.n){ b.wind = 0; for(var s2=0;s2<A.seqs.length;s2++){ var S = A.seqs[s2]; if(S.mk) BG_free(S.mk); if(S.landed===A.n && S.caught===A.n && !A.dis){ A.dis = true; pm.log.seqCatch++; PM_disarm(b, A.els[A.n-1], 'seq'); } }
-      if(!A.dis) pm.seqT = PM_T.seqEvery - PTY_per([0, 0.5, 1.0]); else pm.seqT = PM_T.seqEvery + PM_T.disarm; return !A.dis ? A.t > A.T[A.n-1] + 0.3 : true; }
+      if(!A.dis && !A.armd){ A.armd = true; PM_armUp(b, 'seq'); }
+      if(!A.dis) pm.seqT = PM_T.seqEvery; else pm.seqT = PM_T.seqEvery + PM_T.disarm; return !A.dis ? A.t > A.T[A.n-1] + 0.3 : true; }
     return false; },
   /* phase change: he roars (no attack) */
   roar:function(b, A, dt, f, init){ if(init){ b.wind = 0; return false; } b.act = {id:'tempt', step:0, t:1.0 + Math.min(0.2, A.t)}; b.pm.face = Math.atan2(f.x-b.x, f.z-b.z); return A.t >= PM_T.roar; }
@@ -20503,18 +20518,17 @@ var PM_ACT = {
 function PM_release(b, A){ var pm = b.pm, T = PM_T, H = PTY_heroes().slice(), inL = [], ux = Math.sin(A.ang), uz = Math.cos(A.ang);
   for(var i=0;i<H.length;i++){ var st = H[i]; if(BG_inLane(A.h, st.x, st.z, 0.45)) inL.push(st); }
   b.stance = 'glove'; pm.sp = 'fly'; if(b.M.extra && b.M.extra.spear) b.M.extra.spear.visible = false; if(spearFly.userData.rig) spearFly.userData.rig.setElement(A.el);
-  var n = inL.length, catcher = null, braced = n >= 2 || !PM_party(); SFX.slash(); shake(0.3);
-  for(var j=0;j<n;j++){ var s2 = inL[j]; if(s2.dashT>0) continue; if(PM_ok(s2, A.el)){ if(!catcher) catcher = s2; PM_hit(s2, PM_dmg(b, T.catchDmg), A.el, b); } }
+  var n = inL.length, catcher = null; SFX.slash(); shake(0.3);
+  for(var j=0;j<n;j++){ var s2 = inL[j]; if(s2.dashT>0) continue; if(PM_ok(s2, A.el)){ if(!catcher) catcher = s2; PM_sig(s2, PM_dmg(b, T.catchDmg), A.el, b); } }
   for(j=0;j<n;j++){ var s3 = inL[j]; if(s3===catcher || s3.dashT>0 || PM_ok(s3, A.el)) continue; if(catcher) continue;   /* a braced catch shelters the line */
-    var r = PM_hit(s3, PM_dmg(b, T.catchDmg)/Math.max(1,n), A.el, b); if(r==='hit' || r==='guard' || r==='none'){ PM_knock(s3, ux, uz, T.kb); pm.log.wrong++; } }
-  if(catcher){ A.catcher = catcher; A.stop = Math.max(1, Math.hypot(catcher.x-A.x, catcher.z-A.z)); if(!braced){ catcher.stun = Math.max(catcher.stun||0, T.knock); dmgText(catcher.x, 2.6, catcher.z, 'KNOCKED DOWN', '#ffd27a', 18); } }
+    var r = PM_sig(s3, PM_dmg(b, T.catchDmg)/Math.max(1,n), A.el, b); if(r==='hit' || r==='guard' || r==='none'){ PM_knock(s3, ux, uz, T.kb); pm.log.wrong++; } }
+  if(catcher){ A.catcher = catcher; A.stop = Math.max(1, Math.hypot(catcher.x-A.x, catcher.z-A.z)); }
   else { A.stop = A.len; if(!n) pm.log.step++; }
-  A.fl = Math.max(0.12, A.stop/T.spearSpd); if(A.mk){ BG_free(A.mk); A.mk = null; } A.h.ttl = A.h.t + A.fl + 0.1; A.braced = braced; }
+  A.fl = Math.max(0.12, A.stop/T.spearSpd); if(A.mk){ BG_free(A.mk); A.mk = null; } A.h.ttl = A.h.t + A.fl + 0.1; }
 function PM_land(b, A){ var pm = b.pm, ex = A.x + Math.sin(A.ang)*A.stop, ez = A.z + Math.cos(A.ang)*A.stop;
   burst(ex, 0.5, ez, 22, ELC[A.el], 7, 0.5, 1.3); rocks(ex, 0.3, ez, 8, 0x4a3a3c, 6); SFX.slam();
   if(A.catcher){ spearStuck.visible = true; if(spearStuck.userData.rig) spearStuck.userData.rig.setElement(A.el); spearStuck.position.set(A.catcher.x+0.8, 0.25, A.catcher.z); spearStuck.rotation.set(Math.PI/2, A.ang, 0);
-    if(A.braced){ pm.log.catch++; PM_disarm(b, A.el, 'catch'); }
-    else { dmgText(A.catcher.x, 2.9, A.catcher.z, 'CAUGHT · NO BRACE', '#ffd27a', 18); pm.sp = 'caught'; pm.throwT = Math.max(pm.throwT, 2.5); after(1.5, function(){ if(b.pm && !b.dead && pm.sp==='caught' && !(pm.disarm>0)) PM_rearm(b); }); } return; }
+    pm.log.catch++; PM_disarm(b, A.el, 'catch'); return; }
   var sp = makePillar(ex, ez, 260, true); sp.life = 999; sp.g.visible = false; G.spear = sp; spearStuck.visible = true; if(spearStuck.userData.rig) spearStuck.userData.rig.setElement(A.el);
   spearStuck.position.set(ex, 1.1, ez); spearStuck.rotation.set(0.35, 0, 0.2); ringBurst(ex, ez, 1.4, 14, ELC[A.el]); pm.sp = 'stuck'; pm.retr = {t:0}; pm.throwT = Math.max(pm.throwT, PM_T.stuckWait + 1.5); }
 /* one note of the Kneel Sequence lands on every body's circle of that index; a body inside k overlapping circles takes k hits' worth */
@@ -20524,7 +20538,7 @@ function PM_note(b, A, k){ var T = PM_T, el = A.els[k], H = PTY_heroes().slice()
   /* each note leaves embers in its colour for 3 s: step off them (or hold their colour) */
   for(i=0;i<A.seqs.length;i++){ var hh = A.seqs[i].hs[k]; b.pm.embers.push({x:hh.x, z:hh.z, r:T.emberR, el:el, t:0, tick:T.emberTick, h:BG_pool({x:hh.x, z:hh.z, r:T.emberR, el:el, dur:T.emberT, ttl:T.emberT})}); }
   for(j=0;j<H.length;j++){ var st = H[j], c = 0; for(i=0;i<A.seqs.length;i++) if(BG_inCircle(A.seqs[i].hs[k], st.x, st.z, 0.35)) c++; if(!c) continue;
-    var ok = PM_ok(st, el) && !(st.dashT>0), r = PM_hit(st, PM_dmg(b, T.seqDmg)*c, el, b);
+    var ok = PM_ok(st, el) && !(st.dashT>0), r = PM_sig(st, PM_dmg(b, T.seqDmg)*c, el, b);
     for(i=0;i<A.seqs.length;i++){ var S = A.seqs[i]; if(S.st===st && BG_inCircle(S.hs[k], st.x, st.z, 0.35)){ S.landed++; if(ok || r==='absorb') S.caught++; } }
     if(c > 1) dmgText(st.x, 2.8, st.z, 'MERGED x'+c, '#ffd27a', 16); } }
 
@@ -20539,7 +20553,7 @@ function PM_chains(b, dt){ var pm = b.pm, T = PM_T, H = PTY_heroes(), i;
     if(!slack && !c.pulse && c.t >= c.nextP && c.t + T.pulseLead < T.chainDur){ var el = PM_pick(G.t+T.pulseLead, PM_prefs(c.nx, c.lastEl).filter(function(e){ return e!==c.lastEl; }));
       if(!el) el = PM_pick(G.t+T.pulseLead, [c.lastEl||c.nx]); if(el){ c.pulse = {el:el, t:0, res:PM_book(T.pulseLead, el)}; c.h.litEl = el; c.nx = pick(EL.filter(function(e){ return e!==el; })); c.h.el = c.nx; } else c.nextP += 0.25; }
     if(c.pulse){ var p = c.pulse; p.t += dt; c.h.lit = Math.min(1, p.t/T.pulseLead);
-      if(p.t >= T.pulseLead){ var r = PM_hit(st, PM_dmg(b, T.pulseDmg), p.el, b); burst(st.x, 1.2, st.z, 10, ELC[p.el], 5, 0.35, 1.1);
+      if(p.t >= T.pulseLead){ var r = PM_sig(st, PM_dmg(b, T.pulseDmg), p.el, b); burst(st.x, 1.2, st.z, 10, ELC[p.el], 5, 0.35, 1.1);
         if(r==='absorb'){ PM_bonusOver(st); dmgText(st.x, 2.6, st.z, 'x2 OVERLOAD', ELCSS[p.el], 16); }
         c.lastEl = p.el; c.h.el = c.nx; c.pulse = null; c.h.lit = 0; c.nextP = c.t + T.pulseEvery - T.pulseLead; } }
     /* the leash: past 7 u the chain goes taut (0.35 s), then yanks you to him */
@@ -20550,16 +20564,9 @@ function PM_chains(b, dt){ var pm = b.pm, T = PM_T, H = PTY_heroes(), i;
     var on = null; for(var q=0;q<pillars.length;q++){ var pp = pillars[q]; if(pp.dead || pp===G.spear) continue; if(segDist(pp.x, pp.z, b.x, b.z, st.x, st.z) < pp.r+0.2){ on = pp; break; } }
     if(on){ c.snap += dt; c.snapP = on; on.flash = 0.06; if(Math.random()<dt*20) glowP.emit(on.x+rnd(-0.6,0.6), rnd(1,3), on.z+rnd(-0.6,0.6), 0, 1.5, 0, 0.4, 1, ELC[c.h.el||b.el], 0, 1);
       if(c.snap >= T.snapT){ damagePillar(on, 99999); pm.log.snap++; PM_endChain(b, c, 'snap'); continue; } } else c.snap = Math.max(0, c.snap - dt*0.6);
-    /* party: a free body standing on the chain for 1 s cuts it (no pillar spent) */
-    var cutter = null; for(var j=0;j<H.length;j++){ var o = H[j]; if(o===st || PM_chained(b, o)) continue; if(segDist(o.x, o.z, b.x, b.z, st.x, st.z) < 0.9 && Math.hypot(o.x-b.x, o.z-b.z) > 1.5){ cutter = o; break; } }
-    if(cutter){ c.cut += dt; if(Math.random()<dt*20) glowP.emit(cutter.x, 1, cutter.z, rnd(-1,1), 1.5, rnd(-1,1), 0.35, 1, BG_GOLD, 0, 1); if(c.cut >= T.cutT){ pm.log.cut++; PM_endChain(b, c, 'cut'); continue; } } else c.cut = Math.max(0, c.cut - dt);
     /* greedy answer: hold it; he breaks it himself after 8 s */
     if(c.t >= T.chainDur){ pm.log.held++; PM_endChain(b, c, 'held'); continue; } }
-  if(!pm.chains.length && pm.leash){ BG_free(pm.leash); pm.leash = null; }
-  /* party job marker: where a free body can cut the first chain */
-  var c0 = pm.chains[0], free = null; if(c0 && PM_party()) for(var k=0;k<H.length;k++) if(!PM_chained(b, H[k])){ free = H[k]; break; }
-  if(c0 && free){ if(!pm.cutMk){ pm.cutPt = {x:0, z:0}; pm.cutMk = BG_mark({follow:pm.cutPt, kind:'cut'}); } pm.cutPt.x = (b.x+c0.st.x)/2; pm.cutPt.z = (b.z+c0.st.z)/2; }
-  else if(pm.cutMk){ BG_free(pm.cutMk); pm.cutMk = null; } }
+  if(!pm.chains.length && pm.leash){ BG_free(pm.leash); pm.leash = null; } }
 /* Kneel embers: not booked (like an edge, they only hit a body that stays on them); each tick is in the ember's colour, so its ward holds it */
 function PM_embers(b, dt){ var E = b.pm.embers, H = PTY_heroes(); for(var i=E.length-1;i>=0;i--){ var e = E[i]; e.t += dt; e.tick -= dt;
     if(e.tick <= 0){ e.tick = PM_T.emberTick; for(var j=0;j<H.length;j++){ var st = H[j]; if(!st.dead && Math.hypot(st.x-e.x, st.z-e.z) < e.r){ if(!PM_gate(e.el)){ e.tick = 0.1; continue; } PM_mark(e.el); PM_hit(st, PM_dmg(b, PM_T.emberDmg), e.el, b); if(Math.random()<0.5) burst(st.x, 0.4, st.z, 5, ELC[e.el], 3, 0.3, 0.9); } } }
@@ -20576,16 +20583,35 @@ function PM_chained(b, st){ var C = b.pm.chains; for(var i=0;i<C.length;i++) if(
    only happens when YOU leave the dashed leash (the links jitter for 0.35 s first). Stay inside the ring and you never have to answer it. */
 function PM_yank(b, c){ var pm = b.pm, T = PM_T, st = c.st, el = c.nx || b.el;
   PM_mark(el); var dx = b.x-st.x, dz = b.z-st.z, d = Math.hypot(dx,dz)||1, pull = Math.max(0, d-T.yankTo); zapLine([{x:b.x, z:b.z}, {x:st.x, z:st.z}]);
-  PM_knock(st, dx/d, dz/d, pull); var r2 = PM_hit(st, PM_dmg(b, T.yankDmg), el, b, {noDodge:true}); st.stun = Math.max(st.stun||0, T.yankStun);   /* the pull floors you (not damage: an absorbed yank still floors you) */ c.yankCd = T.yankCd; c.taut = 0; pm.log.yank++; if(r2==='hit') pm.log.yankHit = (pm.log.yankHit||0)+1;
+  PM_knock(st, dx/d, dz/d, pull); var r2 = PM_sig(st, PM_dmg(b, T.yankDmg), el, b, {noDodge:true}); st.stun = Math.max(st.stun||0, T.yankStun);   /* the pull floors you (not damage: an absorbed yank still floors you) */ c.yankCd = T.yankCd; c.taut = 0; pm.log.yank++; if(r2==='hit') pm.log.yankHit = (pm.log.yankHit||0)+1;
   dmgText(st.x, 2.7, st.z, 'YANKED', ELCSS[el], 20); SFX.zap(); shake(0.4); burst(st.x, 1, st.z, 14, ELC[el], 6, 0.4, 1.2); }
 function PM_endChain(b, c, why){ var pm = b.pm, i = pm.chains.indexOf(c); if(i>=0) pm.chains.splice(i,1); if(c.pulse) PM_unbook(c.pulse.res); BG_free(c.h);
-  if(why==='snap' || why==='cut'){ PM_say('THE CHAIN SNAPS', why==='cut' ? 'Cut free! He stumbles (x'+PM_T.stumbleMul+')' : 'The pillar breaks. He stumbles (x'+PM_T.stumbleMul+')', 1.6); SFX.zap(); shake(0.5);
+  if(why==='snap' || why==='cut'){ if(pm.arm) PM_armClear(b, why); PM_say('THE CHAIN SNAPS', why==='cut' ? 'Cut free! He stumbles (x'+PM_T.stumbleMul+')' : 'The pillar breaks. He stumbles (x'+PM_T.stumbleMul+')', 1.6); SFX.zap(); shake(0.5);
     if(!(pm.disarm>0)){ pm.stumble = Math.max(pm.stumble, PM_T.stumble); if(pm.act && pm.act.res) PM_unbook(pm.act.res); if(pm.act && pm.act.h) BG_free(pm.act.h); if(pm.act && pm.act.mk) BG_free(pm.act.mk); pm.act = null; b.wind = 0; b.act = {id:'spikes', step:1, t:0, n:8}; } PM_cheer(0.6); }
   else if(why==='held'){ dmgText(b.x, 5.8, b.z, 'HE DROPS THE CHAIN', '#ffd27a', 18); }
   burst(c.st.x, 1, c.st.z, 12, ELC[c.h.el||b.el], 5, 0.4, 1.1); }
 /* the chained body deals x1.5; Disarm x1.75; stumble x1.5 */
-function PM_mul(b){ var pm = b.pm, m = pm.disarm>0 ? PM_T.disarmMul : pm.stumble>0 ? PM_T.stumbleMul : 1;
-  if(P && PM_chained(b, P) && Math.hypot(P.x-b.x, P.z-b.z) <= PM_T.leash) m = Math.max(m, PM_T.chainMul); return m; }   /* windows don't stack; the chain bonus needs you inside the leash */
+function PM_mul(b){ var pm = b.pm, m = pm.disarm>0 ? (pm.disMul||PM_T.disarmMul) : pm.stumble>0 ? PM_T.stumbleMul : 1;
+  if(P && PM_chained(b, P) && Math.hypot(P.x-b.x, P.z-b.z) <= PM_T.leash) m = Math.max(m, PM_T.chainMul); return m * PM_T.armed[pm.arm||0]; }   /* ARMED scales every window */   /* windows don't stack; the chain bonus needs you inside the leash */
+
+/* ---------------------------------------------------------------- ARMED: the failure state (ladder open item, 2026-10-10) ----------------------------------------------------------------
+   Ignore his mechanic and the crowd throws him a spare spear: a spear he recalls from the sand (uncaught), or a Kneel Sequence nobody finishes.
+   Each adds a stack (max 3): he takes x0.7 / x0.5 / x0.35 and heals 3% (never above the line of
+   the phase he is in). A Disarm clears it (in the Final Wager only a caught Kneel Sequence does, and he cannot fall while ARMED there: he
+   holds at 1 HP), and so does a snapped chain. A bronze dashed ring at his feet shows it. Never touches his damage: a correct ward still takes 0. */
+function PM_armTop(b){ var ph = b.pm.ph; return b.maxHp*(ph===1 ? 1 : ph===2 ? PM_T.p2 : PM_T.p3) - 1; }
+function PM_armUp(b, why){ var pm = b.pm; if(!pm || b.dead) return; pm.arm = Math.min(PM_T.armed.length-1, (pm.arm||0)+1); pm.log.armed++;
+  var top = PM_armTop(b), hv = Math.max(0, Math.min(b.maxHp*PM_T.armHeal, top - b.hp)); if(hv > 0){ b.hp += hv; dmgText(b.x, 5.0, b.z, '+'+Math.round(hv), '#e0a060', 18); }
+  if(!pm.armH) pm.armH = BG_dashed({follow:b, r:2.6, el:'bronze', op:0.95});
+  dmgText(b.x, 6.0, b.z, 'ARMED x'+PM_T.armed[pm.arm], '#e0a060', 24); PM_cheer(0.5); SFX.blink(); burst(b.x, 3, b.z, 14, BG_BRONZE, 5, 0.5, 1.1);
+  PM_say('ARMED', why==='recall' ? 'He took his spear back: catch the next one' : 'The crowd arms him: finish a Kneel Sequence', 1.6); PM_hints(); hintOnce('pmArmed'); }
+/* in the Final Wager an ARMED Pitmaster cannot be finished: he holds at 1 HP until a Kneel Sequence is caught */
+function PM_armHold(b){ var pm = b.pm; b.hp = Math.max(b.hp, 1); if(G.t - (pm.holdT||-9) > 3){ pm.holdT = G.t; dmgText(b.x, 6.2, b.z, 'ARMED: CATCH A KNEEL SEQUENCE', '#e0a060', 20); } }
+function PM_armClear(b, why){ var pm = b.pm; if(!pm || !pm.arm) return; pm.arm = 0; if(pm.armH){ BG_free(pm.armH); pm.armH = null; } dmgText(b.x, 6.0, b.z, 'DISARMED OF HIS SPARES', '#ffd27a', 18); ringBurst(b.x, b.z, 2.6, 18, BG_BRONZE); }
+
+/* hints (HINTS lives in 40-ui-loop, later in the build: registered on first use) */
+function PM_hints(){ if(typeof HINTS==='undefined' || HINTS.pmArmed) return;
+  HINTS.pmArmed = function(){ return '<b style="color:#e0a060">ARMED</b>: you ignored his move, so the crowd threw him a spare spear. He heals a little and takes <b>less damage</b> until you Disarm him. In the Final Wager only a caught <b>Kneel Sequence</b> clears it, and he cannot fall while ARMED.'; }; }
 
 /* ---------------------------------------------------------------- phases ---------------------------------------------------------------- */
 function PM_clearAct(b){ var pm = b.pm, A = pm.act; if(!A) return; if(A.res) PM_unbook(A.res); if(A.res && A.res.length) A.res.forEach(PM_unbook); if(A.h) BG_free(A.h); if(A.mk) BG_free(A.mk); if(A.hs) A.hs.forEach(BG_free); if(A.lea) BG_free(A.lea); if(A.seqs) A.seqs.forEach(function(S){ S.hs.forEach(BG_free); if(S.mk) BG_free(S.mk); }); pm.act = null; b.act = null; b.wind = 0; }
@@ -20619,12 +20645,14 @@ function PM_enrage(b, dt){ var pm = b.pm; pm.enrT -= dt; if(pm.enrT > 0) return;
 
 /* ---------------------------------------------------------------- core wrappers ---------------------------------------------------------------- */
 var PM_hurt0 = hurtEnemy;
-hurtEnemy = function(e, dmg){ if(e && e.pm && !e.dead){ var m = PM_mul(e); if(m!==1) arguments[1] = dmg*m; var r = PM_hurt0.apply(this, arguments); PM_gate(e); return r; } return PM_hurt0.apply(this, arguments); };
-function PM_gate(e){ var pm = e.pm; if(!pm || e.dead) return; var thr = pm.ph===1 ? PM_T.p2 : pm.ph===2 ? PM_T.p3 : 0; if(thr && e.hp < e.maxHp*thr){ e.hp = Math.max(e.hp, e.maxHp*thr - 1, 1); if(!pm.pend) pm.pend = pm.ph+1; } }
+hurtEnemy = function(e, dmg){ if(e && e.pm && !e.dead){ var m = PM_mul(e); if(m!==1) arguments[1] = dmg*m; var r = PM_hurt0.apply(this, arguments); PM_hpGate(e); return r; } return PM_hurt0.apply(this, arguments); };
+/* (was a second `function PM_gate`, which shadowed the colour gate above: yanks and kneel embers never fired; renamed 2026-10-10) */
+function PM_hpGate(e){ var pm = e.pm; if(!pm || e.dead) return; if(pm.ph===3 && pm.arm && e.hp < 1) PM_armHold(e); var thr = pm.ph===1 ? PM_T.p2 : pm.ph===2 ? PM_T.p3 : 0; if(thr && e.hp < e.maxHp*thr){ e.hp = Math.max(e.hp, e.maxHp*thr - 1, 1); if(!pm.pend) pm.pend = pm.ph+1; } }
 var PM_kill0 = killEnemy;
-killEnemy = function(e, quiet){ if(e && e.pm && !e.dead && e.pm.ph < 3){ e.hp = Math.max(1, e.maxHp*(e.pm.ph===1 ? PM_T.p2 : PM_T.p3) - 1); if(!e.pm.pend) e.pm.pend = e.pm.ph+1; return; } return PM_kill0.apply(this, arguments); };
+killEnemy = function(e, quiet){ if(e && e.pm && !e.dead && e.pm.ph===3 && e.pm.arm){ PM_armHold(e); return; }
+  if(e && e.pm && !e.dead && e.pm.ph < 3){ e.hp = Math.max(1, e.maxHp*(e.pm.ph===1 ? PM_T.p2 : PM_T.p3) - 1); if(!e.pm.pend) e.pm.pend = e.pm.ph+1; return; } return PM_kill0.apply(this, arguments); };
 function PM_end(b){ BG_clear(); spearFly.visible = false; if(G.timestop && G.timestop.pm){ G.timestop = null; $('tstop').classList.remove('on'); }
-  if(b && b.pm){ var pm = b.pm; pm.chains.length = 0; pm.embers.length = 0; pm.leash = null; pm.cutMk = null; pm.act = null; if(pm.enr) recomputeMods(); for(var i=CMB.res.length-1;i>=0;i--) if(CMB.res[i].pm) CMB.res.splice(i,1); } }
+  if(b && b.pm){ var pm = b.pm; pm.armH = null; pm.chains.length = 0; pm.embers.length = 0; pm.leash = null; pm.act = null; if(pm.enr) recomputeMods(); for(var i=CMB.res.length-1;i>=0;i--) if(CMB.res[i].pm) CMB.res.splice(i,1); } }
 var PM_bossDeath0 = bossDeath;
 bossDeath = function(b){ if(b && b.pm){ if(DEV) PM_D.last = {t:+b.pm.ft.toFixed(1), log:b.pm.log, risk:b.pm.risk, enr:b.pm.enr}; PM_end(b); } return PM_bossDeath0.apply(this, arguments); };
 var PM_clear0 = clearWorld;
@@ -20634,22 +20662,6 @@ var PM_rc0 = roundCleared;
 roundCleared = function(boss){ if(boss && G.pmRisk && G.waveActive===false){ var add = Math.round(G.stake*PM_T.risk); G.stake += add; G.pmRisk = false; if(P) dmgText(P.x, 3, P.z, 'WAGER WON', '#ffd27a', 24); } return PM_rc0.apply(this, arguments); };
 /* facing: after updateEnemies (which turns the boss toward the controlled hero) */
 STEP_HOOKS.push(function PM_faceStep(dt){ var b = G.bossRef; if(!b || !b.pm || b.dead || b.leap || b.spawnT>0) return; var f = b.pm.face; if(f==null) return; b.face += angDiff(b.face, f)*Math.min(1, dt*(b.pm.act && b.pm.act.id==='throw' ? 14 : 5)); });
-
-/* ---------------------------------------------------------------- party: AI allies follow the job markers ---------------------------------------------------------------- */
-function PM_job(h){ var b = G.bossRef, st = h.st; if(!b || !b.pm || b.dead || st.dead) return null; var pm = b.pm, A = pm.act, f = PM_fav(b), H = PTY_heroes();
-  /* brace: the nearest free ally steps into the lane beside the Favourite */
-  if(A && A.id==='throw' && A.step===0 && st!==f && A.h && BG_inLane(A.h, f.x, f.z, 0.3)){ var best = null, bd = 1e9, ctl = (typeof PTY!=='undefined' && PTY.ctl) ? PTY.ctl.st : null; for(var i=0;i<H.length;i++){ var o = H[i]; if(o===f || o===ctl) continue; var dd = Math.hypot(o.x-f.x, o.z-f.z); if(dd < bd){ bd = dd; best = o; } }
-    if(best===st){ var ux = Math.sin(A.ang), uz = Math.cos(A.ang); return {x:f.x - ux*1.0, z:f.z - uz*1.0, job:'brace'}; } }
-  /* cut: the free ally goes to the chain's midpoint */
-  if(pm.chains.length && !PM_chained(b, st) && pm.cutPt) return {x:pm.cutPt.x, z:pm.cutPt.z, job:'cut'};
-  /* hold: a chained ally stays well inside the leash */
-  if(PM_chained(b, st) && Math.hypot(st.x-b.x, st.z-b.z) > PM_T.leash*0.7) return {x:b.x, z:b.z, job:'hold'};
-  /* spread: keep more than 3.5 u from the others during a sequence */
-  if(A && A.id==='seq'){ var nx = 0, nz = 0, cl = 0; for(var j=0;j<H.length;j++){ var o2 = H[j]; if(o2===st) continue; var dx = st.x-o2.x, dz = st.z-o2.z, d2 = Math.hypot(dx,dz)||0.01; if(d2 < 3.8){ nx += dx/d2; nz += dz/d2; cl++; } }
-    if(cl){ var l = Math.hypot(nx,nz)||1; return {x:st.x + nx/l*2.5, z:st.z + nz/l*2.5, job:'spread'}; } }
-  return null; }
-if(typeof PTY_ai==='function'){ var PM_ai0 = PTY_ai;
-  PTY_ai = function(h, dt){ var r = PM_ai0.apply(this, arguments); var J = PM_job(h); if(J){ var dx = J.x-h.st.x, dz = J.z-h.st.z, d = Math.hypot(dx,dz); if(d > 0.35){ h.ai.mv.x = dx/d; h.ai.mv.z = dz/d; } else { h.ai.mv.x = 0; h.ai.mv.z = 0; } h.ai.job = J.job; } else h.ai.job = null; return r; }; }
 
 /* ---------------------------------------------------------------- DEV ---------------------------------------------------------------- */
 var PM_D = {T:PM_T, last:null};
@@ -20661,17 +20673,16 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.pm = { T:PM_T, D:PM_
    - punish windows: STAGGERED (he kneels, x2) from Anvil Bait (P1), a grounded rod (P2/P3) or a redirected Verdict (P3);
    - CHARGED: an unanswered rod bolt or Verdict runs into him (heals 3%, takes x0.5 until the next stagger);
    - new moves: the Anvil Charge (a lane; put the anvil in it) and Skyfall (he leaps onto you; the rim behind him cracks);
-   - party by position: protect (Gale), split (one rod per body), stack (the Eye) and spread (one numbered sequence per body);
+   - party: boss fights are solo duels (84-duel.js): he always fights one champion with solo HP and solo mechanics (party branches removed);
    - soft enrage "Storm Unbound" (ladder pass 2026-10-10; never damage through a correct ward): a stack every 15 s from SW2_UNB: his gaps x0.88 per
      stack, one more rim sector cracks per stack (arena pressure), and the outer ring (beyond the inner platform) turns to charged storm ground
      that ticks in storm (absorbable; never within 0.5 s of another colour), creeping 1.2 u inward per stack from the 3rd (it stops 2.5 u short of the Eye ring).
    Shape grammar (local; same visual language as the shared BG_* helpers): lane, numbered circles, gold dashed rings, gold chevrons. */
 var SW2_HPK = 2.3;                       /* x the old round scaling (2600 x 3.77 at round 20): no mantle, no cap */
-var SW2_PK = [1, 1.1, 1.45];              /* party boss HP (replaces PARTY.bossHp for him); ladder pass: party kill time within ±15% of solo */
 var SW2_STAG = {bait:4, ground:3.5, redirect:5, temper:3.5};
-var SW2_HEAL = 0.03, SW2_CHG = [1, 0.45, 0.3, 0.2], SW2_UNB = [165, 175, 185], SW2_UNB_STEP = 15, SW2_UNB_MAX = 6, SW2_GND = {tick:0.6, dmg:8, creep:1.2, minR:5.5};
+var SW2_HEAL = 0.03, SW2_CHG = [1, 0.45, 0.3, 0.2], SW2_UNB = 165, SW2_UNB_STEP = 15, SW2_UNB_MAX = 6, SW2_GND = {tick:0.6, dmg:8, creep:1.2, minR:5.5};
 var SW2_GAP0 = SW_GAP.slice(), SW2_CH_SPD = 11, SW2_CH_W = 2.4;
-var SW2 = {t:0, chg:false, chgN:0, xq:null, job:null, stk:0, anvCh:0, a1:false, n:{bait:0, ground:0, redirect:0, feed:0}, log:null, lanes:[], digs:[], seqHit:null};
+var SW2 = {t:0, chg:false, chgN:0, stk:0, anvCh:0, a1:false, n:{bait:0, ground:0, redirect:0, feed:0}, log:null, lanes:[], digs:[], seqHit:null};
 
 /* ---------- attack pools (P1 The Forge, P2 The Conductor, P3 Eye of the Storm) ---------- */
 SW_POOL[1] = [['hammer',1.6,0], ['seq',1.4,6], ['anvil',1.6,11], ['gale',0.9,12], ['leap',1.0,9]];
@@ -20679,9 +20690,9 @@ SW_POOL[2] = [['hammer',2,0], ['seq',1.2,7], ['heave',1,12]];
 SW_POOL[3] = [['hammer',1.6,0], ['seq',1.5,6], ['leap',0.8,11]];
 SW_SET.leap = 1;
 
-/* ---------- HP: no mantle, so a bigger bar; party x1.6 / x2.1 ---------- */
-SW_hpMax = function(){ var n = G.wave||20, vet = 1 + 0.08*(n-1) + (n>10 ? 0.05*(n-10)*(n-10)/4 : 0), sz = (typeof PTY!=='undefined' && PTY.on) ? PTY_size() : 1;
-  return Math.round(SW_HP*vet*SW2_HPK*(G.mods ? G.mods.ehp : 1)*(SW2_PK[Math.min(3, Math.max(1, sz))-1])); };
+/* ---------- HP: no mantle, so a bigger bar (solo HP at every party size: bosses are duels) ---------- */
+SW_hpMax = function(){ var n = G.wave||20, vet = 1 + 0.08*(n-1) + (n>10 ? 0.05*(n-10)*(n-10)/4 : 0);
+  return Math.round(SW_HP*vet*SW2_HPK*(G.mods ? G.mods.ehp : 1)); };
 /* Temper is gone (absorbs, reactions and grounding no longer fill a meter); the cap never binds */
 SW_temper = function(){};
 SW_Q.cap = 1e9; SW_Q.mul = 2.0; SW_Q.mantle = 1;
@@ -20693,7 +20704,6 @@ SW_HINT_TXT.sw2_charge = function(){ return '<b style="color:#c27cff">CHARGED</b
 SW_HINT_TXT.sw2_verdict = function(){ return '<b style="color:#ffd27a">Verdict</b>: match its colour or shelter in <b>the Eye</b> to live through it, but he drinks the storm. Hold <b>any rod</b> inside its gold ring to turn the bolt on <b>him</b>.'; };
 SW_HINT_TXT.sw2_unbound = function(){ return '<b style="color:#c27cff">STORM UNBOUND</b>: the fight ran long. The rim breaks away, the outer ring <b>crackles with storm</b> (hold storm there, or stay inside) and he strikes faster. Finish him.'; };
 SW_HINT_TXT.sw2_leap = function(){ return '<b>Skyfall</b>: he leaps onto the circle. Match its colour or step out; his landing cracks the rim behind him.'; };
-SW_HINT_TXT.sw2_spread = function(){ return '<b style="color:#ffd27a">Spread</b>: each hero gets their own numbered sequence. Circles that overlap hit twice: keep apart.'; };
 SW_HINT_TXT.sw_seq = function(){ return '<b style="color:#c06bff">Crown Sequence</b>: numbered circles land on you <b>in order</b>, 1 → 2 → 3. Switch ward in rhythm, or walk out of them.'; };
 var SW2_HMAP = {sw_rods:'sw2_rods', sw_eye:'sw2_verdict', sw_redirect:'sw2_verdict', sw_bait:'sw2_bait', sw_temper:null, sw_chain:null};
 var SW2_hint0 = SW_hint;
@@ -20747,10 +20757,9 @@ function SW2_markers(t){ if(SW_M && !SW_M.sw2c){ SW_M.sw2c = 1; SW_M.eyeMat.colo
   function ring(x, z, r, op){ if(ri >= M.ring.length) return; var m = M.ring[ri++]; m.visible = true; m.position.set(x, 0.11, z); m.scale.set(r, 1, r); m.rotation.y = t*0.5; m.material.opacity = op; }
   if(on){ if(SW.anvil) ring(SW.anvil.x, SW.anvil.z, 1.5, 0.55 + 0.3*Math.sin(t*5));
     var RL = SW_rods(); for(var i=0;i<RL.length;i++){ var Q = SW_rodPos(RL[i].i); if(Q && !SW_perched(RL[i].i)) ring(Q.x, Q.z, SW_GR_R, 0.7 + 0.25*Math.sin(t*7)); }
-    if(SW.rodNext >= 0 && !SW_rodAt(SW.rodNext)){ var ann = [SW.rodNext].concat(SW2.xq || []); for(var ai2=0;ai2<ann.length;ai2++){ var Qn = SW_rodPos(ann[ai2]); if(Qn) ring(Qn.x, Qn.z, SW_GR_R, 0.35 + 0.2*Math.sin(t*4)); } }   /* the announced rod (3 s ahead), dimmer */
+    if(SW.rodNext >= 0 && !SW_rodAt(SW.rodNext)){ var ann = [SW.rodNext]; for(var ai2=0;ai2<ann.length;ai2++){ var Qn = SW_rodPos(ann[ai2]); if(Qn) ring(Qn.x, Qn.z, SW_GR_R, 0.35 + 0.2*Math.sin(t*4)); } }   /* the announced rod (3 s ahead), dimmer */
     if(SW.vd){ for(var j=0;j<3;j++){ if(SW_rodAt(j)) continue; var Q2 = SW_rodPos(j); if(Q2 && !SW_perched(j)) ring(Q2.x, Q2.z, SW_GR_R, 0.6 + 0.3*Math.sin(t*7)); }
-      if(SW.eye && ii < M.chIn.length){ var c = M.chIn[ii++]; c.visible = true; var pul = 1 + 0.12*Math.sin(t*6); c.position.set(SW.eye.x, 0.12, SW.eye.z); c.scale.set((SW_EYE_R+0.9)*pul, 1, (SW_EYE_R+0.9)*pul); c.rotation.y = 0; } }
-    if(b.act && b.act.id==='seq' && b.phase===3 && PTY_size() > 1){ var H = PTY_heroes(); for(var h=0;h<H.length && oi<M.chOut.length;h++){ var o = M.chOut[oi++]; o.visible = true; o.position.set(H[h].x, 0.12, H[h].z); o.scale.set(1.5, 1, 1.5); o.rotation.y = t*0.8; } } }
+      if(SW.eye && ii < M.chIn.length){ var c = M.chIn[ii++]; c.visible = true; var pul = 1 + 0.12*Math.sin(t*6); c.position.set(SW.eye.x, 0.12, SW.eye.z); c.scale.set((SW_EYE_R+0.9)*pul, 1, (SW_EYE_R+0.9)*pul); c.rotation.y = 0; } } }
   for(; ri<M.ring.length; ri++) M.ring[ri].visible = false; for(; ii<M.chIn.length; ii++) M.chIn[ii].visible = false; for(; oi<M.chOut.length; oi++) M.chOut[oi].visible = false; }
 
 /* ---------- punish window: STAGGERED (replaces the Temper Quench). Already kneeling: the window extends a little ---------- */
@@ -20772,8 +20781,7 @@ function SW2_log(k, v){ if(SW2.log) SW2.log.push([+(G.t||0).toFixed(2), k, v==nu
 
 /* ---------- Storm Rods: a lane and a gold ground ring; grounded = STAGGERED; unanswered = CHARGED ---------- */
 SW_rodGap = function(b){ return b.phase===3 ? 12 : 10; };
-/* party split: the extra rods (pair 1, trio 2) are chosen when the main rod is announced, so allies can walk to theirs (SW2_rodPlan) */
-SW_rodGo = function(i, dur, el){ if(SW.rod && SW2.xq && SW2.xq.length){ var j = SW2.xq.shift(); if(j!==SW.rod.i && !SW_rodAt(j)) i = j; } var Q = SW_rodPos(i), rr = Math.hypot(Q.x, Q.z)||1; SW.rodN++; var R = {i:i, t:0, dur:dur, el:el, prog:0, hits:0, n:SW.rodN, at:G.t + dur}; SW_res(dur, el);
+SW_rodGo = function(i, dur, el){ var Q = SW_rodPos(i), rr = Math.hypot(Q.x, Q.z)||1; SW.rodN++; var R = {i:i, t:0, dur:dur, el:el, prog:0, hits:0, n:SW.rodN, at:G.t + dur}; SW_res(dur, el);
   SW2_lane(Q.x, Q.z, Math.atan2(-Q.x/rr, -Q.z/rr), rr + ARENA_R, 1.6, dur, el); A2_call('setRod', i, 'charge', 0, el); return R; };
 SW_groundRod = function(b, R){ var Q = SW_rodPos(R.i); SW_unres(R.el, R.at); SW_rodEnd(R); A2_call('setRod', R.i, 'grounded', 1, R.el); after(1.0, function(){ if(!SW_rodAt(R.i)) A2_call('setRod', R.i, 'idle', 0); });
   zapLine([{x:Q.x, z:Q.z}, {x:(Q.x+b.x)/2 + rnd(-1,1), z:(Q.z+b.z)/2 + rnd(-1,1)}, {x:b.x, z:b.z}], R.el); SFX.zap(); shake(0.3); burst(b.x, 3, b.z, 26, ELC[R.el], 8, 0.5, 1.4);
@@ -20789,14 +20797,13 @@ SW_verdict = function(b, el){ var E = SW.eye; el = el || 'storm'; SW_flash(0.5);
     SW_hit(SW_d('verdict'), el, P.x+0.01, P.z-1); });
   SW2_feed(b.x, b.z + 0.5, el, 'verdict'); };
 
-/* ---------- Crown Sequence: numbered circles; P3 party = one sequence per body (spread), overlapping circles stack ---------- */
-SW_strike = function(b, col){ var idx = (b.act && b.act.s!=null) ? b.act.s : 0, spread = b.phase===3 && PTY_size() > 1, src = spread ? PTY_heroes().slice() : [PTY_aim(b) || P], spots = [], grp = {done:[]};
-  if(spread && idx===0) SW_hint('sw2_spread');
+/* ---------- Crown Sequence: numbered circles on the champion ---------- */
+SW_strike = function(b, col){ var idx = (b.act && b.act.s!=null) ? b.act.s : 0, src = [PTY_aim(b) || P], spots = [], grp = {done:[]};
   for(var i=0;i<src.length;i++){ var o = {x:src[i].x, z:src[i].z}; SW_clampIn(o, 0.4); spots.push(o); }
   spots.forEach(function(o){ var tl = addTele(o.x, o.z, 1.6, 0.6, col, function(t){ if(!SW.on) return; burst(t.x, 0.6, t.z, 24, ELC[col], 8, 0.5, 1.4); ringBurst(t.x, t.z, 1.6, 16, ELC[col]); SFX.zap(); shake(0.15);
       for(var h=0;h<6;h++) glowP.emit(t.x+rnd(-0.3,0.3), 0.5+h*1.4, t.z+rnd(-0.3,0.3), 0, -6, 0, 0.25, 1.6, ELC[col], 0, 1);
       PTY_forHeroes(function(){ if(!P || P.dead || grp.done.indexOf(P)>=0 || Math.hypot(P.x-t.x, P.z-t.z) >= 2.0) return; var k = 0; for(var s=0;s<spots.length;s++) if(Math.hypot(P.x-spots[s].x, P.z-spots[s].z) < 2.0) k++;
-        grp.done.push(P); if(k>1) dmgText(P.x, 2.8, P.z, 'STACKED ×'+k, '#ffd27a', 18); SW_hit(SW_d('seq')*k, col, t.x, t.z); }); });
+        grp.done.push(P); SW_hit(SW_d('seq')*Math.max(1, k), col, t.x, t.z); }); });
     tl.hostile = 1; SW2_digit(o.x, o.z, idx+1, col, 0.75); }); };
 
 /* ---------- the director: new acts (Anvil Charge, Skyfall), the first anvil, P2 rod walking, the enrage clock ---------- */
@@ -20863,7 +20870,7 @@ SW_update = function(b, dt, d, ux, uz){ SW.tem = 0;
       if(dl > 0.4){ mv[0] = dx/dl*SW_SPD*1.5; mv[1] = dz/dl*SW_SPD*1.5; } else { mv[0] = mv[1] = 0; } } } }
   return mv; };
 /* fight clock: Storm Unbound (soft enrage) and the CHARGED damage factor */
-function SW2_clock(b, dt){ if(SW2.t0==null) SW2.t0 = G.t; SW2.t = G.t - SW2.t0; var sz = Math.min(3, Math.max(1, PTY_size())), T0 = SW2_UNB[sz-1], st = SW2.t >= T0 ? 1 + Math.floor((SW2.t - T0)/SW2_UNB_STEP) : 0;
+function SW2_clock(b, dt){ if(SW2.t0==null) SW2.t0 = G.t; SW2.t = G.t - SW2.t0; var T0 = SW2_UNB, st = SW2.t >= T0 ? 1 + Math.floor((SW2.t - T0)/SW2_UNB_STEP) : 0;
   st = Math.min(SW2_UNB_MAX, st);
   if(st !== SW2.stk){ var up = st > SW2.stk; SW2.stk = st; for(var i=0;i<SW_GAP.length;i++) SW_GAP[i] = SW2_GAP0[i]*Math.pow(0.88, st);
     if(st > 0 && up){ SW_flash(0.3); shake(0.3); SFX.roar(); A2_call('crowd', 'roar'); if(typeof A2_crackOne==='function') A2_crackOne();
@@ -20891,18 +20898,8 @@ function SW2_gndRender(t){ var on = SW.on && SW2.stk > 0 && !SW.dying && SW_live
   SW2_GM.a.visible = SW2_GM.b.visible = true; SW2_GM.a.scale.set(R, R, 1); SW2_GM.b.scale.set(gr, gr, 1); SW2_GM.a.position.y = 0.09; SW2_GM.b.position.y = 0.1; SW2_GM.a.material.opacity = 0.16 + 0.08*Math.abs(Math.sin(t*6));
   if(Math.random() < 0.5){ var a = Math.random()*TAU, r = rnd(gr, R); glowP.emit(Math.cos(a)*r, 0.3, Math.sin(a)*r, 0, rnd(0.5, 1.8), 0, 0.35, 0.9, ELC.storm, 0, 1); } }
 
-function SW2_rodPlan(){ var n = SW.rodNext, k = PTY_per([0,1,2]); SW2.xq = []; SW2.job = []; if(n < 0 || typeof PTY==='undefined' || !PTY.on || k < 1) return;
-  var others = [0,1,2].filter(function(i){ return i!==n && !SW_rodAt(i); }), ais = HEROES.filter(function(h){ return h!==PTY.ctl && !h.st.dead; });
-  while(others.length && SW2.xq.length < k){ var best = null, bi = -1, bd = 1e9; ais.forEach(function(h){ if(SW2.job.some(function(J){ return J.h===h; })) return; others.forEach(function(r){ var Q = SW_rodPos(r), d = Math.hypot(h.st.x-Q.x, h.st.z-Q.z); if(d < bd){ bd = d; best = h; bi = r; } }); });
-    if(bi < 0) bi = others[0]; SW2.xq.push(bi); if(best) SW2.job.push({h:best, r:bi}); others.splice(others.indexOf(bi), 1); } }
-/* ---------- step hook: party rod plan; allies redirect the Verdict too; markers; fx ---------- */
-STEP_HOOKS.push(function SW2_step(dt){ if(!SW.on){ if(SW2.lanes.length || SW2.digs.length) SW2_clearFx(); return; } SW2_stepFx(dt); SW2_ground(dt);
-  if(SW.rodNext >= 0 && SW2.xq==null) SW2_rodPlan(); else if(SW.rodNext < 0 && !SW.rod && !SW.rodX.length && SW2.xq) SW2.xq = SW2.job = null;
-  var b = SW_live(), V = SW.vd; if(!b || !V || V.redir >= 0 || typeof PTY==='undefined' || !PTY.on) return;
-  for(var j=0;j<3;j++){ if(SW_rodAt(j) || SW_perched(j)) continue; var Q = SW_rodPos(j); if(!Q || (P && !P.dead && Math.hypot(P.x-Q.x, P.z-Q.z) < SW_GR_R)) continue;
-    var H = PTY_heroes(), near = false; for(var i=0;i<H.length;i++){ if(H[i]!==P && !H[i].dead && Math.hypot(H[i].x-Q.x, H[i].z-Q.z) < SW_GR_R) near = true; }
-    if(!near) continue; V.prog[j] += dt*1.5; A2_call('setRod', j, 'grounding', Math.min(1, V.prog[j]/0.8));   /* +1.5 dt against 56's 0.5 dt decay = 1 dt net */
-    if(V.prog[j] >= 0.8){ V.redir = j; A2_call('setRod', j, 'grounded', 1); ringBurst(Q.x, Q.z, SW_GR_R, 24, 0xffc94d); dmgText(Q.x, 3.6, Q.z, 'GROUNDED', '#ffd27a', 18); SFX.pick(); break; } } });
+/* ---------- step hook: fx and the Storm Unbound ground ---------- */
+STEP_HOOKS.push(function SW2_step(dt){ if(!SW.on){ if(SW2.lanes.length || SW2.digs.length) SW2_clearFx(); return; } SW2_stepFx(dt); SW2_ground(dt); });
 RENDER_HOOKS.push(function SW2_render(t){ if(SW.on || SW2_M) SW2_markers(t); SW2_gndRender(t); });
 
 /* ---------- HUD: the bar under his HP shows the state (STAGGERED / CHARGED / what to do), plus Storm Unbound ---------- */
@@ -20917,59 +20914,30 @@ SW_temHud = function(){ var el = SW_el; if(!el) return; var b = SW.b, on = SW.on
 
 /* ---------- reset with the fight ---------- */
 var SW2_reset0 = SW_resetFight;
-SW_resetFight = function(){ var r = SW2_reset0.apply(this, arguments); SW2.t = 0; SW2.t0 = null; SW2.chg = false; SW2.stk = 0; SW2.anvCh = 0; SW2.a1 = false; SW2.xq = SW2.job = null; SW2.n = {bait:0, ground:0, redirect:0, feed:0};
+SW_resetFight = function(){ var r = SW2_reset0.apply(this, arguments); SW2.t = 0; SW2.t0 = null; SW2.chg = false; SW2.stk = 0; SW2.anvCh = 0; SW2.a1 = false; SW2.n = {bait:0, ground:0, redirect:0, feed:0};
   for(var i=0;i<SW_GAP.length;i++) SW_GAP[i] = SW2_GAP0[i]; SW_Q.mantle = 1; SW_Q.dur = 4; SW2_clearFx(); return r; };
 var SW2_clearFight0 = SW_clearFight;
 SW_clearFight = function(){ var r = SW2_clearFight0.apply(this, arguments); SW2_clearFx(); SW2.chg = false; SW_Q.mantle = 1; return r; };
-
-/* ---------- party AI: protect (Gale), stack / redirect (Verdict), spread (P3 sequence). The rod split job is 60-party's PTY_rodFor. ---------- */
-function SW2_aiIdx(h){ var n = 0; for(var i=0;i<HEROES.length;i++){ if(HEROES[i]===h) return n; if(HEROES[i]!==PTY.ctl && !HEROES[i].st.dead) n++; } return n; }
-function SW2_goal(h){ var b = SW_live(); if(!b || SW.ent || SW.dying || !G.waveActive || h.st.dead) return null; var me = h.st, C = PTY.ctl.st, goal = null, st = null, ai = SW2_aiIdx(h), a = b.act;
-  if(SW.vd && SW.vd.redir < 0){ var onRod = false, best = null, bd = 99, j, Q;
-    for(j=0;j<3;j++){ Q = SW_rodPos(j); if(Q && !C.dead && Math.hypot(C.x-Q.x, C.z-Q.z) < SW_GR_R) onRod = true; }
-    if(ai===0 && !onRod){ for(j=0;j<3;j++){ if(SW_rodAt(j) || SW_perched(j)) continue; Q = SW_rodPos(j); if(!Q) continue; var dq = Math.hypot(me.x-Q.x, me.z-Q.z); if(dq < bd){ bd = dq; best = Q; } }
-      if(best && bd < 9){ var qr = Math.hypot(best.x, best.z)||1; goal = {x:best.x - best.x/qr*0.9, z:best.z - best.z/qr*0.9, r:0.5}; st = 'Redirect'; } }
-    if(!goal && SW.eye){ var ea = (ai+1)*2.1; goal = {x:SW.eye.x + Math.cos(ea)*0.9, z:SW.eye.z + Math.sin(ea)*0.9, r:0.4}; st = 'Stack'; } }
-  else if(SW2.job && SW2.job.length && b.phase>=2 && me.hp > me.maxHp*0.25){ var J = null; for(var jj=0;jj<SW2.job.length;jj++) if(SW2.job[jj].h===h) J = SW2.job[jj];
-    if(J && !SW_perched(J.r) && (SW_rodAt(J.r) || SW.rodNext >= 0)){ var Qj = SW_rodPos(J.r), qrj = Math.hypot(Qj.x, Qj.z)||1; goal = {x:Qj.x - Qj.x/qrj*0.9, z:Qj.z - Qj.z/qrj*0.9, r:0.6}; st = 'Ground'; } }
-  if(goal){}
-  else if(a && a.id==='seq' && b.phase===3 && PTY_size() > 1){ var H = PTY_heroes(), nx = 0, nz = 0, cl = false; for(var i=0;i<H.length;i++){ var o = H[i]; if(o===me || o.dead) continue; var dx = me.x-o.x, dz = me.z-o.z, dd = Math.hypot(dx, dz); if(dd < 3.8){ cl = true; nx += dx/(dd||1); nz += dz/(dd||1); } }
-    if(cl){ var nl = Math.hypot(nx, nz)||1; goal = {x:me.x + nx/nl*2, z:me.z + nz/nl*2, r:0.2}; st = 'Spread'; } }
-  else if(a && a.id==='gale' && a.step===0 && a.ang!=null && ai===0){ goal = {x:b.x + Math.sin(a.ang)*3.4, z:b.z + Math.cos(a.ang)*3.4, r:0.5}; st = 'Protect'; }
-  if(goal) goal.st = st; return goal; }
-/* steer toward a goal (false when the step would enter a hole) */
-function SW2_steer(me, goal, mv){ var mx = goal.x-me.x, mz = goal.z-me.z, l = Math.hypot(mx, mz);
-  if(G.act===2 && typeof A2_unsafe==='function' && l > 0.3 && A2_unsafe(me.x+mx/l*1.3, me.z+mz/l*1.3)) return false;
-  if(l > goal.r){ var k = l < 1.2 ? Math.max(0.35, l/1.2) : 1; mv.x = mx/l*k; mv.z = mz/l*k; } else { mv.x = 0; mv.z = 0; } return true; }
-function SW2_ally(h, out){ var g = SW2_goal(h); if(g && SW2_steer(h.st, g, out.mv)) out.state = g.st; }
-/* the AI acts on a decision after a reaction delay; once it has a Stormwright job, steer onto the spot every frame (no overshoot) */
-var SW2_JOBS = {Ground:1, Redirect:1, Stack:1, Spread:1, Protect:1};
-if(typeof PTY_ai==='function'){ var SW2_ai0 = PTY_ai;
-  PTY_ai = function(h, dt){ var r = SW2_ai0.apply(this, arguments); try{ var A = h.ai; if(SW.on && A && SW2_JOBS[A.state] && !h.st.dead){ var g = SW2_goal(h);
-      if(!g && A.state==='Ground' && typeof PTY_rodFor==='function'){ var Q = PTY_rodFor(h, SW); if(Q){ var qr = Math.hypot(Q.x, Q.z)||1; g = {x:Q.x - Q.x/qr*0.9, z:Q.z - Q.z/qr*0.9, r:0.6}; } }
-      if(g) SW2_steer(h.st, g, A.mv); } }catch(err){ if(DEV) console.warn('sw2 ai', err); } return r; }; }
-if(typeof PTY_think==='function'){ var SW2_think0 = PTY_think;
-  PTY_think = function(h){ var out = SW2_think0.apply(this, arguments); try{ if(SW.on) SW2_ally(h, out); }catch(err){ if(DEV) console.warn('sw2 ally', err); } return out; }; }
 
 /* ---------- Codex: moves, phases and tips for v2 ---------- */
 if(typeof CX_BOSS!=='undefined' && CX_BOSS.stormwright){ var SW2_CX = CX_BOSS.stormwright;
   SW2_CX.moves = [
     ['Anvil Charge','His anvil lands in the colour of his lit crown tip. Then a lane points at you and he strides down it with the hammer up. Keep the anvil in the lane and he smashes into it: STAGGERED, double damage.'],
     ['Hammerfall','A ring tide in the lit tip\'s colour rolls out from him. Match it, or dash through it. In the last phase the crown may spin and chime: the colour changes.'],
-    ['Crown Sequence','Numbered circles land on you in order: 1, 2, 3 (later 4). Switch ward in rhythm, or walk out of them. With allies in the last phase each hero gets a sequence: keep apart, overlaps hit twice.'],
+    ['Crown Sequence','Numbered circles land on you in order: 1, 2, 3 (later 4). Switch ward in rhythm, or walk out of them.'],
     ['Skyfall','He leaps onto a circle in his tip colour. Landing near the rim cracks the edge behind him.'],
-    ['Gale Breath','A wedge of wind in his tip colour pushes you toward the edge and carries bolts. An ally can stand in its mouth to shield you.'],
-    ['Storm Rods','From the second phase he walks to a rim rod and charges it: a lane runs through the platform. Stand in the rod\'s gold ring to ground the bolt into him (STAGGERED). Left alone, the bolt runs into him: CHARGED. With allies, one rod per hero.'],
+    ['Gale Breath','A wedge of wind in his tip colour pushes you toward the edge and carries bolts.'],
+    ['Storm Rods','From the second phase he walks to a rim rod and charges it: a lane runs through the platform. Stand in the rod\'s gold ring to ground the bolt into him (STAGGERED). Left alone, the bolt runs into him: CHARGED.'],
     ['Verdict of Thunder','In the last phase the whole platform is struck every 14 s in the colour its haze shows. Match it or shelter in the Eye to live, but he drinks it (CHARGED). Hold a rod in its gold ring and the bolt strikes him instead: STAGGERED 5 s.'],
     ['Charged','An unanswered rod or Verdict heals him a little and halves your damage until you stagger him again.'],
     ['Storm Unbound','If the fight runs long, the rim breaks away piece by piece, the outer ring crackles with storm (hold storm there, or stay inside) and he strikes faster. It never hurts through the right ward.']];
-  SW2_CX.phases = [['100–65%','The Forge: bait his charge into the anvil.'], ['65–30%','The Conductor: ground his rods (one per hero); Heave, two Kite Wardens, two edge sectors crack.'], ['Under 30%','Eye of the Storm: the outer ring cracks; turn the Verdict through a rod, spread for the sequences.']];
+  SW2_CX.phases = [['100–65%','The Forge: bait his charge into the anvil.'], ['65–30%','The Conductor: ground his rods; Heave, two Kite Wardens, two edge sectors crack.'], ['Under 30%','Eye of the Storm: the outer ring cracks; turn the Verdict through a rod.']];
   SW2_CX.tips = 'Your ward keeps you alive; your position decides whether he weakens. Every greedy answer (anvil in the lane, a grounded rod, a redirected Verdict) STAGGERS him for double damage. Every storm you leave alone CHARGES him. Every attack he has can be absorbed by the matching ward.'; }
 
 /* ---------- DEV ---------- */
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.sw2 = { SW2:SW2,
   state:function(){ var b = SW.b; return {t:+SW2.t.toFixed(1), chg:SW2.chg, stk:SW2.stk, n:SW2.n, qT:+SW.qT.toFixed(2), phase:b ? b.phase : null, hp:b ? +(b.hp/b.maxHp).toFixed(3) : null, max:b ? b.maxHp : null, act:b && b.act ? b.act.id : null}; },
-  hpK:function(k){ if(k!=null) SW2_HPK = k; return SW2_HPK; }, unbound:function(s){ SW2.t = SW2_UNB[Math.min(3, PTY_size())-1] + (s||0); return SW2.t; },
+  hpK:function(k){ if(k!=null) SW2_HPK = k; return SW2_HPK; }, unbound:function(s){ SW2.t = SW2_UNB + (s||0); return SW2.t; },
   log:function(on){ if(on===false){ var L = SW2.log; SW2.log = null; return L; } SW2.log = []; return true; },
   snap:function(){ var b = SW.b, all = []; for(var i=0;i<3;i++){ var Q = SW_rodPos(i); if(Q) all.push({i:i, x:Q.x, z:Q.z, live:!!SW_rodAt(i) || SW.rodNext===i, per:!!SW_perched(i)}); }
     return {main:SW.rod ? SW.rod.i : SW.rodNext, rods:all, anvil:SW.anvil ? {x:SW.anvil.x, z:SW.anvil.z} : null, vd:!!SW.vd, eye:SW.eye ? {x:SW.eye.x, z:SW.eye.z} : null, b:b && !b.dead ? {x:b.x, z:b.z, act:b.act ? b.act.id : null, step:b.act ? b.act.step : null, ph:b.phase} : null,
@@ -21201,6 +21169,272 @@ if(typeof A2_showSpireVictory==='function'){ var GL_spv0 = A2_showSpireVictory;
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.glift = { GL:GL, T:GL_T, comp:function(o){ GL.compO = o||null; if(GL.on) GL.on.comp = GL_comp(); return GL_comp(); },
   state:function(){ var S = GL.on, D = A3.desc; return {on:!!S, t:D ? +D.t.toFixed(2) : null, swapped:S ? S.swapped : null, dock:S ? S.dock : null, hesk:!!(S && S.R), act:G.act, wave:G.wave, state:G.state, camO:!!G.camO, zoom:+camera.zoom.toFixed(3),
     lift:!!(GL.lift && GL.lift.parent), cache:typeof RIG_CACHE!=='undefined' ? !!RIG_CACHE['hesk|v1'] : null, dark:!!(A3E.dark && A3E.dark.visible)}; } }; }
+/* 83-partyboss.js — retired (owner decision 2026-10-10). Boss fights are solo duels now (84-duel.js): one champion fights the boss with solo HP
+   and solo mechanics, the rest of the party watches from the stands. The party-boss rules that lived here (Champion's Mark, side blows,
+   allies at x1.0 from signatures, late AI jobs, the wave-30 heal cap) no longer apply and were removed from 80-pitmaster.js and
+   81-stormwright2.js. This file is kept as an empty stub so the build list stays stable. */
+/* ======================================================================================================================
+   84-duel.js — BOSS DUELS (owner decision 2026-10-10). Prefix DU_. Design: design/PARTY.md "Boss duels", design/research/19-epic-boss-waves.md §2.9.
+   Every boss is soloable and fought SOLO: the boss asks "who dares?", one champion steps in, the others watch from the Champions' Ledge.
+     - Party of 2-3 on a boss wave (Pitmaster 'boss', Stormwright 'finale', Hesk 'hesk', Undermaw 'undermaw'; later bosses too):
+       at startWave the party is SPLIT before the boss spawns: HEROES = [champion] for the whole fight, so PTY_size() is 1, PTY_aim is the
+       champion and every boss runs its solo HP and solo mechanics. The rest of the roster (DU.all) is "benched": not targetable, no damage,
+       no AI, rendered on the arena's ledge (Pit: bronze balcony by a gate arch, Spire: chained skiff, Garden: terrace rail; ~135°, screen-left).
+     - Benched heroes regenerate DU_T.regen (1%) of max HP per second while alive.
+     - Swap (Tab / a portrait): 3 s cooldown, unlimited, only while the champion is alive. Instant for gameplay: the incoming hero lands on the
+       outgoing hero's exact spot with the same facing and ward (0.6 s grace); the leap from the ledge is a 0.35 s visual gold arc.
+     - The champion falls: "WHO'S NEXT?" (the sim holds; 1.7 s beat, then the pick of living benched heroes, auto after 5 s). The boss keeps its
+       HP and phase; enemy bolts, telegraphs and colour bookings are cleared; the new champion gets 1.5 s of grace. A fallen hero is carried to
+       the ledge and cannot return that fight. Every hero fallen: the normal defeat (Phoenix Ash still rescues; the duel re-forms after it).
+     - Victory (roundCleared): the bench leaps down, the whole party rejoins; fallen heroes are downed and the normal boss-clear revive (35%) applies.
+     - The Glory factor keeps the full party size (PTY_f / PTY_label use DU.all during a duel). Normal waves are untouched. Solo: only a flavour line.
+   PUBLIC API (same IIFE scope) — for 85-epicboss.js (intro -> challenge -> fight):
+     DU.auto = true          (default) 84 opens the challenge itself right after startWave. Set DU.auto = false at load to sequence it yourself.
+     DU_armed()              true when this boss wave is a duel waiting for its challenge pick (party split done, pick not shown yet).
+     DU_challenge(onDone, o) shows "WHO DARES?" and holds the sim (max DU_T.pick = 6 s, then the current hero). onDone(champSt) runs after the pick.
+                             Solo / no duel: plays the boss's flavour line (unless o.quiet) and calls onDone(P) at once. Safe to call once per wave.
+     DU_kind()               'pm' | 'sw' | 'hk' | 'um' (the boss of this wave, for lines / staging).   DU_on()  true while a duel is running.
+     DU_hold()               true while the duel holds the sim (pick panel or the "Who's next?" beat).
+   Wraps (each calls the original): startWave, roundCleared, playerDie, hitPlayer, clearWorld, PTY_disband, PTY_eachHero, PTY_f, PTY_label, step.
+   No white: every arc / ring / burst is UI gold or a class tint, never a hit. No keys beyond Tab / 1-3 / arrows / Enter / Space (never Z/X/C, never Escape).
+   ====================================================================================================================== */
+var DU_T = {cd:3, inv:0.6, nextInv:1.5, beat:1.7, pick:6, autoNext:5, regen:0.01, leapIn:0.35, leapOut:0.45, carry:0.8, ring:1.8};
+var DU = {on:false, ph:'off', all:[], auto:true, cd:0, frz:false, pk:null, pkT:0, pkMax:0, sel:0, list:[], kind:null, cb:null, chDone:false, beatT:0,
+  vis:[], ledge:null, ring:null, ringT:0, react:0, lastRt:null, stats:{swaps:0, falls:0, picks:0, regen:0}};
+var DU_BOSS = {boss:1, finale:1, hesk:1, undermaw:1};
+var DU_LINES = {
+  pm:{name:'THE PITMASTER', dare:'"So many brave faces, and only one steps down into my pit. Who dares?"', solo:'"Just you? Then show the crowd what you are worth."', next:'"That one is finished. Who\'s next?"'},
+  sw:{name:'THE STORMWRIGHT', dare:'"The Court allows one challenger beneath my storm. Who dares?"', solo:'"One spark against the whole storm. Come, then."', next:'"The verdict is in. Send me the next one."'},
+  hk:{name:'HESK, THE THORNWALL COLOSSUS', dare:'"Little roots. Only one of you may walk into my shade. Who dares?"', solo:'"A lone seedling. The Garden will take you gently."', next:'"Another seed for the soil. Who\'s next?"'},
+  um:{name:'THE UNDERMAW', dare:'"...One. Only one of you comes down to me. Who dares?"', solo:'"...Alone. Good. Come closer."', next:'"...Still hungry. Who\'s next?"'}};
+function DU_on(){ return DU.on; }
+function DU_hold(){ return DU.frz; }
+function DU_armed(){ return DU.on && DU.ph==='arm'; }
+function DU_kind(){ var rt = G.round; if(rt==='finale' || G.act===2) return 'sw'; if(rt==='undermaw') return 'um'; if(rt==='hesk' || G.act===3) return 'hk'; return 'pm'; }
+function DU_L(){ return DU_LINES[DU.kind || DU_kind()] || DU_LINES.pm; }
+function DU_isBench(h){ return DU.on && HEROES.indexOf(h) < 0; }
+function DU_benchAlive(){ return DU.all.filter(function(h){ return DU_isBench(h) && !h.st.dead; }); }
+function DU_cls(h){ var c = CLASSES[h.st.cls]; return c ? c.name.split(' ').pop() : h.st.cls; }
+
+/* ---------------------------------------------------------------- the Champions' Ledge (built lazily, shown only during a duel) ---------------------------------------------------------------- */
+function DU_cfg(){ var R = ARENA_R, d = Math.PI/180;
+  if(G.act===2) return {k:'sw', a:135*d, r:Math.max(18.2, R+3.0), y:0.4, slab:0x4a4e59, rail:0x6e4a2e};
+  if(G.act===3) return {k:'gd', a:128*d, r:Math.max(19.3, R+3.6), y:0.62, slab:0xa89f80, rail:0xb08a48};
+  return {k:'pit', a:135*d, r:Math.max(18.6, R+3.0), y:0.45, slab:0x3a2e30, rail:0x8a6a3a}; }
+function DU_mkLedge(){ var g = new THREE.Group(), lam = function(c){ return new THREE.MeshLambertMaterial({color:c}); }, box = function(w, h, dd, x, y, z, m){ var o = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), m); o.position.set(x, y, z); g.add(o); return o; };
+  var S = {g:g, slabM:lam(0x3a2e30), railM:lam(0x8a6a3a), chainM:lam(0x2c2729), gold:new THREE.MeshBasicMaterial({color:0xffc94d})};
+  S.slab = box(4.9, 0.32, 2.3, 0, -0.16, 0, S.slabM); S.lip = box(5.0, 0.08, 0.16, 0, 0.02, -1.15, S.railM);
+  S.rail = box(4.9, 0.08, 0.08, 0, 0.78, -1.05, S.railM); for(var i=0;i<6;i++) box(0.09, 0.78, 0.09, -2.4 + i*0.96, 0.39, -1.05, S.railM);
+  [-1, 1].forEach(function(s){ box(0.12, 1.6, 0.12, s*2.45, 0.8, 0.9, S.railM); box(0.5, 0.7, 0.03, s*2.45 - s*0.3, 1.25, 0.92, S.gold).material = new THREE.MeshLambertMaterial({color:0x7a2418}); });
+  S.chains = [box(0.1, 0.1, 1, -1.8, -0.1, -2, S.chainM), box(0.1, 0.1, 1, 1.8, -0.1, -2, S.chainM)];
+  g.visible = false; scene.add(g); return S; }
+function DU_ledgeShow(on){ if(!on){ if(DU.ledge) DU.ledge.g.visible = false; return; } var S = DU.ledge || (DU.ledge = DU_mkLedge()), c = DU_cfg(), R = ARENA_R;
+  S.slabM.color.setHex(c.slab); S.railM.color.setHex(c.rail); S.g.position.set(Math.cos(c.a)*c.r, c.y, Math.sin(c.a)*c.r); S.g.rotation.y = Math.PI/2 - c.a;
+  var gap = Math.max(0.2, c.r - 1.15 - R); S.chains.forEach(function(m){ m.visible = c.k==='sw'; m.scale.z = gap; m.position.z = -1.15 - gap/2; }); S.cfg = c; S.g.visible = true; }
+function DU_slot(h){ var c = (DU.ledge && DU.ledge.cfg) || DU_cfg(), o = [-1.35, 0, 1.35][h.i % 3], bob = c.k==='sw' ? 0.08*Math.sin((G.rt||0)*1.3) : 0;
+  return {x:Math.cos(c.a)*c.r - Math.sin(c.a)*o, z:Math.sin(c.a)*c.r + Math.cos(c.a)*o, y:c.y + bob}; }
+
+/* ---------------------------------------------------------------- split / swap / restore ---------------------------------------------------------------- */
+function DU_split(champ){ var keep = []; DU.all.forEach(function(h){ if(h!==champ) keep.push(h); });
+  HEROES.length = 0; HEROES.push(champ); keep.forEach(function(h){ var A = h.ai; A.mv.x = A.mv.z = 0; A.fire = false; A.pend = A.pq = null; A.tgt = null; if(h.M.light) h.M.light.visible = false; h.st.dashT = 0; h.st.whirl = 0; }); }
+function DU_begin(){ HEROES.forEach(function(h){ if(h.st.out) PTY_revive(h, PARTY.returnHp, true); });   /* today's startWave return rule, applied before the split */
+  DU.all = HEROES.slice().sort(function(a, b){ return a.i - b.i; }); DU.on = true; DU.ph = 'arm'; DU.cd = 0; DU.kind = null; DU.chDone = false; DU.armT = 0; DU.vis.length = 0;
+  DU.all.forEach(function(h){ h.duAt = 'floor'; }); DU_split(PTY.ctl); }
+/* visual leap: the model flies an arc while the logical position is already set */
+function DU_leap(h, from, to, dur, kind){ for(var i=DU.vis.length-1;i>=0;i--) if(DU.vis[i].h===h) DU.vis.splice(i,1); DU.vis.push({h:h, f:{x:from.x, y:from.y||0, z:from.z}, to:to, t:0, dur:dur, kind:kind}); }
+function DU_toBench(h, kind){ var s = DU_slot(h); DU_leap(h, {x:h.st.x, y:0, z:h.st.z}, 'slot', kind==='carry' ? DU_T.carry : DU_T.leapOut, kind); h.duAt = 'ledge'; }
+/* make h the champion. mode 'pick' (the challenge: h keeps its own spot), 'swap' (lands on the old champion's spot), 'next' (after a fall) */
+function DU_swapTo(h, mode){ var old = PTY.ctl; if(!h || h.st.dead || HEROES.indexOf(h) >= 0 && h===old) return h===old;
+  var spot = {x:old.st.x, z:old.st.z, face:old.st.face, ward:old.st.ward}, from = DU_slot(h), wasLedge = h.duAt==='ledge';
+  if(mode==='pick'){ spot = {x:h.st.x, z:h.st.z, face:h.st.face, ward:old.st.ward}; }
+  h.st.x = h.st.px = spot.x; h.st.z = h.st.pz = spot.z; h.st.face = spot.face; h.st.vx = h.st.vz = 0; h.st.hurtT = 0; h.M.root.rotation.set(0, 0, 0);
+  HEROES.push(h); var ok = PTY_swap(HEROES.length-1, true); if(!ok){ HEROES.splice(HEROES.indexOf(h), 1); return false; }
+  var oi = HEROES.indexOf(old); if(oi >= 0) HEROES.splice(oi, 1); PTY.swapCd = 0; h.duAt = 'floor';
+  if(P.ward !== spot.ward) setWard(spot.ward, true);
+  P.inv = Math.max(P.inv, mode==='next' ? DU_T.nextInv : DU_T.inv); G.camK = null; PTY.glide = 0;
+  if(mode!=='pick' && wasLedge) DU_leap(h, from, 'floor', DU_T.leapIn, 'in');
+  if(mode==='pick'){ DU_spot(P.x, P.z); }
+  if(mode!=='pick' || !old.st.dead) DU_toBench(old, old.st.dead ? 'carry' : 'out');
+  DU.stats.swaps++; return true; }
+function DU_trySwap(h){ if(!DU.on || DU.ph!=='fight' || DU.frz || !h || !DU_isBench(h) || h.st.dead || !P || P.dead || DU.cd > 0 || G.state!=='play' || G.paused || PTY.stk.length) return false;
+  if(!DU_swapTo(h, 'swap')) return false; DU.cd = DU_T.cd; dmgText(P.x, 2.8, P.z, DU_cls(h).toUpperCase()+' STEPS IN', '#ffd27a', 18); if(typeof crowdCheer!=='undefined') crowdCheer = Math.max(crowdCheer, 0.5); return true; }
+function DU_nextIdx(){ var L = DU.all, ci = PTY.ctl ? L.indexOf(PTY.ctl) : 0; for(var k=1;k<L.length;k++){ var h = L[(ci + k) % L.length]; if(DU_isBench(h) && !h.st.dead) return (ci + k) % L.length; } return -1; }
+function DU_next(){ var i = DU_nextIdx(); return i >= 0 ? DU_trySwap(DU.all[i]) : false; }
+function DU_tap(i){ var h = DU.all[i]; if(!h) return false; if(DU.pk) return DU_pickH(h); return DU_trySwap(h); }
+/* hard restore (menu, new run, wipe): roster back in order, ledge hidden; positions near the champion */
+function DU_restore(win){ if(!DU.on) return; var c = PTY.ctl, k = 0; DU_panel(null); DU.frz = false;
+  DU.all.forEach(function(h){ if(HEROES.indexOf(h) >= 0) return; var a = (k++ ? 2.5 : 0.7), x = c.st.x + Math.cos(a)*1.8, z = c.st.z + Math.sin(a)*1.8, o = {x:x, z:z}; clampArena(o, 0.8);
+    var from = DU_slot(h); h.st.x = h.st.px = o.x; h.st.z = h.st.pz = o.z; h.M.root.rotation.set(0, 0, 0); h.duAt = 'floor';
+    if(h.st.dead && h.st.out && win){ h.st.out = false; h.st.downed = true; h.st.downT = PARTY.bleed; }   /* the boss-clear revive picks them up */
+    if(win && !h.st.dead) DU_leap(h, from, 'floor', 0.6, 'in'); });
+  HEROES.length = 0; DU.all.forEach(function(h){ HEROES.push(h); }); DU.all = []; DU.on = false; DU.ph = 'off'; DU_ledgeShow(false); if(typeof PTY_hud==='function') PTY_hud(); }
+
+/* ---------------------------------------------------------------- the pick panel ---------------------------------------------------------------- */
+(function(){ var st = document.createElement('style'); st.id = 'DU_css'; st.textContent = [
+'#DU_pk{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:radial-gradient(ellipse at 50% 45%,rgba(18,8,6,.45),rgba(10,5,4,.86));font-family:Rubik,sans-serif;color:#e8d6bc;user-select:none;-webkit-user-select:none;overflow:auto}',
+'#DU_pk[hidden]{display:none}',
+'#DU_pk .k{font:700 12px/1 Cinzel,serif;letter-spacing:.32em;color:#d9a04e;text-align:center}',
+'#DU_pk .t{font:900 50px/1.05 Cinzel,serif;color:#ffd27a;letter-spacing:.04em;margin:8px 0 6px;text-shadow:0 3px 0 #5a2412,0 0 22px rgba(255,140,40,.45);text-align:center}',
+'#DU_pk .s{font-style:italic;font-size:15px;max-width:600px;text-align:center;margin:0 0 18px;color:#e9d9c0;text-shadow:0 1px 2px #000}',
+'#DU_pk .cs{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}',
+'.DU_c{position:relative;width:208px;padding:14px 14px 12px;box-sizing:border-box;cursor:pointer;touch-action:manipulation;background:linear-gradient(180deg,#2a1c18,#140c0c 70%);border:2px solid #5a4634;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.6);transition:transform .12s,border-color .12s,box-shadow .12s;text-align:left}',
+'.DU_c.on{border-color:#ffd27a;transform:translateY(-4px);box-shadow:0 0 0 1px #ffd27a,0 0 26px rgba(255,190,80,.45),0 8px 20px rgba(0,0,0,.6)}',
+'.DU_c .ic{width:62px;height:62px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;color:#ffe1b0;background:radial-gradient(circle at 50% 30%,#5a3622,#1c100c 72%);border:3px solid var(--wc,#ff7a33);border-radius:50%}',
+'.DU_c .ic svg{width:62%;height:62%}.DU_c .ic b{font-size:26px}',
+'.DU_c .nm{font:900 19px/1.1 Cinzel,serif;color:#ffd9a0;text-align:center;letter-spacing:.06em}',
+'.DU_c .ep{font-size:11px;color:#b8a896;text-align:center;margin:2px 0 8px;letter-spacing:.04em}',
+'.DU_c .hp{position:relative;height:14px;background:#1a0d0c;box-shadow:inset 0 0 0 1px #000,0 0 0 1px #4a3a2c;margin-bottom:8px}',
+'.DU_c .hp i{position:absolute;left:1px;top:1px;bottom:1px;background:linear-gradient(180deg,#ff8a5c,#d8352a 55%,#9a1e16)}',
+'.DU_c .hp em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 10.5px/1 Rubik,sans-serif;font-style:normal;color:#fff3e2;text-shadow:0 0 2px #000,0 1px 1px #000}',
+'.DU_c ul{list-style:none;margin:0;padding:0;font-size:11.5px;line-height:1.45;color:#d9c8b0}.DU_c li b{color:#e0a060;font-weight:700;margin-right:4px}',
+'.DU_c kbd{position:absolute;top:8px;left:8px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;font:800 11px/1 Rubik,sans-serif;color:#fff0d6;background:linear-gradient(#2b1c18,#120a0b);border:1px solid #b08a58;border-radius:3px}',
+'.DU_c .tg{position:absolute;top:8px;right:8px;font:700 8.5px/1 Cinzel,serif;letter-spacing:.18em;padding:3px 5px;color:#2a1608;background:linear-gradient(#ffe2a6,#d9a04e);border-radius:2px}',
+'#DU_pk .f{margin-top:16px;font-size:12px;color:#b8a896;text-align:center;letter-spacing:.04em}',
+'#DU_pk .bar{width:240px;height:4px;margin:8px auto 0;background:#1d110d;border:1px solid #5a4634;overflow:hidden}#DU_pk .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff8a3d,#ffd27a);transform-origin:0 50%}',
+'body.touch #DU_pk kbd{display:none}',
+'@media (max-width:700px),(max-height:520px){#DU_pk .t{font-size:34px}#DU_pk .s{font-size:13px;margin-bottom:12px}#DU_pk .cs{flex-direction:column;gap:8px;width:100%;max-width:380px}',
+'.DU_c{width:auto;display:grid;grid-template-columns:54px 1fr;column-gap:12px;padding:10px 12px;align-items:center}.DU_c.on{transform:none}',
+'.DU_c .ic{grid-row:1 / span 4;width:52px;height:52px;margin:0}.DU_c .nm,.DU_c .ep{text-align:left}.DU_c .ep{margin:1px 0 5px}.DU_c .hp{margin-bottom:5px}.DU_c ul{font-size:11px;line-height:1.35}.DU_c li.sp{display:none}.DU_c kbd{left:auto;right:8px;top:auto;bottom:8px}}'
+].join('\n'); document.head.appendChild(st);
+  var el = document.createElement('div'); el.id = 'DU_pk'; el.hidden = true;
+  el.innerHTML = '<div class="k"></div><div class="t"></div><div class="s"></div><div class="cs"></div><div class="f"></div><div class="bar"><i></i></div>';
+  document.body.appendChild(el); DU.el = el; })();
+function DU_esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function DU_card(h, i, ctl){ var st = h.st, I = (typeof LB_INFO!=='undefined' && LB_INFO[st.cls]) || {}, hp = Math.max(0, st.hp), f = Math.max(0, Math.min(1, hp/st.maxHp));
+  var sp = (st.spells||[]).filter(function(s){ return s && SPELLS[s.id]; }).map(function(s){ return SPELLS[s.id].name; }).join(', ');
+  var svg = typeof PH_svg==='function' ? PH_svg(st.cls) : '<b>'+(CLASSES[st.cls] ? CLASSES[st.cls].icon : '?')+'</b>';
+  return '<div class="DU_c" data-i="'+i+'" style="--wc:'+(ELCSS[st.ward]||'#ff7a33')+'"><kbd>'+(i+1)+'</kbd>'+(ctl ? '<span class="tg">YOU</span>' : '')+'<div class="ic">'+svg+'</div><div class="nm">'+DU_esc(DU_cls(h).toUpperCase())+'</div>'+
+    '<div class="ep">'+DU_esc(I.epi || (CLASSES[st.cls] ? CLASSES[st.cls].desc : ''))+'</div><div class="hp"><i style="width:calc('+(f*100).toFixed(1)+'% - 2px)"></i><em>'+Math.ceil(hp)+' / '+Math.round(st.maxHp)+'</em></div>'+
+    '<ul>'+(I.atk ? '<li><b>Attack</b>'+DU_esc(I.atk[0])+'</li>' : '')+(sp ? '<li class="sp"><b>Spells</b>'+DU_esc(sp)+'</li>' : '')+'<li><b>Ultimate</b>'+DU_esc(I.ult ? I.ult[0] : CLASSES[st.cls].ult)+'</li></ul></div>'; }
+/* kind: 'dare' | 'next' | null (close) */
+function DU_panel(kind){ var el = DU.el; if(!kind){ el.hidden = true; DU.pk = null; return; }
+  var L = DU_L(), list = kind==='dare' ? DU.all.filter(function(h){ return !h.st.dead; }) : DU_benchAlive();
+  DU.pk = kind; DU.list = list; DU.pkT = 0; DU.pkMax = kind==='dare' ? DU_T.pick : DU_T.autoNext;
+  var def = 0; if(kind==='dare'){ def = Math.max(0, list.indexOf(PTY.ctl)); } else { var bh = -1; list.forEach(function(h, i){ var k = h.st.hp/h.st.maxHp; if(k > bh){ bh = k; def = i; } }); }
+  DU.sel = def; el.querySelector('.k').textContent = L.name;
+  el.querySelector('.t').textContent = kind==='dare' ? 'WHO DARES?' : "WHO'S NEXT?"; el.querySelector('.s').textContent = kind==='dare' ? L.dare : L.next;
+  el.querySelector('.cs').innerHTML = list.map(function(h, i){ return DU_card(h, i, h===PTY.ctl && kind==='dare'); }).join('');
+  el.querySelector('.f').innerHTML = G.touch ? 'Tap a champion. The others watch from the stands and can swap in.' : 'Click a champion, or '+[1,2,3].slice(0, list.length).map(kl.bind(null)).map(function(n){ return n; }).join(' / ')+', or arrows + '+kl('Enter')+'. The others watch from the stands: '+kl('Tab')+' swaps them in.';
+  el.querySelectorAll('.DU_c').forEach(function(c){ c.addEventListener('pointerdown', function(e){ if(e.pointerType==='mouse') return; e.preventDefault(); e.stopPropagation(); audioInit(); setTouch(true); DU_choose(+c.getAttribute('data-i')); }); });
+  DU_selShow(); el.hidden = false; }
+function DU_selShow(){ var cs = DU.el.querySelectorAll('.DU_c'); for(var i=0;i<cs.length;i++) cs[i].classList.toggle('on', i===DU.sel); }
+function DU_choose(i){ if(!DU.pk) return false; var h = DU.list[i]; if(!h) return false; return DU_pickH(h); }
+function DU_pickH(h){ var kind = DU.pk; if(!kind || DU.list.indexOf(h) < 0) return false; DU_panel(null); if(typeof SFX!=='undefined' && SFX.click) SFX.click();
+  if(kind==='dare') DU_afterDare(h); else DU_afterNext(h); return true; }
+/* challenge flow */
+function DU_challenge(onDone, o){ o = o||{}; DU.kind = DU_kind(); var L = DU_L();
+  if(!DU_armed()){ if(!o.quiet && !DU.chDone) bossSay(L.name, L.solo, 2.4); DU.chDone = true; if(onDone) onDone(P); return false; }
+  DU.cb = onDone || null; DU.chDone = true; DU.frz = true; DU.ph = 'dare'; DU_ledgeShow(true); DU_panel('dare'); return true; }
+function DU_afterDare(h){ DU.frz = false; DU.ph = 'fight'; DU.stats.picks++; if(h!==PTY.ctl) DU_swapTo(h, 'pick'); else DU_spot(P.x, P.z);
+  DU.all.forEach(function(o){ if(DU_isBench(o)) DU_toBench(o, 'out'); }); DU.cd = 0;
+  dmgText(P.x, 3.0, P.z, 'CHAMPION', '#ffd27a', 22); if(typeof crowdCheer!=='undefined') crowdCheer = 1; if(SFX.cheer) SFX.cheer(); else if(SFX.pick) SFX.pick();
+  var cb = DU.cb; DU.cb = null; if(cb) try{ cb(P); }catch(err){ if(DEV) console.warn(err); } }
+/* the gold spotlight ring the champion steps into */
+function DU_spot(x, z){ if(!DU.ring){ DU.ring = new THREE.Mesh(new THREE.RingGeometry(0.95, 1.25, 48), new THREE.MeshBasicMaterial({color:0xffc94d, transparent:true, opacity:0.9, depthWrite:false, side:THREE.DoubleSide}));
+    DU.ring.rotation.x = -Math.PI/2; DU.ring.renderOrder = 3; scene.add(DU.ring); }
+  DU.ring.position.set(x, 0.07, z); DU.ring.visible = true; DU.ringT = DU_T.ring; ringBurst(x, z, 1.2, 18, 0xffd27a); }
+
+/* ---------------------------------------------------------------- the champion falls: "Who's next?" ---------------------------------------------------------------- */
+function DU_clearAttacks(){ eprojs.forEach(function(p){ p.m.visible = false; projPool.push(p.m); }); eprojs.length = 0;
+  teles.forEach(function(t){ t.v.used = false; t.v.g.visible = false; }); teles.length = 0; if(typeof CMB!=='undefined' && CMB.res) CMB.res.length = 0; }
+function DU_fall(reason){ var st = P; st.dead = true; st.downed = true; st.out = true; st.hp = 0; st.deathReason = reason||'slain'; st.dashT = 0; st.whirl = 0; st.deadT = 0; st.stun = 0;
+  burst(st.x, 1, st.z, 24, ELC[st.ward], 6, 0.8, 1.3); dmgText(st.x, 2.6, st.z, DU_cls(PTY.ctl).toUpperCase()+' FALLS', '#ff6b6b', 22); SFX.hurt(); shake(0.4);
+  DU_clearAttacks(); DU.stats.falls++; DU.ph = 'beat'; DU.frz = true; DU.beatT = DU_T.beat; var L = DU_L(); bossSay(L.name, L.next, DU_T.beat + 0.6); }
+function DU_afterNext(h){ DU_clearAttacks(); DU_swapTo(h, 'next'); DU.ph = 'fight'; DU.frz = false; DU.cd = DU_T.cd;
+  dmgText(P.x, 3.0, P.z, DU_cls(h).toUpperCase()+' STEPS IN', '#ffd27a', 22); if(typeof crowdCheer!=='undefined') crowdCheer = 1; }
+
+/* ---------------------------------------------------------------- wrappers ---------------------------------------------------------------- */
+var DU_sw0 = startWave;
+startWave = function(n){ if(DU.on) DU_restore(false);
+  var boss = false; try{ if(G.act > 1 || isBossRound(n)) boss = !!DU_BOSS[roundType(n)]; }catch(err){}   /* act I: only boss waves (roundType rolls the random rounds) */
+  if(boss) DU.chDone = false;
+  if(boss && PTY.on && PTY_standing().length >= 2 && P && !P.dead) DU_begin();
+  var r = DU_sw0.apply(this, arguments);
+  if(boss){ DU.kind = DU_kind(); if(DU.auto){ if(DU.on) DU_challenge(null); else after(DU.kind==='hk' ? 5.8 : 3.4, function(){ if(G.waveActive && !DU.chDone) DU_challenge(null); }); } }
+  return r; };
+var DU_rc0 = roundCleared;
+roundCleared = function(boss){ if(DU.on) DU_restore(true); return DU_rc0.apply(this, arguments); };
+var DU_pd0 = playerDie;
+playerDie = function(reason){ if(!DU.on || DU.ph==='off' || DU.ph==='beat' || !P || P.dead || G.aiCtx || P!==PTY.ctl.st) return DU_pd0.apply(this, arguments);
+  if(!DU_benchAlive().length){ DU_restore(false); var r = DU_pd0.apply(this, arguments);
+    if(P && !P.dead && PTY.on && G.waveActive && PTY_standing().length >= 2){ DU_begin(); DU.ph = 'fight'; DU.chDone = true; DU_ledgeShow(true); DU.all.forEach(function(o){ if(DU_isBench(o)) DU_toBench(o, 'out'); }); }   /* Phoenix Ash: the duel re-forms */
+    return r; }
+  DU_fall(reason); };
+var DU_hp0 = hitPlayer;
+hitPlayer = function(dmg, el, src, o){ var r = DU_hp0.apply(this, arguments); if(DU.on && !G.aiCtx){ if(r==='hit') DU.react = 0.6; } return r; };
+var DU_cw0 = clearWorld;
+clearWorld = function(){ if(DU.on) DU_restore(false); return DU_cw0.apply(this, arguments); };
+var DU_db0 = PTY_disband;
+PTY_disband = function(){ if(DU.on) DU_restore(false); return DU_db0.apply(this, arguments); };
+var DU_f0 = PTY_f;
+PTY_f = function(tab){ if(DU.on && DU.all.length) return tab[Math.min(tab.length, Math.max(1, DU.all.length))-1]; return DU_f0(tab); };   /* the Glory factor keeps the full party */
+var DU_lb0 = PTY_label;
+PTY_label = function(){ if(DU.on && DU.all.length) return DU.all.length >= 3 ? 'FAMILIA' : 'PAIR'; return DU_lb0.apply(this, arguments); };
+var DU_step0 = step;
+step = function(dt){ if(DU.frz) return; return DU_step0.apply(this, arguments); };
+
+/* ---------------------------------------------------------------- per-step: cooldown, bench regen, safety end ---------------------------------------------------------------- */
+STEP_HOOKS.push(function DU_stepHook(dt){ if(!DU.on) return; if(DU.cd > 0) DU.cd -= dt;
+  if(DU.ph==='arm'){ DU.armT = (DU.armT||0) + dt; if(DU.armT > 12){ DU.chDone = true; DU_ledgeShow(true); DU_afterDare(PTY.ctl); } }   /* an outside sequencer (85) never asked: the current hero fights */
+  if(DU.ph==='fight') DU.all.forEach(function(h){ if(!DU_isBench(h) || h.st.dead) return; var s = h.st, h0 = s.hp; s.hp = Math.min(s.maxHp, s.hp + s.maxHp*DU_T.regen*dt); DU.stats.regen += s.hp - h0; });
+  if(DU.ph==='fight' && !G.waveActive){ DU.endT = (DU.endT||0) + dt; if(DU.endT > 1.0) DU_restore(true); } else DU.endT = 0; });
+
+/* ---------------------------------------------------------------- rendering: bench on the ledge, visual leaps, spotlight, panel timers ---------------------------------------------------------------- */
+function DU_arc(V, k){ var to = V.to==='slot' ? DU_slot(V.h) : {x:V.h.st.x, y:0, z:V.h.st.z}, e = k<0.5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2)/2;
+  return {x:lerp(V.f.x, to.x, e), z:lerp(V.f.z, to.z, e), y:lerp(V.f.y, to.y||0, e) + Math.sin(k*Math.PI)*(V.kind==='carry' ? 1.2 : 2.4)}; }
+function DU_visOf(h){ for(var i=0;i<DU.vis.length;i++) if(DU.vis[i].h===h) return DU.vis[i]; return null; }
+var DU_each0 = PTY_eachHero;
+PTY_eachHero = function(fn){ var r = DU_each0.apply(this, arguments); if(!PTY.on) return r;
+  try{ var i, h, V, p;
+    /* heroes on the floor that are still finishing a visual leap (incoming champion, the party rejoining) */
+    for(i=0;i<HEROES.length;i++){ h = HEROES[i]; V = DU_visOf(h); if(!V || V.to!=='floor') continue; p = DU_arc(V, Math.min(1, V.t/V.dur)); h.M.root.position.set(p.x, p.y, p.z); h.M.root.visible = true; }
+    if(!DU.on) return r;
+    var cheer = typeof crowdCheer!=='undefined' ? crowdCheer : 0, t = G.rt||0;
+    for(i=0;i<DU.all.length;i++){ h = DU.all[i]; if(HEROES.indexOf(h) >= 0) continue; var st = h.st; V = DU_visOf(h);
+      if(V) p = DU_arc(V, Math.min(1, V.t/V.dur)); else if(h.duAt==='ledge') p = DU_slot(h); else p = {x:st.x, y:0, z:st.z};
+      st.x = st.px = p.x; st.z = st.pz = p.z; st.vx = st.vz = 0; st.hurtT = 0; st.atkAnim = 0;
+      if(h.duAt==='ledge' && !V) st.face = Math.atan2(-p.x, -p.z);
+      (function(hh){ withHero(hh, function(){ fn(); }); })(h);
+      var M = h.M, hop = 0, lean = 0;
+      if(!st.dead && !V && h.duAt==='ledge'){ hop = cheer > 0.45 ? Math.abs(Math.sin(t*9 + h.i*1.7))*0.22*cheer : 0.02*Math.sin(t*2 + h.i); lean = DU.react > 0 ? Math.sin(t*30 + h.i)*0.08*DU.react : 0; }
+      M.root.position.y = p.y + hop; M.root.rotation.z = lean; if(M.ring) M.ring.visible = false; if(M.bub) M.bub.visible = false; if(M.light) M.light.visible = false; } }
+  catch(err){ if(DEV) console.warn('duel render', err); }
+  return r; };
+function DU_tick(rdt){ var i;
+  for(i=DU.vis.length-1;i>=0;i--){ var V = DU.vis[i]; V.t += rdt; if(Math.random() < 0.5){ var p = DU_arc(V, Math.min(1, V.t/V.dur)); glowP.emit(p.x, p.y + 0.8, p.z, 0, 0.3, 0, 0.3, 0.8, 0xffc94d, 0, 1); }
+    if(V.t >= V.dur){ DU.vis.splice(i, 1); if(V.to==='floor'){ ringBurst(V.h.st.x, V.h.st.z, 1.1, 14, 0xffd27a); burst(V.h.st.x, 0.4, V.h.st.z, 10, 0xffc94d, 4, 0.4, 1.0); } } }
+  if(DU.ringT > 0){ DU.ringT -= rdt; if(DU.ring){ DU.ring.material.opacity = 0.9*Math.min(1, DU.ringT/0.6); if(P) DU.ring.position.set(P.x, 0.07, P.z); if(DU.ringT <= 0) DU.ring.visible = false; } }
+  if(DU.react > 0) DU.react = Math.max(0, DU.react - rdt);
+  if(G.state!=='play' || G.paused) return;
+  if(DU.ph==='beat'){ DU.beatT -= rdt; if(DU.beatT <= 0){ DU.ph = 'next'; if(DU_benchAlive().length) DU_panel('next'); } }
+  if(DU.pk){ DU.pkT += rdt; var bar = DU.el.querySelector('.bar i'); if(bar) bar.style.transform = 'scaleX('+Math.max(0, 1 - DU.pkT/DU.pkMax).toFixed(3)+')';
+    if(typeof locked!=='undefined' && locked){ var j = DU_cardAt(mouseX, mouseY); if(j >= 0 && j!==DU.sel){ DU.sel = j; DU_selShow(); } }
+    if(DU.pkT >= DU.pkMax) DU_choose(DU.pk==='dare' ? Math.max(0, DU.list.indexOf(PTY.ctl)) : DU.sel); } }
+RENDER_HOOKS.push(function DU_render(){ var now = G.rt||0, rdt = DU.lastRt==null ? 0 : Math.min(0.1, Math.max(0, now - DU.lastRt)); DU.lastRt = now; if(DU.on || DU.vis.length || DU.ringT > 0) DU_tick(rdt); });
+
+/* ---------------------------------------------------------------- input ---------------------------------------------------------------- */
+function DU_cardAt(x, y){ var cs = DU.el.querySelectorAll('.DU_c'); for(var i=0;i<cs.length;i++){ var r = cs[i].getBoundingClientRect(); if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return i; } return -1; }
+window.addEventListener('keydown', function(e){ if(G.state!=='play') return;
+  if(DU.pk){ var c = e.code, n = DU.list.length;
+    if(/^(Digit|Numpad)[1-3]$/.test(c)){ var i = +c.slice(-1) - 1; if(i < n){ e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat){ DU.sel = i; DU_selShow(); DU_choose(i); } } else { e.preventDefault(); e.stopImmediatePropagation(); } return; }
+    if(c==='ArrowLeft' || c==='ArrowUp'){ e.preventDefault(); e.stopImmediatePropagation(); DU.sel = (DU.sel + n - 1) % n; DU_selShow(); return; }
+    if(c==='ArrowRight' || c==='ArrowDown'){ e.preventDefault(); e.stopImmediatePropagation(); DU.sel = (DU.sel + 1) % n; DU_selShow(); return; }
+    if(c==='Enter' || c==='NumpadEnter' || c==='Space'){ e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) DU_choose(DU.sel); return; }
+    if(c==='Tab'){ e.preventDefault(); e.stopImmediatePropagation(); return; }
+    return; }
+  if(DU.on && e.code==='Tab' && !G.paused){ e.preventDefault(); if(!e.repeat) DU_next(); } }, true);
+window.addEventListener('mousedown', function(e){ if(!DU.pk || G.state!=='play') return; var lk = typeof locked!=='undefined' && locked, x = lk ? mouseX : e.clientX, y = lk ? mouseY : e.clientY;
+  e.preventDefault(); e.stopPropagation(); if(e.button!==0) return; var i = DU_cardAt(x, y); if(i >= 0){ audioInit(); setTouch(false); DU.sel = i; DU_selShow(); DU_choose(i); } }, true);
+window.addEventListener('mousemove', function(e){ if(!DU.pk || (typeof locked!=='undefined' && locked)) return; var i = DU_cardAt(e.clientX, e.clientY); if(i >= 0 && i!==DU.sel){ DU.sel = i; DU_selShow(); } });
+if(typeof keysHelp==='function'){ var DU_kh0 = keysHelp; keysHelp = function(){ var k = DU_kh0.apply(this, arguments); if(DU.on) k += '<div>Boss duel: '+(G.touch ? 'tap a portrait' : kl('Tab')+' or a portrait')+' swaps in a hero from the stands ('+DU_T.cd+' s)</div>'; return k; }; }
+
+/* ---------------------------------------------------------------- DEV ---------------------------------------------------------------- */
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.duel = {DU:DU, T:DU_T,
+  state:function(){ return {on:DU.on, ph:DU.ph, frz:DU.frz, pk:DU.pk, sel:DU.sel, cd:+DU.cd.toFixed(2), kind:DU.kind, heroes:HEROES.map(function(h){ return h.st.cls; }), champ:PTY.ctl ? PTY.ctl.st.cls : null,
+    bench:DU.all.filter(DU_isBench).map(function(h){ return {cls:h.st.cls, hp:Math.round(h.st.hp), max:h.st.maxHp, dead:!!h.st.dead, at:h.duAt, x:+h.st.x.toFixed(1), z:+h.st.z.toFixed(1)}; }), stats:DU.stats}; },
+  pick:function(i){ return DU_choose(i); }, swap:function(i){ return DU_tap(i); }, next:DU_next, tick:function(s){ var n = Math.round((s||0)/0.05); for(var k=0;k<n;k++) DU_tick(0.05); return DU.ph; },
+  kill:function(){ if(!P || P.dead) return false; var g = G.god; G.god = false; P.inv = 0; P.dashT = 0; P.guard = 0; hitPlayer(99999, 'pure', null, {noDodge:true, noInv:true, noGuard:true}); G.god = g; return P.dead; },
+  challenge:function(){ return DU_challenge(null); }, slot:function(i){ return DU_slot(DU.all[i]); }}; }
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
