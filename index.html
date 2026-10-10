@@ -10444,11 +10444,18 @@ var CX_ROUND = {
 };
 var CX_BOSS = {
   boss:{n:'The Pitmaster', act:'Act I', el:'flame', pz:1.12,
-    lore:'Master of the Ember Pit. He fights in two stances and swaps between them, and his weapon tells you which.',
+    lore:'The house\'s champion. He duels you for the crowd: he throws, he chains, he bets, and he respects a clean catch. Meet his colour on purpose and he loses his weapon.',
+    moves:[['Spear Throw','A lane fills out from his hand toward you for 1.1 s; the spear head shows its colour. Stand in it with that ward to CATCH the spear: he is Disarmed for 4 s and takes ×1.75. Step out and the spear sticks in the sand; he walks over and pulls it back along a line.'],
+      ['Feint','From 80% health he sometimes pumps once and the spear head changes colour 0.6 s before the throw, with a call. Switch late to still catch it.'],
+      ['Sunder Wedge','When you are close, a 60° wedge from his feet in his colour. Go around it, or absorb it.'],
+      ['Shockwave','A ring rolls out from him in his colour. Dash through it, or absorb it.'],
+      ['The Chain','He hooks you; the dashed ring is the 7 u leash. Every 2 s a pulse runs down the chain, lighting the links 0.8 s ahead in its colour. Leave the leash and he yanks you. Drag the chain across a pillar for 1 s to snap it (he stumbles 2 s, ×1.5), or hold it: you deal ×1.5 and absorbed pulses give double Overload.'],
+      ['Kneel Sequence','Numbered circles land around you 0.6 s apart, never the same colour twice in a row; the last one follows you. Step into 1, then 2, with the matching ward and catch the last under you to disarm him again. Or stay clear and walk or dash out of the last one.']],
+    party:[['Pair and trio','Two bodies in the spear lane brace the catch (one alone is knocked down, no Disarm). A free ally can cut a chain by standing on it for 1 s; a trio faces two chains. Sequences come one per body: keep apart, overlapping circles hit twice. Allies follow the gold markers.']],
     act2:{sunder:['Sunder','A slam that tears a line of fire toward you. In phase 2 it splits into three lines.'], cyclone:['Cyclone','He spins with the spear in his colour: match it or step out of reach. In phase 2 the spin turns colour once.'], shockwave:['Shockwave','A ring in his colour rolls outward. Match it, or dash through it as it reaches you. In phase 2 a second ring follows in another colour.'], throw:['Spear throw','He hurls the spear in his colour. Match it, then watch for the recall.'],
       trimortar:['Three mortars','Three shells land one after another in three colours. Switch in rhythm as each lands.'], heart:['Heart tether','He chains you to a heart. Stay within the chain\'s reach and shoot the heart to hurt him.'], spikes:['Spikes','Spikes in his colour erupt in a trail under you. Match them or keep moving. In phase 2 the last spikes come in a second colour.'], omega:['Omega orb','An orb bounces off the walls. Match its colour to absorb it.'], recall:['Recall','The thrown spear flies back to him along a line in his colour. Match it, or do not stand between them.']},
-    phases:[['75% and 25%','Time kneels: the world stops. Walk out of his circles, or switch to their colour, before time resumes.'], ['50%','Temptation: gold orbs offer more Glory, and each one unleashes a hazard.'], ['Phase 2','From half health his attacks grow: more lines, more shells, more spikes.']],
-    tips:'Every attack he has carries a colour and can be absorbed. Different colours always land at least half a second apart, so each switch is possible.'}
+    phases:[['100–65% · Spear Catch','Spear throws, feints from 80%, the wedge and the shockwave.'], ['65–30% · The Chain','The chain every 14 s, spear throws every 9 s. At 50% the Temptation: gold orbs offer more Glory, and each one unleashes a hazard.'], ['30% · The Final Wager','Time kneels. Stand in RISK IT (the win pays ×2.5 instead of ×2, one more note per sequence) or TAKE IT (5 s; Take is the default).'], ['30–0%','Kneel Sequences every 8 s, spear throws every 6 s.'], ['After 3:00','The crowd grows restless: the pit closes 2 u every 20 s and he hits harder.']],
+    tips:'Every attack he has carries a colour and can be absorbed. Different colours always land at least half a second apart, so each switch is possible. Catching is the greedy answer; stepping out always works.'}
 };
 
 /* ---------- the Armoury adapter (another agent owns it; everything is optional and defensive) ---------- */
@@ -10541,7 +10548,9 @@ function CX_bosses(){ var c = CX_s(), out = [];
       out.push({id:t, cat:'Boss', name:name, sub:act+' · round '+rd, tag:act, known:!!c.x[t], por:rig ? t+'|'+el : null, thumb:function(){ return rig ? CX_por(t, el, c.x[t]?'':'sil') : CX_g('boss'); }, hint:'The master of '+(B.where || (act==='Act I'?'the Ember Pit':'the Storm Spire'))+'. Reach round '+rd+' to face '+(B.where ? 'it' : 'him')+'.', body:function(){
           var h = CX_p(B.lore || 'A champion of the trials.')+CX_tbl([['Health', CX_fmt(T.hp)], ['First met', act+', round '+rd], t==='boss' ? ['Returns', 'Every 5 rounds in Endless'] : null, ['Slain by you', CX_fmt(c.kt[t]||0)]]);
           if(t==='boss'){ var seq = function(lab, arr){ if(!arr || !arr.length) return ''; return CX_h(lab)+'<div class="cxLad">'+arr.map(function(id){ var x = B.act2 && B.act2[id]; return '<div class="cxLr"><b>'+CX_esc(x?x[0]:CX_tc(id))+'</b><span>'+CX_esc(x?x[1]:'')+'</span></div>'; }).join('')+'</div>'; };
-            h += seq('Spear stance', typeof SPEAR_SEQ!=='undefined' ? SPEAR_SEQ : []) + seq('Gauntlet stance', typeof GLOVE_SEQ!=='undefined' ? GLOVE_SEQ : []);
+            var lad0 = function(lab, arr){ return CX_h(lab)+'<div class="cxLad">'+arr.map(function(x){ return '<div class="cxLr"><b>'+CX_esc(x[0])+'</b><span>'+CX_esc(x[1])+'</span></div>'; }).join('')+'</div>'; };
+            if(B.moves) h += lad0('Attacks', B.moves) + (B.party ? lad0('In a party', B.party) : '');   /* the Wager Duel (80-pitmaster.js) */
+            else h += seq('Spear stance', typeof SPEAR_SEQ!=='undefined' ? SPEAR_SEQ : []) + seq('Gauntlet stance', typeof GLOVE_SEQ!=='undefined' ? GLOVE_SEQ : []);
             h += CX_h('Phases')+'<div class="cxLad">'+B.phases.map(function(p){ return '<div class="cxLr"><b>'+p[0]+'</b><span>'+p[1]+'</span></div>'; }).join('')+'</div>'; }
           if(t==='undermaw' && B.moves){ var lad = function(lab, arr){ return CX_h(lab)+'<div class="cxLad">'+arr.map(function(x){ return '<div class="cxLr"><b>'+CX_esc(x[0])+'</b><span>'+CX_esc(x[1])+'</span></div>'; }).join('')+'</div>'; }; h += lad('Attacks', B.moves) + lad('Phases', B.phases); }
           return h+(B.tips ? CX_tip(B.tips) : ''); }}); })(t); }
@@ -16281,7 +16290,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:51',h:'1be9752'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 15:01',h:'d4eb0b1'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -20009,6 +20018,480 @@ if(typeof CX_bosses==='function'){ var HK_cxb0 = CX_bosses; CX_bosses = function
     x.body = function(){ var lad = function(lab, arr){ return CX_h(lab)+'<div class="cxLad">'+arr.map(function(m){ return '<div class="cxLr"><b>'+CX_esc(m[0])+'</b><span>'+CX_esc(m[1])+'</span></div>'; }).join('')+'</div>'; };
       var h = b0.apply(this, arguments), tip = B.tips ? CX_tip(B.tips) : '', i = tip ? h.lastIndexOf(tip) : -1; var mid = lad('Attacks', B.moves) + lad('Phases', B.phases); return i >= 0 ? h.slice(0, i) + mid + tip : h + mid; }; });
   return out; }; }
+/* ======================================================================================================================
+   80-pitmaster.js — The Pitmaster rework: "The Wager Duel" (design/research/15-boss-mechanics.md §3, §4, §8). Owner: Pitmaster agent.
+   Verb: CATCH (meet his colour on purpose and he loses his weapon).
+     P1 Spear Catch (100–65%)  signature: the Spear Throw down a LANE. Stand in it with the matching ward to CATCH it (Disarmed 4 s, x1.75),
+                               or step out (the spear sticks; he walks over and recalls it along a line). From 80% every other throw FEINTS
+                               (the head changes colour 0.6 s before release, called out). Fillers: Sunder Wedge, Shockwave ring.
+     P2 The Chain (65–30%)     signature: a TETHER to the Favourite with a dashed 7 u leash. A pulse runs down the chain every 2 s (its colour
+                               lights the links 0.8 s ahead). Leave the leash and he yanks you. Drag the chain across a pillar for 1 s to snap
+                               it (pillar lost, he stumbles 2 s, x1.5), or hold it (the chained body deals x1.5, absorbed pulses give x2
+                               Overload). He drags you while it is on; throws (every 9 s) come between chains. The 50% Temptation (leap + gold orbs) is kept from 30-game.js.
+     P3 The Final Wager (30–0%) time kneels: RISK IT / TAKE IT discs (5 s, default Take). Then KNEEL SEQUENCES: numbered circles land around
+                               you 0.6 s apart, the last one follows you. Step into each in order with its colour to Disarm him again. Throws every 6 s.
+     Cut from the old fight: cyclone, tri-mortar, spikes, omega, the heart tether and the 75%/25% Ultimatum blinks.
+     Soft enrage from 3:00: the pit closes 2 u every 20 s and he hits 8% harder per step (never a one-shot).
+   OWNER DECISION (2026-10-10): "Risk it" raises the boss stake only (a win pays x2.5 instead of x2) and adds one note per sequence.
+   Party (PTY_size): catching needs 2 bodies in the lane (one body catches but is knocked down, no Disarm; wrong-ward damage is split);
+     a free body can cut a chain by standing on it 1 s; trio = 2 chains; sequences are one per body (same colours, same beats; overlapping
+     circles hit twice). AI allies follow gold job markers (brace / cut / spread). HP x1.6 pair, x2.1 trio.
+   Every hit is flame, frost or storm and booked with CMB_reserve (different colours >= 0.5 s apart). No white, no new keys.
+   Wraps (each calls the original otherwise): spawnBoss, updateBoss, hurtEnemy, killEnemy, bossDeath, updateTimestop, clearWorld,
+   roundCleared, PTY_ai. Uses STEP_HOOKS and RENDER_HOOKS.
+
+   ------------------------------------------------------------------------------------------------------------------------------
+   SHARED SHAPE GRAMMAR (§3): BG_* — reusable by any boss (Hesk 79, Stormwright 81, ...). Same IIFE scope; just call them.
+   Every shape is a pooled ground decal. Create it, keep the handle, then let it run or drive it yourself.
+   Fields on every handle h:  h.el  colour key 'flame'|'frost'|'storm' (or 'gold'/'bronze' for markers only, never a hit)
+                              h.t   seconds since creation (advanced by BG_tick, sim time; it also ticks during a timestop you run)
+                              h.dur fill time, h.k = clamp(t/dur) unless h.manual (then you set h.k)
+                              h.ttl auto-free after this many seconds (default dur+0.15; 0 = never: free it yourself)
+                              h.follow  any object with x,z: the shape follows it (numbered circles, marks, dashed rings)
+   BG_free(h) releases one shape; BG_clear() releases all (clearWorld does this).
+     BG_lane({x,z,ang,len,w,el,dur})          lane: long rectangle with edge lines; fills outward from (x,z) along ang (atan2(dx,dz)).
+     BG_wedge({x,z,ang,half,r,el,dur})        wedge: sector from (x,z), half-angle `half` (rad), radius r; fills outward.
+     BG_ring({x,z,r0,r1,el,dur})              expanding ring r0 -> r1 over dur (a wave from a point; dash through or absorb).
+     BG_pool({x,z,r,el,dur})                  a lingering coloured pool that flickers (it keeps hitting in its colour while you stand in it).
+     BG_close({x,z,r0,r1,el,dur})             closing dashed ring r0 -> r1 over dur (an enclosure).
+     BG_dashed({x,z,r,el,follow})             static dashed ring (an anchor, a leash, a safe spot). ttl 0 by default.
+     BG_num({x,z,r,el,n,dur,follow})          numbered circle: colour disc + rim + the digit n; the fill (over dur) shows the order.
+     BG_tether({a,b,el})                      chain links between objects a and b. h.hook (0..1) = how far the chain has reached,
+                                              h.lit (0..1) lights links from a toward b in h.litEl, h.taut (0..1) jitters it. ttl 0.
+     BG_mark({follow,kind,r})                 gold party markers: 'stack' chevrons (point in), 'spread' (point out), 'cut' (an X).
+     BG_pad({x,z,r,el,label})                 a choice disc ('gold' / 'bronze') with a floating label; h.k = stand progress.
+     BG_inLane(h,x,z,pad) / BG_inWedge(h,x,z,pad) / BG_inCircle(h,x,z,pad)   geometry tests on a handle.
+   Gold (0xffc94d) is for UI and markers only; every hit shape takes a ward colour.
+   ====================================================================================================================== */
+
+/* ---------------------------------------------------------------- shared shape grammar ---------------------------------------------------------------- */
+var BG_GOLD = 0xffc94d, BG_BRONZE = 0xc8823a, BG_IRON = 0x4a3a34;
+var BG_live = [], BG_stash = {}, BG_c1 = new THREE.Color(), BG_c2 = new THREE.Color();
+var BG_geo = { plane:new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2), disc:new THREE.CircleGeometry(1,40).rotateX(-Math.PI/2),
+  rim:new THREE.RingGeometry(0.9,1,48).rotateX(-Math.PI/2), wave:new THREE.RingGeometry(0.86,1,64).rotateX(-Math.PI/2),
+  tri:new THREE.CircleGeometry(1,3).rotateX(-Math.PI/2), link:new THREE.BoxGeometry(0.26,0.26,0.66), wedge:{}, wrim:{},
+  dash:(function(){ var pos = [], N = 24, r0 = 0.93, r1 = 1; for(var i=0;i<N;i++){ var a0 = i/N*Math.PI*2, a1 = a0 + Math.PI*2/N*0.55, S = 3;
+      for(var j=0;j<S;j++){ var u0 = a0+(a1-a0)*j/S, u1 = a0+(a1-a0)*(j+1)/S, c0 = Math.cos(u0), s0 = Math.sin(u0), c1 = Math.cos(u1), s1 = Math.sin(u1);
+        pos.push(c0*r0,0,s0*r0, c0*r1,0,s0*r1, c1*r1,0,s1*r1,  c0*r0,0,s0*r0, c1*r1,0,s1*r1, c1*r0,0,s1*r0); } }
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g; })() };
+function BG_col(el){ return el==='gold' ? BG_GOLD : el==='bronze' ? BG_BRONZE : (ELC[el]!=null ? ELC[el] : BG_GOLD); }   /* never white */
+function BG_mat(op){ return new THREE.MeshBasicMaterial({color:BG_GOLD, transparent:true, opacity:op, depthWrite:false, side:THREE.DoubleSide}); }
+function BG_mesh(g, geo, op, y){ var m = new THREE.Mesh(geo, BG_mat(op)); m.position.y = y||0; m.renderOrder = 2; g.add(m); return m; }
+function BG_wgeo(half){ var k = half.toFixed(3); if(!BG_geo.wedge[k]){ BG_geo.wedge[k] = new THREE.RingGeometry(0.001,1,28,1,-Math.PI/2-half,2*half).rotateX(-Math.PI/2); BG_geo.wrim[k] = new THREE.RingGeometry(0.94,1,28,1,-Math.PI/2-half,2*half).rotateX(-Math.PI/2); } return k; }
+var BG_tex = {};
+function BG_canvasTex(key, w, h, draw){ if(BG_tex[key]) return BG_tex[key]; var c = document.createElement('canvas'); c.width = w; c.height = h; var x = c.getContext('2d'); draw(x, w, h);
+  var t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; BG_tex[key] = t; return t; }
+function BG_rr(x, X, Y, W, H, r){ x.beginPath(); x.moveTo(X+r,Y); x.lineTo(X+W-r,Y); x.quadraticCurveTo(X+W,Y,X+W,Y+r); x.lineTo(X+W,Y+H-r); x.quadraticCurveTo(X+W,Y+H,X+W-r,Y+H); x.lineTo(X+r,Y+H); x.quadraticCurveTo(X,Y+H,X,Y+H-r); x.lineTo(X,Y+r); x.quadraticCurveTo(X,Y,X+r,Y); x.closePath(); }
+function BG_digitTex(n, el){ var css = el==='gold' ? '#ffd27a' : (ELCSS[el]||'#ffd27a');
+  return BG_canvasTex('d'+n+el, 64, 64, function(x, w, h){ BG_rr(x, 4, 4, 56, 56, 12); x.fillStyle = 'rgba(22,15,12,0.92)'; x.fill(); x.lineWidth = 6; x.strokeStyle = css; x.stroke();
+    x.fillStyle = '#f4e6cc'; x.font = '900 38px Rubik, Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 32, 35); }); }
+function BG_labelTex(txt, el){ var css = el==='bronze' ? '#e0a060' : '#ffd27a';
+  return BG_canvasTex('l'+txt+el, 256, 64, function(x, w, h){ BG_rr(x, 4, 6, 248, 52, 12); x.fillStyle = 'rgba(22,15,12,0.9)'; x.fill(); x.lineWidth = 4; x.strokeStyle = css; x.stroke();
+    x.fillStyle = css; x.font = '800 28px Cinzel, Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, 128, 33); }); }
+function BG_sprite(g, y, sc){ var s = new THREE.Sprite(new THREE.SpriteMaterial({transparent:true, depthTest:false, depthWrite:false})); s.position.y = y; s.scale.set(sc[0], sc[1], 1); s.renderOrder = 6; g.add(s); return s; }
+var BG_BUILD = {
+  lane:function(h){ h.under = BG_mesh(h.g, BG_geo.plane, 0.12, 0.05); h.fill = BG_mesh(h.g, BG_geo.plane, 0.3, 0.06); h.e1 = BG_mesh(h.g, BG_geo.plane, 0.9, 0.07); h.e2 = BG_mesh(h.g, BG_geo.plane, 0.9, 0.07); },
+  wedge:function(h){ h.under = BG_mesh(h.g, BG_geo.disc, 0.12, 0.05); h.fill = BG_mesh(h.g, BG_geo.disc, 0.3, 0.06); h.rim = BG_mesh(h.g, BG_geo.disc, 0.9, 0.07); h.e1 = BG_mesh(h.g, BG_geo.plane, 0.9, 0.07); h.e2 = BG_mesh(h.g, BG_geo.plane, 0.9, 0.07); },
+  ring:function(h){ h.m = BG_mesh(h.g, BG_geo.wave, 0.6, 0.3); },
+  pool:function(h){ h.under = BG_mesh(h.g, BG_geo.disc, 0.3, 0.05); h.rim = BG_mesh(h.g, BG_geo.rim, 0.8, 0.07); },
+  close:function(h){ h.m = BG_mesh(h.g, BG_geo.dash, 0.85, 0.08); },
+  dashed:function(h){ h.m = BG_mesh(h.g, BG_geo.dash, 0.85, 0.08); },
+  num:function(h){ h.under = BG_mesh(h.g, BG_geo.disc, 0.14, 0.05); h.fill = BG_mesh(h.g, BG_geo.disc, 0.34, 0.06); h.rim = BG_mesh(h.g, BG_geo.rim, 0.9, 0.07); h.spr = BG_sprite(h.g, 1.0, [0.95,0.95]); },
+  pad:function(h){ h.under = BG_mesh(h.g, BG_geo.disc, 0.16, 0.05); h.fill = BG_mesh(h.g, BG_geo.disc, 0.45, 0.06); h.rim = BG_mesh(h.g, BG_geo.rim, 0.95, 0.07); h.spr = BG_sprite(h.g, 1.7, [3.4,0.85]); },
+  mark:function(h){ h.tris = []; for(var i=0;i<3;i++) h.tris.push(BG_mesh(h.g, BG_geo.tri, 0.95, 0.09)); h.x1 = BG_mesh(h.g, BG_geo.plane, 0.95, 0.09); h.x2 = BG_mesh(h.g, BG_geo.plane, 0.95, 0.09); },
+  tether:function(h){ h.links = []; for(var i=0;i<16;i++){ var m = new THREE.Mesh(BG_geo.link, new THREE.MeshBasicMaterial({color:BG_IRON})); h.g.add(m); h.links.push(m); } }
+};
+function BG_make(kind, o){ var P0 = BG_stash[kind] || (BG_stash[kind] = []), h = P0.pop();
+  if(!h){ h = {kind:kind, g:new THREE.Group()}; BG_BUILD[kind](h); scene.add(h.g); }
+  var keep = {kind:1, g:1, under:1, fill:1, e1:1, e2:1, rim:1, m:1, spr:1, tris:1, x1:1, x2:1, links:1};
+  for(var k in h) if(!keep[k]) delete h[k];
+  for(var q in o) h[q] = o[q];
+  h.on = true; h.t = 0; if(h.dur==null) h.dur = 1; if(h.k==null) h.k = 0; if(h.ttl==null) h.ttl = (kind==='dashed'||kind==='tether'||kind==='mark'||kind==='pad') ? 0 : h.dur+0.15;
+  if(h.x==null) h.x = h.follow ? h.follow.x : 0; if(h.z==null) h.z = h.follow ? h.follow.z : 0; h.g.visible = true; BG_live.push(h); BG_draw(h, G.rt||0); return h; }
+function BG_free(h){ if(!h || !h.on) return; h.on = false; h.g.visible = false; var i = BG_live.indexOf(h); if(i>=0) BG_live.splice(i,1); (BG_stash[h.kind] || (BG_stash[h.kind] = [])).push(h); }
+function BG_clear(){ while(BG_live.length) BG_free(BG_live[BG_live.length-1]); }
+function BG_tick(dt){ for(var i=BG_live.length-1;i>=0;i--){ var h = BG_live[i]; h.t += dt; if(!h.manual) h.k = Math.min(1, h.t/Math.max(0.01, h.dur)); if(h.ttl>0 && h.t>=h.ttl) BG_free(h); } }
+function BG_tint(m, el, op){ m.material.color.setHex(BG_col(el)); if(op!=null) m.material.opacity = op; }
+function BG_draw(h, rt){ var g = h.g, el = h.el||'gold', k = h.k||0, i;
+  if(h.follow && !h.lock){ h.x = h.follow.x; h.z = h.follow.z; } g.position.set(h.x, 0, h.z);
+  if(h.kind==='lane'){ var L = h.len, w = h.w; g.rotation.y = h.ang; h.under.scale.set(w,1,L); h.under.position.z = L/2; h.fill.scale.set(w,1,Math.max(0.01,L*k)); h.fill.position.z = L*k/2;
+    h.e1.scale.set(0.13,1,L); h.e2.scale.set(0.13,1,L); h.e1.position.set(w/2,0.07,L/2); h.e2.position.set(-w/2,0.07,L/2);
+    BG_tint(h.under, el, 0.12); BG_tint(h.fill, el, 0.22+0.2*k); BG_tint(h.e1, el, 0.6+0.35*Math.abs(Math.sin(rt*10))); BG_tint(h.e2, el, h.e1.material.opacity); }
+  else if(h.kind==='wedge'){ var kk = BG_wgeo(h.half), r = h.r; g.rotation.y = h.ang; if(h.under.geometry!==BG_geo.wedge[kk]){ h.under.geometry = BG_geo.wedge[kk]; h.fill.geometry = BG_geo.wedge[kk]; h.rim.geometry = BG_geo.wrim[kk]; }
+    h.under.scale.set(r,1,r); h.fill.scale.set(r*Math.max(0.01,k),1,r*Math.max(0.01,k)); h.rim.scale.set(r,1,r);
+    h.e1.scale.set(0.12,1,r); h.e2.scale.set(0.12,1,r); h.e1.rotation.y = h.half; h.e2.rotation.y = -h.half; h.e1.position.set(Math.sin(h.half)*r/2,0.07,Math.cos(h.half)*r/2); h.e2.position.set(-Math.sin(h.half)*r/2,0.07,Math.cos(h.half)*r/2);
+    BG_tint(h.under, el, 0.12); BG_tint(h.fill, el, 0.22+0.2*k); BG_tint(h.rim, el, 0.85); BG_tint(h.e1, el, 0.85); BG_tint(h.e2, el, 0.85); }
+  else if(h.kind==='ring'){ var R = h.r0 + (h.r1-h.r0)*k; h.m.scale.set(Math.max(0.05,R),1,Math.max(0.05,R)); BG_tint(h.m, el, 0.65*(1-0.6*k)); }
+  else if(h.kind==='pool'){ var rq = h.r*(1-0.25*Math.max(0, (h.t-h.dur+0.6)/0.6)); h.under.scale.set(rq,1,rq); h.rim.scale.set(rq,1,rq); var fl = 0.5+0.5*Math.sin(rt*9+h.x);
+    BG_tint(h.under, el, 0.2+0.14*fl); BG_tint(h.rim, el, 0.55+0.35*fl); }
+  else if(h.kind==='close'){ var R2 = h.r0 + (h.r1-h.r0)*k; h.m.scale.set(R2,1,R2); h.m.rotation.y = rt*0.25; BG_tint(h.m, el, 0.6+0.3*Math.abs(Math.sin(rt*4))); }
+  else if(h.kind==='dashed'){ h.m.scale.set(h.r,1,h.r); h.m.rotation.y = rt*0.15; BG_tint(h.m, el, h.op!=null ? h.op : 0.8); }
+  else if(h.kind==='num'){ var rn = h.r; h.under.scale.set(rn,1,rn); h.fill.scale.set(rn*Math.max(0.02,k),1,rn*Math.max(0.02,k)); h.rim.scale.set(rn,1,rn);
+    BG_tint(h.under, el, 0.14); BG_tint(h.fill, el, 0.24+0.24*k); BG_tint(h.rim, el, 0.7+0.3*(k>0.85?Math.abs(Math.sin(rt*16)):0.4)); h.spr.material.map = BG_digitTex(h.n, el); h.spr.material.needsUpdate = true; }
+  else if(h.kind==='pad'){ var rp = h.r; h.under.scale.set(rp,1,rp); h.fill.scale.set(rp*Math.max(0.02,k),1,rp*Math.max(0.02,k)); h.rim.scale.set(rp,1,rp);
+    BG_tint(h.under, el, 0.18); BG_tint(h.fill, el, 0.5); BG_tint(h.rim, el, 0.7+0.3*Math.abs(Math.sin(rt*5))); var lt = BG_labelTex(h.label||'', el); if(h.spr.material.map!==lt){ h.spr.material.map = lt; h.spr.material.needsUpdate = true; } }
+  else if(h.kind==='mark'){ var rr = h.r||1.3, spin = rt*0.9, cut = h.kind2==='cut';
+    for(i=0;i<3;i++){ var tm = h.tris[i]; tm.visible = !cut; if(cut) continue; var be = spin + i/3*Math.PI*2, bob = 0.12*Math.sin(rt*6+i), rad = rr + (h.kind2==='spread' ? bob : -bob);
+      tm.position.set(Math.sin(be)*rad, 0.09, Math.cos(be)*rad); tm.rotation.y = h.kind2==='spread' ? be - Math.PI/2 : be + Math.PI/2; tm.scale.set(0.42,1,0.3); BG_tint(tm, 'gold', 0.95); }
+    h.x1.visible = h.x2.visible = cut; if(cut){ var s1 = 1 + 0.12*Math.sin(rt*8); h.x1.scale.set(0.22,1,1.5*s1); h.x2.scale.set(0.22,1,1.5*s1); h.x1.rotation.y = Math.PI/4; h.x2.rotation.y = -Math.PI/4; BG_tint(h.x1, 'gold', 0.95); BG_tint(h.x2, 'gold', 0.95); } }
+  else if(h.kind==='tether'){ var a = h.a, b = h.b; if(!a || !b) return; g.position.set(0,0,0); var dx = b.x-a.x, dz = b.z-a.z, ang = Math.atan2(dx,dz), n = h.links.length, reach = h.hook==null ? 1 : h.hook, taut = h.taut||0;
+    BG_c1.setHex(BG_IRON); if(h.el){ BG_c2.setHex(BG_col(h.el)); BG_c1.lerp(BG_c2, 0.6); }
+    for(i=0;i<n;i++){ var lk = (i+0.5)/n, m = h.links[i]; m.visible = lk <= reach; if(!m.visible) continue; var y0 = (h.ya||3.0) + ((h.yb||1.0)-(h.ya||3.0))*lk;
+      m.position.set(a.x+dx*lk + (taut ? Math.sin(rt*40+i*1.7)*0.08*taut : 0), y0 - Math.sin(lk*Math.PI)*0.45*(1-taut), a.z+dz*lk); m.rotation.set(0, ang, i%2 ? Math.PI/2 : 0);
+      if(h.lit>0 && lk <= h.lit && h.litEl) m.material.color.setHex(BG_col(h.litEl)); else m.material.color.copy(BG_c1); } } }
+RENDER_HOOKS.push(function BG_render(t, dt){ for(var i=0;i<BG_live.length;i++) BG_draw(BG_live[i], t); });
+STEP_HOOKS.push(function BG_step(dt){ BG_tick(dt); });
+function BG_lane(o){ if(o.w==null) o.w = 2.2; return BG_make('lane', o); }
+function BG_wedge(o){ if(o.half==null) o.half = Math.PI/6; return BG_make('wedge', o); }
+function BG_ring(o){ return BG_make('ring', o); }
+function BG_pool(o){ return BG_make('pool', o); }
+function BG_close(o){ return BG_make('close', o); }
+function BG_dashed(o){ return BG_make('dashed', o); }
+function BG_num(o){ if(o.r==null) o.r = 1.9; return BG_make('num', o); }
+function BG_tether(o){ o.manual = true; return BG_make('tether', o); }
+function BG_mark(o){ o.kind2 = o.kind || 'stack'; delete o.kind; o.el = 'gold'; return BG_make('mark', o); }
+function BG_pad(o){ o.manual = true; return BG_make('pad', o); }
+function BG_inLane(h, x, z, pad){ pad = pad||0; var dx = x-h.x, dz = z-h.z, s = Math.sin(h.ang), c = Math.cos(h.ang), al = dx*s+dz*c, ac = dx*c-dz*s; return al >= -pad && al <= h.len+pad && Math.abs(ac) <= h.w/2+pad; }
+function BG_inWedge(h, x, z, pad){ pad = pad||0; var dx = x-h.x, dz = z-h.z, d = Math.hypot(dx,dz); if(d > h.r+pad) return false; if(d < 0.6+pad) return true; return Math.abs(angDiff(h.ang, Math.atan2(dx,dz))) <= h.half + pad/Math.max(1,d); }
+function BG_inCircle(h, x, z, pad){ return Math.hypot(x-h.x, z-h.z) < (h.r||1)+(pad||0); }
+
+/* ---------------------------------------------------------------- the Pitmaster: tuning ---------------------------------------------------------------- */
+var PM_T = {hp:8000, party:[1, 1.6, 2.1], p2:0.65, p3:0.30,
+  throwCd:7, throwCd80:5.5, throwP2:9, throwP3:6, throwParty:[0, 0.5, 1.0], wind:1.1, laneW:2.2, laneL:16, feintLead:0.6, spearSpd:34,
+  catchDmg:28, kb:3, disarm:4, disarmMul:1.75, knock:1.5, chip:8,
+  fillCd:[3.0, 3.6], wedgeWind:0.8, wedgeR:7, wedgeHalf:Math.PI/6, wedgeDmg:22, wedgeNear:6.5, shockWind:0.7, shockR:9.5, shockT:1.1, shockDmg:24,
+  stuckWait:2.5, recallWind:0.6, recallDmg:18,
+  chainEvery:12, chainDur:8, hook:0.8, leash:7, pulseEvery:2, pulseLead:0.8, pulseDmg:12, yankDmg:28, yankStun:0.6, yankCd:0.9, yankTo:5.0, tautT:0.35, snapT:1.0, cutT:1.0,
+  stumble:2, stumbleMul:1.5, chainMul:1.5, dragDist:10.5, dragSpd:1.6,
+  wagerDur:5, wagerHold:1.5, risk:0.25,
+  seqEvery:8, seqLead:1.4, seqGap:0.6, seqR:1.9, seqDmg:18, seqLock:0.6, seqOff:2.7, emberT:4.0, emberTick:0.5, emberDmg:8, emberR:1.7,
+  enrageT:180, enrageEvery:20, enrageStep:2, enrageMin:7, enrageDmg:0.08, enrageCd:0.9,
+  roar:1.3, beat:0.5};
+
+/* ---------------------------------------------------------------- helpers ---------------------------------------------------------------- */
+function PM_is(b){ return !!(b && b.type==='boss' && b.stance==='spear' && !b.sw && !b.um && !b.hk && !b.hesk && !b.sw2 && !b.pmOff); }
+function PM_fav(b){ var f = PTY_aim(b); return (f && !f.dead) ? f : P; }
+function PM_ok(st, el){ return !!st && !st.dead && (st.ward===el || (st.prevT>0 && st.prevWard===el)); }
+function PM_dmg(b, base){ return (base + 2*(b.tier||0)) * (1 + PM_T.enrageDmg*(b.pm ? b.pm.enr : 0)); }
+function PM_wm(b){ return b.phase===2 ? 0.8 : 1; }
+/* colour booking: a colour is free at `at` (absolute G.t) when no OTHER colour is booked within one beat of it */
+function PM_free(at, el, skip){ var R = CMB.res; for(var i=0;i<R.length;i++){ var r = R[i]; if(r===skip || r.el===el) continue; if(Math.abs(r.at-at) < PM_T.beat) return false; } return true; }
+function PM_pick(at, prefs, skip){ for(var i=0;i<prefs.length;i++) if(PM_free(at, prefs[i], skip)) return prefs[i]; return null; }
+function PM_prefs(first, not){ var o = shuffle(EL.filter(function(e){ return e!==first && e!==not; })); if(first && first!==not) o.unshift(first); if(not && o.indexOf(not)<0) o.push(not); return o; }
+function PM_book(dt, el){ var r = {at:G.t+dt, el:el, pm:1}; CMB.res.push(r); return r; }
+function PM_unbook(r){ var i = CMB.res.indexOf(r); if(i>=0) CMB.res.splice(i,1); }
+function PM_setEl(b, el){ if(b.el===el) return; b.el = el; setModelEl(b.M, el); }
+function PM_say(t, s, d){ bossSay(t, s||'', d||1.6); }
+function PM_call(b, el){ dmgText(b.x, 6.2, b.z, ELNAME[el]+'!', ELCSS[el], 26); SFX.tele(); }
+function PM_hit(st, dmg, el, b, o){ if(!st || st.dead) return 'none'; return PTY_hit(st, dmg, el, b, o||{}); }
+function PM_bonusOver(st){ PTY_as(st, function(){ if(P && !P.dead) P.over = Math.min(100, P.over + 9*(P.surge||1)*(P.cls==='mage'?1.3:1)); }); }
+function PM_knock(st, ux, uz, d){ st.x += ux*d; st.z += uz*d; clampArena(st, 0.3); st.px = st.x; st.pz = st.z; }
+function PM_cheer(n){ if(typeof crowdCheer!=='undefined') crowdCheer = Math.max(crowdCheer, n||0.6); }
+function PM_party(){ return PTY_size() > 1; }
+
+/* ---------------------------------------------------------------- spawn / HP ---------------------------------------------------------------- */
+function PM_init(b){ var tier = b.tier||0, hp = PM_T.hp * (G.mods ? G.mods.ehp : 1) * (1 + 0.35*tier) * PTY_per(PM_T.party);
+  b.hp = b.maxHp = hp; b.ult75 = b.ult25 = b.tempt = true; b.elT = 1e9; b.shifting = 0; b.act = null; b.wind = 0; b.whirl = 0; b.phase = 1;
+  b.pm = {ph:1, pend:0, ft:0, act:null, disarm:0, stumble:0, sp:'hand', spEl:null, feintN:0, throwT:3.4, fillT:5.2, chainT:1.6, seqT:1.6, chains:[], embers:[], cutJob:null,
+    retr:null, temptDone:false, risk:false, enr:0, enrT:PM_T.enrageT, strafe:Math.random()<0.5?1:-1, strT:5, face:null, catches:0, snaps:0, seqDis:0, log:{catch:0, step:0, wrong:0, yank:0, snap:0, cut:0, seqCatch:0, held:0}};
+  G.pmRisk = false; return b; }
+var PM_spawn0 = spawnBoss;
+spawnBoss = function(){ var b = PM_spawn0.apply(this, arguments); if(b && PM_is(b)) PM_init(b); return b; };
+
+/* ---------------------------------------------------------------- the fight ---------------------------------------------------------------- */
+var PM_updateBoss0 = updateBoss;
+updateBoss = function(b, dt, d, ux, uz, spd){ if(!b || !b.pm) return PM_updateBoss0.apply(this, arguments);
+  if(b.leap || (b.act && b.act.id==='tempt')) return PM_updateBoss0.apply(this, arguments);   /* the 50% Temptation runs on the core code */
+  return PM_step(b, dt, spd); };
+function PM_cad(b, base){ var pm = b.pm; return Math.max(2.5, (base - PTY_per(PM_T.throwParty)) * Math.pow(PM_T.enrageCd, pm.enr)); }
+function PM_throwCd(b){ var pm = b.pm; return pm.ph===1 ? PM_cad(b, b.hp/b.maxHp < 0.8 ? PM_T.throwCd80 : PM_T.throwCd) : pm.ph===2 ? PM_cad(b, PM_T.throwP2) : PM_cad(b, PM_T.throwP3); }
+function PM_step(b, dt, spd){ var pm = b.pm, f = PM_fav(b), hpF = b.hp/b.maxHp, mv = [0,0];
+  if(!f || f.dead){ b.act = null; return mv; }
+  pm.ft += dt;
+  /* phase gates: a single burst can't skip a phase; the transition always plays */
+  if(pm.ph===1 && hpF < PM_T.p2){ b.hp = Math.max(b.hp, b.maxHp*PM_T.p2 - 1); if(!pm.pend) pm.pend = 2; }
+  if(pm.ph===2 && hpF < PM_T.p3){ b.hp = Math.max(b.hp, b.maxHp*PM_T.p3 - 1); if(!pm.pend) pm.pend = 3; }
+  PM_enrage(b, dt);
+  if(pm.chains.length) PM_chains(b, dt);
+  if(pm.embers.length) PM_embers(b, dt);
+  if(pm.retr) pm.retr.t += dt;
+  pm.throwT -= dt; pm.fillT -= dt; if(pm.ph===2) pm.chainT -= dt; if(pm.ph===3) pm.seqT -= dt;
+  pm.strT -= dt; if(pm.strT<=0){ pm.strT = rnd(4,6.5); pm.strafe *= -1; }
+  /* punish windows */
+  if(pm.disarm>0){ pm.disarm -= dt; if(Math.random()<dt*10) glowP.emit(b.x+rnd(-1,1),rnd(1,3),b.z+rnd(-1,1),0,1.4,0,0.5,1,BG_GOLD,0,1); if(pm.disarm<=0) PM_rearm(b); pm.face = Math.atan2(f.x-b.x, f.z-b.z); return mv; }
+  if(pm.stumble>0){ pm.stumble -= dt; if(pm.stumble<=0) b.act = null; return mv; }
+  if(pm.act){ var A = pm.act; A.t += dt; var done = PM_ACT[A.id](b, A, dt, f); if(done){ pm.act = null; if(!(pm.disarm>0) && !(pm.stumble>0)) b.act = null; b.wind = 0; } return A.mv || mv; }
+  /* choose the next move */
+  if(pm.pend && !pm.chains.length){ var ph = pm.pend; pm.pend = 0; if(ph===2) PM_toP2(b); else PM_toP3(b); return mv; }
+  if(pm.ph===2 && !pm.temptDone && hpF < 0.5 && !pm.chains.length){ pm.temptDone = true; CMB_reserve(0.9, b.el); startTemptation(b); b.phase = 2; return mv; }
+  if(pm.ph===2 && pm.chainT<=0 && !pm.chains.length && pm.throwT > 1.2){ PM_start(b, 'hook', f); return mv; }
+  if(pm.ph===3 && pm.seqT<=0 && pm.throwT > 1.0){ PM_start(b, 'seq', f); return mv; }
+  if(pm.throwT<=0 && pm.sp==='hand' && !pm.chains.length){ PM_start(b, 'throw', f); return mv; }   /* while the chain is on he drags; he throws between chains */
+  if(pm.sp==='stuck' && pm.retr && (pm.retr.t >= PM_T.stuckWait || (G.spear && Math.hypot(G.spear.x-b.x, G.spear.z-b.z) < 5))){ PM_start(b, 'recall', f); return mv; }
+  if(pm.fillT<=0 && pm.throwT > 1.6 && !pm.chains.length && !(pm.ph===2 && pm.chainT < 1.5)){ var dd = Math.hypot(f.x-b.x, f.z-b.z); PM_start(b, dd < PM_T.wedgeNear ? 'wedge' : 'shock', f); return mv; }
+  return PM_move(b, f, spd); }
+/* duel footwork: hold 5.5–9 u from the Favourite and circle; walk to the stuck spear; drag the chain */
+function PM_move(b, f, spd){ var pm = b.pm, dx = f.x-b.x, dz = f.z-b.z, d = Math.hypot(dx,dz)||1, ux = dx/d, uz = dz/d, mx = 0, mz = 0; b.act = null; pm.face = Math.atan2(dx,dz);
+  if(pm.chains.length){ var c = pm.chains[0], cx = c.st.x-b.x, cz = c.st.z-b.z, cd = Math.hypot(cx,cz)||1; pm.face = Math.atan2(cx,cz);
+    /* the drag: he circles the chained body, walking out to 10.5 u; at the wall he keeps circling */
+    var ox = -cx/cd, oz = -cz/cd, tx = -oz*pm.strafe, tz = ox*pm.strafe; mx = ox*(cd < PM_T.dragDist ? 1 : 0.15) + tx*0.75; mz = oz*(cd < PM_T.dragDist ? 1 : 0.15) + tz*0.75;
+    var br = Math.hypot(b.x, b.z)||1, rad = (mx*b.x + mz*b.z)/br; if(br > AR()-3.4 && rad > 0){ var wx = -b.z/br, wz = b.x/br; if(wx*ox+wz*oz < 0){ wx = -wx; wz = -wz; } mx = wx - b.x/br*0.15; mz = wz - b.z/br*0.15; } }   /* at the wall: slide the way that gains distance */
+  else if(pm.sp==='stuck' && G.spear){ var sx = G.spear.x-b.x, sz = G.spear.z-b.z, sd = Math.hypot(sx,sz)||1; mx = sx/sd*1.25; mz = sz/sd*1.25; }
+  else { if(d > 9){ mx = ux; mz = uz; } else if(d < 5.5){ mx = -ux*0.7; mz = -uz*0.7; } mx += -uz*pm.strafe*0.7; mz += ux*pm.strafe*0.7; }
+  var r = Math.hypot(b.x, b.z), lim = AR()-2.6; if(r > lim){ mx -= b.x/r*1.2; mz -= b.z/r*1.2; }
+  var l = Math.hypot(mx,mz), k = pm.chains.length ? PM_T.dragSpd : 1; if(l < 0.05) return [0,0]; mx /= l; mz /= l;
+  /* walk around pillars instead of grinding into them */
+  for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(p.dead) continue; var px = p.x-b.x, pz = p.z-b.z, pd = Math.hypot(px,pz), lim2 = p.r + b.r + 1.4;
+    if(pd < lim2 && pd > 0.01 && (px*mx+pz*mz)/pd > 0.2){ var sx = -pz/pd, sz = px/pd; if(sx*mx+sz*mz < 0){ sx = -sx; sz = -sz; } mx = sx*0.9 - px/pd*0.3; mz = sz*0.9 - pz/pd*0.3; var l2 = Math.hypot(mx,mz)||1; mx /= l2; mz /= l2; } }
+  return [mx*spd*k, mz*spd*k]; }
+function PM_start(b, id, f){ var pm = b.pm, A = {id:id, t:0, step:0, f:f}; pm.act = A; PM_ACT[id](b, A, 0, f, true); }
+function PM_rearm(b){ var pm = b.pm; pm.disarm = 0; pm.sp = 'hand'; pm.retr = null; if(G.spear){ damagePillar(G.spear, 99999); G.spear = null; } b.stance = 'spear'; b.act = null; spearStuck.visible = false; if(b.M.extra && b.M.extra.spear) b.M.extra.spear.visible = true;
+  burst(b.x, 3, b.z, 18, BG_GOLD, 5, 0.5, 1.2); SFX.blink(); pm.throwT = Math.max(pm.throwT, 1.8); }
+function PM_disarm(b, el, why){ var pm = b.pm; pm.disarm = PM_T.disarm; pm.act = null; b.wind = 0; b.stance = 'glove'; pm.sp = 'caught';
+  b.act = {id:'spikes', step:1, t:0, n:22}; pm.throwT = PM_T.disarm + PM_throwCd(b)*0.6; pm.fillT = Math.max(pm.fillT, PM_T.disarm + 1.2);
+  PM_say(why==='seq' ? 'SEQUENCE CAUGHT!' : 'CAUGHT!', 'He is Disarmed: strike now (x'+PM_T.disarmMul+')', 2.0); SFX.roar(); shake(0.5); G.hitstop = Math.max(G.hitstop||0, 0.08); PM_cheer(0.9);
+  var g = PM_T.chip + 2*(G.wave||10); G.stake += g; stakePop(); dmgText(b.x, 5.5, b.z, '+'+g+' ⚜', '#ffd27a', 22);
+  try{ if(typeof RX_apply==='function') RX_apply(b, el, 1); }catch(err){}
+  ringBurst(b.x, b.z, 2.6, 26, BG_GOLD); pm.catches++; }
+
+/* ---------------------------------------------------------------- moves ---------------------------------------------------------------- */
+var PM_ACT = {
+  /* P1 signature: the Spear Throw down a lane at the Favourite (fills outward 1.1 s; the spear head shows the colour from the wind-up) */
+  throw:function(b, A, dt, f, init){ var pm = b.pm, wm = PM_wm(b), T = PM_T;
+    if(init){ var ang = Math.atan2(f.x-b.x, f.z-b.z), len = T.laneL, sx = b.x + Math.sin(ang)*1.4, sz = b.z + Math.cos(ang)*1.4;
+        for(var s=0; s<40 && len>4; s++){ var ex = sx+Math.sin(ang)*len, ez = sz+Math.cos(ang)*len; if(Math.hypot(ex,ez) <= AR()-0.4) break; len -= 0.4; }
+        var el = PM_pick(G.t+T.wind, PM_prefs(pick(EL.filter(function(e){ return e!==pm.spEl; })), null)); if(!el){ pm.act = null; pm.throwT = 0.3; return true; }
+        A.el = el; A.ang = ang; A.x = sx; A.z = sz; A.len = len; A.res = PM_book(T.wind, el); pm.spEl = el; PM_setEl(b, el); PM_call(b, el); b.wind = 1;
+        var fp = b.hp/b.maxHp < 0.8 || pm.ph>1; A.feint = pm.ph===1 ? (fp && (pm.feintN++ % 2)===0) : (Math.random() < 0.35);
+        A.h = BG_lane({x:sx, z:sz, ang:ang, len:len, w:T.laneW, el:el, dur:T.wind, ttl:0});
+        if(PM_party()) A.mk = BG_mark({follow:f, kind:'stack', r:1.5});
+        hintOnce('pmCatch'); return false; }
+    var k = Math.min(1, A.t/T.wind); pm.face = A.ang;
+    if(A.step===0){ b.act = {id:'throw', step:0, t:k*0.43*0.5*wm/0.5}; if(Math.random()<dt*30) glowP.emit(b.x+Math.sin(A.ang)*0.9, 4.2, b.z+Math.cos(A.ang)*0.9, 0, 1.2, 0, 0.35, 1.0, ELC[A.el], 0, 1);
+      if(A.feint && !A.fd && A.t >= T.wind - T.feintLead){ A.fd = true; var e2 = PM_pick(G.t + (T.wind-A.t), PM_prefs(null, A.el).filter(function(e){ return e!==A.el; }), A.res);
+        if(e2){ A.el = e2; A.res.el = e2; A.h.el = e2; PM_setEl(b, e2); pm.spEl = e2; dmgText(b.x, 6.6, b.z, 'FEINT! '+ELNAME[e2]+'!', ELCSS[e2], 30); SFX.tele(); shake(0.15); hintOnce('pmFeint'); } }
+      if(A.t >= T.wind){ A.step = 1; A.t = 0; b.wind = 0; PM_release(b, A); } return false; }
+    if(A.step===1){ b.act = {id:'throw', step:1, t:A.t}; var fk = Math.min(1, A.t/A.fl), px = A.x + Math.sin(A.ang)*A.stop*fk, pz = A.z + Math.cos(A.ang)*A.stop*fk;
+      spearFly.visible = true; spearFly.position.set(px, 1.6, pz); spearFly.rotation.order = 'YXZ'; spearFly.rotation.set(Math.PI/2, A.ang, 0);
+      if(fk>=1){ spearFly.visible = false; PM_land(b, A); A.step = 2; A.t = 0; } return false; }
+    return A.t > 0.45; },
+  /* filler: Sunder Wedge (60°, 0.8 s, his colour) when the Favourite is close */
+  wedge:function(b, A, dt, f, init){ var pm = b.pm, wm = PM_wm(b), T = PM_T;
+    if(init){ var el = PM_pick(G.t+T.wedgeWind, PM_prefs(b.el, null)); if(!el){ pm.act = null; pm.fillT = 0.4; return true; }
+      A.el = el; A.ang = Math.atan2(f.x-b.x, f.z-b.z); A.res = PM_book(T.wedgeWind, el); PM_setEl(b, el); b.wind = 1; SFX.tele();
+      A.h = BG_wedge({x:b.x, z:b.z, ang:A.ang, half:T.wedgeHalf, r:T.wedgeR, el:el, dur:T.wedgeWind}); return false; }
+    pm.face = A.ang;
+    if(A.step===0){ b.act = {id:'sunder', step:0, t:Math.min(1, A.t/T.wedgeWind)*0.8*wm};
+      if(A.t >= T.wedgeWind){ A.step = 1; A.t = 0; b.wind = 0; b.act = {id:'sunder', step:1, t:0}; SFX.slam(); shake(0.45); rocks(b.x,0.3,b.z,10,0x4a3a3c,6);
+        for(var i=0;i<9;i++){ var a2 = A.ang + (i/8-0.5)*2*T.wedgeHalf, rr = rnd(2, T.wedgeR); burst(b.x+Math.sin(a2)*rr, 0.4, b.z+Math.cos(a2)*rr, 5, ELC[A.el], 5, 0.4, 1.1); }
+        var H = PTY_heroes().slice(); for(var j=0;j<H.length;j++) if(BG_inWedge(A.h, H[j].x, H[j].z, 0.4)) PM_hit(H[j], PM_dmg(b, T.wedgeDmg), A.el, b);
+        for(var q=0;q<pillars.length;q++){ var pp = pillars[q]; if(!pp.dead && BG_inWedge(A.h, pp.x, pp.z, pp.r)) damagePillar(pp, 90); } }
+      return false; }
+    b.act = {id:'sunder', step:1, t:A.t}; if(A.t > 0.75){ pm.fillT = rnd(PM_T.fillCd[0], PM_T.fillCd[1]); return true; } return false; },
+  /* filler: Shockwave (an expanding ring in his colour: dash through it or absorb) */
+  shock:function(b, A, dt, f, init){ var pm = b.pm, wm = PM_wm(b), T = PM_T;
+    if(init){ var d = Math.hypot(f.x-b.x, f.z-b.z), at = T.shockWind + Math.min(d, T.shockR)/T.shockR*T.shockT; var el = PM_pick(G.t+at, PM_prefs(b.el, null)); if(!el){ pm.act = null; pm.fillT = 0.4; return true; }
+      A.el = el; A.res = PM_book(at, el); PM_setEl(b, el); b.wind = 1; SFX.tele(); A.hitL = []; A.x = b.x; A.z = b.z;
+      A.tele = BG_dashed({x:b.x, z:b.z, r:2.6, el:el, ttl:T.shockWind}); return false; }
+    if(A.step===0){ b.act = {id:'shockwave', step:0, t:Math.min(1, A.t/T.shockWind)*0.7*wm};
+      if(A.t >= T.shockWind){ A.step = 1; A.t = 0; b.wind = 0; SFX.slam(); shake(0.5); rocks(b.x,0.3,b.z,10,0x4a3a3c,6); A.ring = BG_ring({x:A.x, z:A.z, r0:0.6, r1:T.shockR, el:A.el, dur:T.shockT}); } return false; }
+    b.act = {id:'shockwave', step:1, t:A.t}; var R = Math.min(1, A.t/T.shockT)*T.shockR;
+    if(R > 1.2){ var H = PTY_heroes().slice(); for(var j=0;j<H.length;j++){ var h = H[j]; if(A.hitL.indexOf(h)<0 && Math.abs(Math.hypot(h.x-A.x, h.z-A.z)-R) < 0.9){ A.hitL.push(h); PM_hit(h, PM_dmg(b, T.shockDmg), A.el, b); } } }
+    if(Math.random()<0.8){ var ra = Math.random()*TAU; glowP.emit(A.x+Math.sin(ra)*R, 0.4, A.z+Math.cos(ra)*R, 0, 2, 0, 0.3, 1.1, ELC[A.el], 0, 1); }
+    if(A.t >= T.shockT + 0.2){ pm.fillT = rnd(PM_T.fillCd[0], PM_T.fillCd[1]); return true; } return false; },
+  /* the spear stuck in the sand: he pulls it back along a line (the existing recall, absorbable) */
+  recall:function(b, A, dt, f, init){ var pm = b.pm, T = PM_T, sp = G.spear;
+    if(init){ if(!sp || sp.dead){ PM_rearm(b); pm.act = null; return true; } var len = Math.hypot(b.x-sp.x, b.z-sp.z), ang = Math.atan2(b.x-sp.x, b.z-sp.z);
+      var el = PM_pick(G.t+T.recallWind, PM_prefs(b.el, null)); if(!el){ pm.act = null; return true; }
+      A.el = el; A.res = PM_book(T.recallWind, el); PM_setEl(b, el); A.sx = sp.x; A.sz = sp.z; A.h = BG_lane({x:sp.x, z:sp.z, ang:ang, len:len, w:1.6, el:el, dur:T.recallWind}); SFX.tele(); A.ang = ang; return false; }
+    pm.face = A.ang + Math.PI; b.act = {id:'recall', step:A.step, t:A.t, ang:A.ang};
+    if(A.step===0 && A.t >= T.recallWind){ A.step = 1; A.t = 0; var H = PTY_heroes().slice(); for(var j=0;j<H.length;j++) if(segDist(H[j].x, H[j].z, A.sx, A.sz, b.x, b.z) < 1.0) PM_hit(H[j], PM_dmg(b, T.recallDmg), A.el, b);
+      for(var q=0;q<10;q++){ var qk = q/10; burst(lerp(A.sx,b.x,qk), 1, lerp(A.sz,b.z,qk), 4, ELC[A.el], 3, 0.3, 1); } if(G.spear) damagePillar(G.spear, 99999); G.spear = null; spearStuck.visible = false; SFX.slash(); return false; }
+    if(A.step===1 && A.t > 0.3){ A.step = 2; A.t = 0; PM_rearm(b); return false; }
+    return A.step===2 && A.t > 0.3; },
+  /* P2 signature: the hook, then the chain (runs alongside his other moves) */
+  hook:function(b, A, dt, f, init){ var pm = b.pm, T = PM_T;
+    if(init){ var tg = [f]; if(PTY_size() >= 3){ var o = PTY_bodyAt(1); if(o && o!==f && !o.dead) tg.push(o); }
+      A.tg = tg; A.hs = tg.map(function(st){ return BG_tether({a:b, b:st, el:b.el, hook:0, ya:3.2, yb:1.0}); }); A.lea = BG_dashed({follow:b, r:T.leash, el:b.el, op:0.55});
+      PM_say('THE CHAIN', 'Stay inside the dashed ring. Drag it across a pillar to snap it, or hold it.', 2.2); SFX.roar(); b.wind = 1; hintOnce('pmChain'); return false; }
+    b.act = {id:'heart', step:A.t < 0.5 ? 0 : 1, t:A.t < 0.5 ? A.t : A.t-0.5, fireT:9}; pm.face = Math.atan2(f.x-b.x, f.z-b.z);
+    for(var i=0;i<A.hs.length;i++) A.hs[i].hook = Math.min(1, A.t/T.hook);
+    if(A.t >= T.hook){ b.wind = 0; for(var j=0;j<A.tg.length;j++){ var st = A.tg[j]; if(st.dead){ BG_free(A.hs[j]); continue; }
+        var nx0 = pick(EL); pm.chains.push({st:st, h:A.hs[j], t:0, nextP:0.4, pulse:null, lastEl:null, nx:nx0, taut:0, yankCd:0, snap:0, snapP:null, cut:0}); A.hs[j].el = nx0;
+        burst(st.x, 1, st.z, 14, ELC[b.el], 5, 0.4, 1.1); SFX.zap(); }
+      pm.leash = A.lea; pm.chainT = T.chainEvery; pm.fillT = Math.max(pm.fillT, 2.5); return true; }
+    return false; },
+  /* P3 signature: the Kneel Sequence (numbered circles; colours in order, never the same twice in a row; 0.6 s apart; the last follows you) */
+  seq:function(b, A, dt, f, init){ var pm = b.pm, T = PM_T;
+    if(init){ var n = 3 + (pm.risk ? 1 : 0), els = [], prev = null, ok = true;
+      for(var k=0;k<n;k++){ var at = G.t + T.seqLead + k*T.seqGap, el = PM_pick(at, PM_prefs(null, prev).filter(function(e){ return e!==prev; })); if(!el){ ok = false; break; } els.push(el); prev = el; A.tmp = els; CMB.res.push({at:at, el:el, pm:2}); }
+      for(var r=CMB.res.length-1;r>=0;r--) if(CMB.res[r].pm===2) CMB.res.splice(r,1);
+      if(!ok){ pm.act = null; pm.seqT = 0.35; return true; }
+      A.n = n; A.els = els; A.T = []; A.res = []; for(k=0;k<n;k++){ A.T.push(T.seqLead + k*T.seqGap); A.res.push(PM_book(A.T[k], els[k])); }
+      var H = PTY_heroes().slice(); A.seqs = H.map(function(st){ var hs = [], a0 = Math.random()*TAU;
+        for(var k2=0;k2<n;k2++){ var last = k2===n-1, aa = a0 + k2*2.2, o = last ? {follow:st} : {x:st.x+Math.sin(aa)*T.seqOff, z:st.z+Math.cos(aa)*T.seqOff};
+          o.r = T.seqR; o.el = els[k2]; o.n = k2+1; o.dur = A.T[k2]; o.ttl = A.T[k2]+0.25; var hh = BG_num(o); if(!last) clampArena(hh, 0.6); hs.push(hh); }
+        return {st:st, hs:hs, landed:0, caught:0, mk:PM_party() ? BG_mark({follow:st, kind:'spread', r:1.1, ttl:A.T[n-1]}) : null}; });
+      A.i = 0; b.wind = 1; SFX.tele(); PM_say('KNEEL', 'Step into 1 → '+n+' in order with each colour, or stay clear.', 1.6); hintOnce('pmSeq'); return false; }
+    pm.face = Math.atan2(f.x-b.x, f.z-b.z); b.act = {id:'trimortar', step:A.t < 0.5 ? 0 : 1, t:A.t < 0.5 ? A.t : A.t-0.5};
+    for(var s=0;s<A.seqs.length;s++){ var L = A.seqs[s].hs[A.n-1]; if(!L.lock && A.t >= A.T[A.n-1] - T.seqLock) L.lock = true; }
+    while(A.i < A.n && A.t >= A.T[A.i]){ PM_note(b, A, A.i); A.i++; }
+    if(A.i >= A.n){ b.wind = 0; for(var s2=0;s2<A.seqs.length;s2++){ var S = A.seqs[s2]; if(S.mk) BG_free(S.mk); if(S.landed===A.n && S.caught===A.n && !A.dis){ A.dis = true; pm.log.seqCatch++; PM_disarm(b, A.els[A.n-1], 'seq'); } }
+      if(!A.dis) pm.seqT = PM_T.seqEvery - PTY_per([0, 0.5, 1.0]); else pm.seqT = PM_T.seqEvery + PM_T.disarm; return !A.dis ? A.t > A.T[A.n-1] + 0.3 : true; }
+    return false; },
+  /* phase change: he roars (no attack) */
+  roar:function(b, A, dt, f, init){ if(init){ b.wind = 0; return false; } b.act = {id:'tempt', step:0, t:1.0 + Math.min(0.2, A.t)}; b.pm.face = Math.atan2(f.x-b.x, f.z-b.z); return A.t >= PM_T.roar; }
+};
+/* the spear leaves his hand: resolve the lane now (the booked beat), then fly the spear to where it stops */
+function PM_release(b, A){ var pm = b.pm, T = PM_T, H = PTY_heroes().slice(), inL = [], ux = Math.sin(A.ang), uz = Math.cos(A.ang);
+  for(var i=0;i<H.length;i++){ var st = H[i]; if(BG_inLane(A.h, st.x, st.z, 0.45)) inL.push(st); }
+  b.stance = 'glove'; pm.sp = 'fly'; if(b.M.extra && b.M.extra.spear) b.M.extra.spear.visible = false; if(spearFly.userData.rig) spearFly.userData.rig.setElement(A.el);
+  var n = inL.length, catcher = null, braced = n >= 2 || !PM_party(); SFX.slash(); shake(0.3);
+  for(var j=0;j<n;j++){ var s2 = inL[j]; if(s2.dashT>0) continue; if(PM_ok(s2, A.el)){ if(!catcher) catcher = s2; PM_hit(s2, PM_dmg(b, T.catchDmg), A.el, b); } }
+  for(j=0;j<n;j++){ var s3 = inL[j]; if(s3===catcher || s3.dashT>0 || PM_ok(s3, A.el)) continue; if(catcher) continue;   /* a braced catch shelters the line */
+    var r = PM_hit(s3, PM_dmg(b, T.catchDmg)/Math.max(1,n), A.el, b); if(r==='hit' || r==='guard' || r==='none'){ PM_knock(s3, ux, uz, T.kb); pm.log.wrong++; } }
+  if(catcher){ A.catcher = catcher; A.stop = Math.max(1, Math.hypot(catcher.x-A.x, catcher.z-A.z)); if(!braced){ catcher.stun = Math.max(catcher.stun||0, T.knock); dmgText(catcher.x, 2.6, catcher.z, 'KNOCKED DOWN', '#ffd27a', 18); } }
+  else { A.stop = A.len; if(!n) pm.log.step++; }
+  A.fl = Math.max(0.12, A.stop/T.spearSpd); if(A.mk){ BG_free(A.mk); A.mk = null; } A.h.ttl = A.h.t + A.fl + 0.1; A.braced = braced; }
+function PM_land(b, A){ var pm = b.pm, ex = A.x + Math.sin(A.ang)*A.stop, ez = A.z + Math.cos(A.ang)*A.stop;
+  burst(ex, 0.5, ez, 22, ELC[A.el], 7, 0.5, 1.3); rocks(ex, 0.3, ez, 8, 0x4a3a3c, 6); SFX.slam();
+  if(A.catcher){ spearStuck.visible = true; if(spearStuck.userData.rig) spearStuck.userData.rig.setElement(A.el); spearStuck.position.set(A.catcher.x+0.8, 0.25, A.catcher.z); spearStuck.rotation.set(Math.PI/2, A.ang, 0);
+    if(A.braced){ pm.log.catch++; PM_disarm(b, A.el, 'catch'); }
+    else { dmgText(A.catcher.x, 2.9, A.catcher.z, 'CAUGHT · NO BRACE', '#ffd27a', 18); pm.sp = 'caught'; pm.throwT = Math.max(pm.throwT, 2.5); after(1.5, function(){ if(b.pm && !b.dead && pm.sp==='caught' && !(pm.disarm>0)) PM_rearm(b); }); } return; }
+  var sp = makePillar(ex, ez, 260, true); sp.life = 999; sp.g.visible = false; G.spear = sp; spearStuck.visible = true; if(spearStuck.userData.rig) spearStuck.userData.rig.setElement(A.el);
+  spearStuck.position.set(ex, 1.1, ez); spearStuck.rotation.set(0.35, 0, 0.2); ringBurst(ex, ez, 1.4, 14, ELC[A.el]); pm.sp = 'stuck'; pm.retr = {t:0}; pm.throwT = Math.max(pm.throwT, PM_T.stuckWait + 1.5); }
+/* one note of the Kneel Sequence lands on every body's circle of that index; a body inside k overlapping circles takes k hits' worth */
+function PM_note(b, A, k){ var T = PM_T, el = A.els[k], H = PTY_heroes().slice(), cnt = [], i, j;
+  for(i=0;i<A.seqs.length;i++){ var h = A.seqs[i].hs[k]; burst(h.x, 0.5, h.z, 16, ELC[el], 6, 0.4, 1.2); ringBurst(h.x, h.z, T.seqR, 14, ELC[el]); }
+  SFX.slam(); shake(0.2);
+  /* each note leaves embers in its colour for 3 s: step off them (or hold their colour) */
+  for(i=0;i<A.seqs.length;i++){ var hh = A.seqs[i].hs[k]; b.pm.embers.push({x:hh.x, z:hh.z, r:T.emberR, el:el, t:0, tick:T.emberTick, h:BG_pool({x:hh.x, z:hh.z, r:T.emberR, el:el, dur:T.emberT, ttl:T.emberT})}); }
+  for(j=0;j<H.length;j++){ var st = H[j], c = 0; for(i=0;i<A.seqs.length;i++) if(BG_inCircle(A.seqs[i].hs[k], st.x, st.z, 0.35)) c++; if(!c) continue;
+    var ok = PM_ok(st, el) && !(st.dashT>0), r = PM_hit(st, PM_dmg(b, T.seqDmg)*c, el, b);
+    for(i=0;i<A.seqs.length;i++){ var S = A.seqs[i]; if(S.st===st && BG_inCircle(S.hs[k], st.x, st.z, 0.35)){ S.landed++; if(ok || r==='absorb') S.caught++; } }
+    if(c > 1) dmgText(st.x, 2.8, st.z, 'MERGED x'+c, '#ffd27a', 16); } }
+
+/* ---------------------------------------------------------------- the chain (P2) ---------------------------------------------------------------- */
+function PM_chains(b, dt){ var pm = b.pm, T = PM_T, H = PTY_heroes(), i;
+  var slack = pm.disarm>0 || pm.stumble>0;   /* while he kneels or stumbles the chain goes slack: no pulses, no yank, its 8 s pause */
+  for(i=pm.chains.length-1;i>=0;i--){ var c = pm.chains[i], st = c.st; if(!slack) c.t += dt; if(c.yankCd>0) c.yankCd -= dt;
+    if(st.dead){ PM_endChain(b, c, 'gone'); continue; }
+    if(slack){ if(c.pulse){ PM_unbook(c.pulse.res); c.pulse = null; c.h.lit = 0; c.nextP = c.t + 0.6; } c.taut = 0; c.h.taut = 0; }
+    /* pulses: the colour lights the links 0.8 s ahead, then lands on the chained body */
+    /* the bright run down the links is the pulse in flight (booked, 0.8 s); the dim links already show the colour of the pulse after it */
+    if(!slack && !c.pulse && c.t >= c.nextP && c.t + T.pulseLead < T.chainDur){ var el = PM_pick(G.t+T.pulseLead, PM_prefs(c.nx, c.lastEl).filter(function(e){ return e!==c.lastEl; }));
+      if(!el) el = PM_pick(G.t+T.pulseLead, [c.lastEl||c.nx]); if(el){ c.pulse = {el:el, t:0, res:PM_book(T.pulseLead, el)}; c.h.litEl = el; c.nx = pick(EL.filter(function(e){ return e!==el; })); c.h.el = c.nx; } else c.nextP += 0.25; }
+    if(c.pulse){ var p = c.pulse; p.t += dt; c.h.lit = Math.min(1, p.t/T.pulseLead);
+      if(p.t >= T.pulseLead){ var r = PM_hit(st, PM_dmg(b, T.pulseDmg), p.el, b); burst(st.x, 1.2, st.z, 10, ELC[p.el], 5, 0.35, 1.1);
+        if(r==='absorb'){ PM_bonusOver(st); dmgText(st.x, 2.6, st.z, 'x2 OVERLOAD', ELCSS[p.el], 16); }
+        c.lastEl = p.el; c.h.el = c.nx; c.pulse = null; c.h.lit = 0; c.nextP = c.t + T.pulseEvery - T.pulseLead; } }
+    /* the leash: past 7 u the chain goes taut (0.35 s), then yanks you to him */
+    var d = Math.hypot(st.x-b.x, st.z-b.z);
+    if(!slack && d > T.leash && c.yankCd<=0 && !(st.dashT>0)){ c.taut += dt; if(c.taut >= T.tautT) PM_yank(b, c); } else c.taut = Math.max(0, c.taut - dt*2);
+    c.h.taut = Math.min(1, c.taut/T.tautT + (d > T.leash*0.85 ? 0.3 : 0));
+    /* safe answer: drag the chain across a pillar for 1 s (the pillar breaks, the chain snaps, he stumbles) */
+    var on = null; for(var q=0;q<pillars.length;q++){ var pp = pillars[q]; if(pp.dead || pp===G.spear) continue; if(segDist(pp.x, pp.z, b.x, b.z, st.x, st.z) < pp.r+0.2){ on = pp; break; } }
+    if(on){ c.snap += dt; c.snapP = on; on.flash = 0.06; if(Math.random()<dt*20) glowP.emit(on.x+rnd(-0.6,0.6), rnd(1,3), on.z+rnd(-0.6,0.6), 0, 1.5, 0, 0.4, 1, ELC[c.h.el||b.el], 0, 1);
+      if(c.snap >= T.snapT){ damagePillar(on, 99999); pm.log.snap++; PM_endChain(b, c, 'snap'); continue; } } else c.snap = Math.max(0, c.snap - dt*0.6);
+    /* party: a free body standing on the chain for 1 s cuts it (no pillar spent) */
+    var cutter = null; for(var j=0;j<H.length;j++){ var o = H[j]; if(o===st || PM_chained(b, o)) continue; if(segDist(o.x, o.z, b.x, b.z, st.x, st.z) < 0.9 && Math.hypot(o.x-b.x, o.z-b.z) > 1.5){ cutter = o; break; } }
+    if(cutter){ c.cut += dt; if(Math.random()<dt*20) glowP.emit(cutter.x, 1, cutter.z, rnd(-1,1), 1.5, rnd(-1,1), 0.35, 1, BG_GOLD, 0, 1); if(c.cut >= T.cutT){ pm.log.cut++; PM_endChain(b, c, 'cut'); continue; } } else c.cut = Math.max(0, c.cut - dt);
+    /* greedy answer: hold it; he breaks it himself after 8 s */
+    if(c.t >= T.chainDur){ pm.log.held++; PM_endChain(b, c, 'held'); continue; } }
+  if(!pm.chains.length && pm.leash){ BG_free(pm.leash); pm.leash = null; }
+  /* party job marker: where a free body can cut the first chain */
+  var c0 = pm.chains[0], free = null; if(c0 && PM_party()) for(var k=0;k<H.length;k++) if(!PM_chained(b, H[k])){ free = H[k]; break; }
+  if(c0 && free){ if(!pm.cutMk){ pm.cutPt = {x:0, z:0}; pm.cutMk = BG_mark({follow:pm.cutPt, kind:'cut'}); } pm.cutPt.x = (b.x+c0.st.x)/2; pm.cutPt.z = (b.z+c0.st.z)/2; }
+  else if(pm.cutMk){ BG_free(pm.cutMk); pm.cutMk = null; } }
+/* Kneel embers: not booked (like an edge, they only hit a body that stays on them); each tick is in the ember's colour, so its ward holds it */
+function PM_embers(b, dt){ var E = b.pm.embers, H = PTY_heroes(); for(var i=E.length-1;i>=0;i--){ var e = E[i]; e.t += dt; e.tick -= dt;
+    if(e.tick <= 0){ e.tick = PM_T.emberTick; for(var j=0;j<H.length;j++){ var st = H[j]; if(!st.dead && Math.hypot(st.x-e.x, st.z-e.z) < e.r){ PM_hit(st, PM_dmg(b, PM_T.emberDmg), e.el, b); if(Math.random()<0.5) burst(st.x, 0.4, st.z, 5, ELC[e.el], 3, 0.3, 0.9); } } }
+    if(Math.random() < dt*6) glowP.emit(e.x+rnd(-1,1)*e.r*0.7, 0.2, e.z+rnd(-1,1)*e.r*0.7, 0, 1.6, 0, 0.45, 0.8, ELC[e.el], 0, 1);
+    if(e.t >= PM_T.emberT){ E.splice(i,1); } } }
+function PM_chained(b, st){ var C = b.pm.chains; for(var i=0;i<C.length;i++) if(C[i].st===st) return true; return false; }
+/* the yank takes the chain's own colour: the dim colour of the links (the pulse after the one in flight). It is not booked: like an edge, it
+   only happens when YOU leave the dashed leash (the links jitter for 0.35 s first). Stay inside the ring and you never have to answer it. */
+function PM_yank(b, c){ var pm = b.pm, T = PM_T, st = c.st, el = c.nx || b.el;
+  var dx = b.x-st.x, dz = b.z-st.z, d = Math.hypot(dx,dz)||1, pull = Math.max(0, d-T.yankTo); zapLine([{x:b.x, z:b.z}, {x:st.x, z:st.z}]);
+  PM_knock(st, dx/d, dz/d, pull); var r2 = PM_hit(st, PM_dmg(b, T.yankDmg), el, b, {noDodge:true}); st.stun = Math.max(st.stun||0, T.yankStun);   /* the pull floors you (not damage: an absorbed yank still floors you) */ c.yankCd = T.yankCd; c.taut = 0; pm.log.yank++; if(r2==='hit') pm.log.yankHit = (pm.log.yankHit||0)+1;
+  dmgText(st.x, 2.7, st.z, 'YANKED', ELCSS[el], 20); SFX.zap(); shake(0.4); burst(st.x, 1, st.z, 14, ELC[el], 6, 0.4, 1.2); }
+function PM_endChain(b, c, why){ var pm = b.pm, i = pm.chains.indexOf(c); if(i>=0) pm.chains.splice(i,1); if(c.pulse) PM_unbook(c.pulse.res); BG_free(c.h);
+  if(why==='snap' || why==='cut'){ PM_say('THE CHAIN SNAPS', why==='cut' ? 'Cut free! He stumbles (x'+PM_T.stumbleMul+')' : 'The pillar breaks. He stumbles (x'+PM_T.stumbleMul+')', 1.6); SFX.zap(); shake(0.5);
+    if(!(pm.disarm>0)){ pm.stumble = Math.max(pm.stumble, PM_T.stumble); if(pm.act && pm.act.res) PM_unbook(pm.act.res); if(pm.act && pm.act.h) BG_free(pm.act.h); if(pm.act && pm.act.mk) BG_free(pm.act.mk); pm.act = null; b.wind = 0; b.act = {id:'spikes', step:1, t:0, n:8}; } PM_cheer(0.6); }
+  else if(why==='held'){ dmgText(b.x, 5.8, b.z, 'HE DROPS THE CHAIN', '#ffd27a', 18); }
+  burst(c.st.x, 1, c.st.z, 12, ELC[c.h.el||b.el], 5, 0.4, 1.1); }
+/* the chained body deals x1.5; Disarm x1.75; stumble x1.5 */
+function PM_mul(b){ var pm = b.pm, m = pm.disarm>0 ? PM_T.disarmMul : pm.stumble>0 ? PM_T.stumbleMul : 1;
+  if(P && PM_chained(b, P) && Math.hypot(P.x-b.x, P.z-b.z) <= PM_T.leash) m = Math.max(m, PM_T.chainMul); return m; }   /* windows don't stack; the chain bonus needs you inside the leash */
+
+/* ---------------------------------------------------------------- phases ---------------------------------------------------------------- */
+function PM_clearAct(b){ var pm = b.pm, A = pm.act; if(!A) return; if(A.res) PM_unbook(A.res); if(A.res && A.res.length) A.res.forEach(PM_unbook); if(A.h) BG_free(A.h); if(A.mk) BG_free(A.mk); if(A.hs) A.hs.forEach(BG_free); if(A.lea) BG_free(A.lea); if(A.seqs) A.seqs.forEach(function(S){ S.hs.forEach(BG_free); if(S.mk) BG_free(S.mk); }); pm.act = null; b.act = null; b.wind = 0; }
+function PM_toP2(b){ var pm = b.pm; pm.ph = 2; b.phase = 2; pm.chainT = PM_T.roar + 0.4; pm.throwT = Math.max(pm.throwT, 4.5); pm.fillT = Math.max(pm.fillT, 3.2);
+  PM_say('PHASE II · THE CHAIN', '"You catch well. Let us see you hold."', 2.2); SFX.roar(); shake(0.6); PM_start(b, 'roar', PM_fav(b)); }
+function PM_toP3(b){ var pm = b.pm, f = PM_fav(b); PM_clearAct(b); while(pm.chains.length) PM_endChain(b, pm.chains[0], 'gone'); pm.ph = 3; b.phase = 2;
+  var ctl = P || f, cx = ctl.x, cz = ctl.z, r0 = Math.hypot(cx, cz), mx = r0 > 2 ? cx - cx/r0*2 : cx, mz = r0 > 2 ? cz - cz/r0*2 : cz, ang = Math.atan2(b.x-mx, b.z-mz), px = Math.cos(ang), pz = -Math.sin(ang);
+  var R = {x:mx+px*2.8, z:mz+pz*2.8}, K = {x:mx-px*2.8, z:mz-pz*2.8}; clampArena(R, 1.6); clampArena(K, 1.6);
+  [R, K].forEach(function(o){ var ox = o.x-cx, oz = o.z-cz, od = Math.hypot(ox,oz); if(od < 2.4){ o.x = cx - cx/(r0||1)*2.6; o.z = cz - cz/(r0||1)*2.6; if(o===K){ o.x = cx + (cx-R.x); o.z = cz + (cz-R.z); clampArena(o, 1.6); } } });   /* never start inside a disc */
+  var W = {pm:1, t:0, dur:PM_T.wagerDur, b:b, blinks:0, n:0, marks:[], hr:0, hk:0,
+    risk:BG_pad({x:R.x, z:R.z, r:1.5, el:'gold', label:'RISK IT'}), take:BG_pad({x:K.x, z:K.z, r:1.5, el:'bronze', label:'TAKE IT'})};
+  G.timestop = W; $('tstop').classList.add('on'); G.hitstop = 0.1; SFX.ult(); b.act = null;
+  PM_say('THE FINAL WAGER', 'Time kneels. Stand in RISK IT (win pays x2.5, +1 note) or TAKE IT.', 3.2); hintOnce('pmWager'); }
+function PM_wagerStep(dt){ var W = G.timestop, b = W.b; W.t += dt; BG_tick(dt); var ctl = P;
+  var inR = ctl && !ctl.dead && BG_inCircle(W.risk, ctl.x, ctl.z, 0), inK = ctl && !ctl.dead && BG_inCircle(W.take, ctl.x, ctl.z, 0);
+  W.hr = inR ? W.hr + dt : Math.max(0, W.hr - dt); W.hk = inK ? W.hk + dt : Math.max(0, W.hk - dt); W.risk.k = W.hr/PM_T.wagerHold; W.take.k = W.hk/PM_T.wagerHold;
+  W.risk.label = 'RISK IT' + (W.hr>0 ? ' '+Math.ceil(PM_T.wagerHold-W.hr) : ''); W.take.label = 'TAKE IT' + (W.t > PM_T.wagerDur-3 && !inR ? ' · '+Math.max(0, Math.ceil(PM_T.wagerDur-W.t))+'s' : '');
+  var ch = W.hr >= PM_T.wagerHold ? 'risk' : (W.hk >= PM_T.wagerHold || W.t >= W.dur) ? 'take' : null; if(ch) PM_wagerEnd(b, ch); }
+function PM_wagerEnd(b, ch){ var W = G.timestop; BG_free(W.risk); BG_free(W.take); G.timestop = null; $('tstop').classList.remove('on');
+  if(!b || b.dead || !b.pm) return; var pm = b.pm; pm.risk = ch==='risk'; G.pmRisk = pm.risk; pm.seqT = 1.6; pm.throwT = Math.max(pm.throwT, 4); pm.fillT = Math.max(pm.fillT, 3);
+  if(pm.risk){ PM_say('RISK IT', 'Win pays x2.5 · one more note per sequence', 2.2); PM_cheer(1); burst(W.risk.x, 1, W.risk.z, 30, BG_GOLD, 7, 0.6, 1.4); }
+  else { PM_say('TAKE IT', 'The normal finale.', 1.6); burst(W.take.x, 1, W.take.z, 20, BG_BRONZE, 6, 0.5, 1.2); }
+  SFX.roar(); shake(0.4); PM_start(b, 'roar', PM_fav(b)); }
+var PM_ts0 = updateTimestop;
+updateTimestop = function(dt){ if(G.timestop && G.timestop.pm) return PM_wagerStep(dt); return PM_ts0.apply(this, arguments); };
+
+/* ---------------------------------------------------------------- soft enrage (3:00): the pit closes 2 u every 20 s ---------------------------------------------------------------- */
+function PM_enrage(b, dt){ var pm = b.pm; pm.enrT -= dt; if(pm.enrT > 0) return; pm.enrT = PM_T.enrageEvery;
+  var r0 = AR(), r1 = Math.max(PM_T.enrageMin, r0 - PM_T.enrageStep); if(r1 >= r0 - 0.01 && pm.enr > 0){ pm.enr++; return; } pm.enr++; G.mods.arenaR = r1;
+  BG_close({x:0, z:0, r0:r0, r1:r1, el:'flame', dur:2.0}); PM_say('THE CROWD GROWS RESTLESS', 'The pit closes in. He hits harder.', 1.8); PM_cheer(0.8); SFX.roar(); }
+
+/* ---------------------------------------------------------------- core wrappers ---------------------------------------------------------------- */
+var PM_hurt0 = hurtEnemy;
+hurtEnemy = function(e, dmg){ if(e && e.pm && !e.dead){ var m = PM_mul(e); if(m!==1) arguments[1] = dmg*m; var r = PM_hurt0.apply(this, arguments); PM_gate(e); return r; } return PM_hurt0.apply(this, arguments); };
+function PM_gate(e){ var pm = e.pm; if(!pm || e.dead) return; var thr = pm.ph===1 ? PM_T.p2 : pm.ph===2 ? PM_T.p3 : 0; if(thr && e.hp < e.maxHp*thr){ e.hp = Math.max(e.hp, e.maxHp*thr - 1, 1); if(!pm.pend) pm.pend = pm.ph+1; } }
+var PM_kill0 = killEnemy;
+killEnemy = function(e, quiet){ if(e && e.pm && !e.dead && e.pm.ph < 3){ e.hp = Math.max(1, e.maxHp*(e.pm.ph===1 ? PM_T.p2 : PM_T.p3) - 1); if(!e.pm.pend) e.pm.pend = e.pm.ph+1; return; } return PM_kill0.apply(this, arguments); };
+function PM_end(b){ BG_clear(); spearFly.visible = false; if(G.timestop && G.timestop.pm){ G.timestop = null; $('tstop').classList.remove('on'); }
+  if(b && b.pm){ var pm = b.pm; pm.chains.length = 0; pm.embers.length = 0; pm.leash = null; pm.cutMk = null; pm.act = null; if(pm.enr) recomputeMods(); for(var i=CMB.res.length-1;i>=0;i--) if(CMB.res[i].pm) CMB.res.splice(i,1); } }
+var PM_bossDeath0 = bossDeath;
+bossDeath = function(b){ if(b && b.pm){ if(DEV) PM_D.last = {t:+b.pm.ft.toFixed(1), log:b.pm.log, risk:b.pm.risk, enr:b.pm.enr}; PM_end(b); } return PM_bossDeath0.apply(this, arguments); };
+var PM_clear0 = clearWorld;
+clearWorld = function(){ PM_end(G.bossRef && G.bossRef.pm ? G.bossRef : null); G.pmRisk = false; return PM_clear0.apply(this, arguments); };
+/* Risk it: the win pays x2.5 instead of x2 (added before the core doubles the stake) */
+var PM_rc0 = roundCleared;
+roundCleared = function(boss){ if(boss && G.pmRisk && G.waveActive===false){ var add = Math.round(G.stake*PM_T.risk); G.stake += add; G.pmRisk = false; if(P) dmgText(P.x, 3, P.z, 'WAGER WON', '#ffd27a', 24); } return PM_rc0.apply(this, arguments); };
+/* facing: after updateEnemies (which turns the boss toward the controlled hero) */
+STEP_HOOKS.push(function PM_faceStep(dt){ var b = G.bossRef; if(!b || !b.pm || b.dead || b.leap || b.spawnT>0) return; var f = b.pm.face; if(f==null) return; b.face += angDiff(b.face, f)*Math.min(1, dt*(b.pm.act && b.pm.act.id==='throw' ? 14 : 5)); });
+
+/* ---------------------------------------------------------------- party: AI allies follow the job markers ---------------------------------------------------------------- */
+function PM_job(h){ var b = G.bossRef, st = h.st; if(!b || !b.pm || b.dead || st.dead) return null; var pm = b.pm, A = pm.act, f = PM_fav(b), H = PTY_heroes();
+  /* brace: the nearest free ally steps into the lane beside the Favourite */
+  if(A && A.id==='throw' && A.step===0 && st!==f && A.h && BG_inLane(A.h, f.x, f.z, 0.3)){ var best = null, bd = 1e9, ctl = (typeof PTY!=='undefined' && PTY.ctl) ? PTY.ctl.st : null; for(var i=0;i<H.length;i++){ var o = H[i]; if(o===f || o===ctl) continue; var dd = Math.hypot(o.x-f.x, o.z-f.z); if(dd < bd){ bd = dd; best = o; } }
+    if(best===st){ var ux = Math.sin(A.ang), uz = Math.cos(A.ang); return {x:f.x - ux*1.0, z:f.z - uz*1.0, job:'brace'}; } }
+  /* cut: the free ally goes to the chain's midpoint */
+  if(pm.chains.length && !PM_chained(b, st) && pm.cutPt) return {x:pm.cutPt.x, z:pm.cutPt.z, job:'cut'};
+  /* hold: a chained ally stays well inside the leash */
+  if(PM_chained(b, st) && Math.hypot(st.x-b.x, st.z-b.z) > PM_T.leash*0.7) return {x:b.x, z:b.z, job:'hold'};
+  /* spread: keep more than 3.5 u from the others during a sequence */
+  if(A && A.id==='seq'){ var nx = 0, nz = 0, cl = 0; for(var j=0;j<H.length;j++){ var o2 = H[j]; if(o2===st) continue; var dx = st.x-o2.x, dz = st.z-o2.z, d2 = Math.hypot(dx,dz)||0.01; if(d2 < 3.8){ nx += dx/d2; nz += dz/d2; cl++; } }
+    if(cl){ var l = Math.hypot(nx,nz)||1; return {x:st.x + nx/l*2.5, z:st.z + nz/l*2.5, job:'spread'}; } }
+  return null; }
+if(typeof PTY_ai==='function'){ var PM_ai0 = PTY_ai;
+  PTY_ai = function(h, dt){ var r = PM_ai0.apply(this, arguments); var J = PM_job(h); if(J){ var dx = J.x-h.st.x, dz = J.z-h.st.z, d = Math.hypot(dx,dz); if(d > 0.35){ h.ai.mv.x = dx/d; h.ai.mv.z = dz/d; } else { h.ai.mv.x = 0; h.ai.mv.z = 0; } h.ai.job = J.job; } else h.ai.job = null; return r; }; }
+
+/* ---------------------------------------------------------------- DEV ---------------------------------------------------------------- */
+var PM_D = {T:PM_T, last:null};
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.pm = { T:PM_T, D:PM_D, b:function(){ return G.bossRef; }, st:function(){ var b = G.bossRef; return b && b.pm ? {ph:b.pm.ph, hp:+(b.hp/b.maxHp).toFixed(3), max:Math.round(b.maxHp), act:b.pm.act && b.pm.act.id, dis:+b.pm.disarm.toFixed(1), stum:+b.pm.stumble.toFixed(1), chains:b.pm.chains.length, sp:b.pm.sp, ft:+b.pm.ft.toFixed(1), risk:b.pm.risk, enr:b.pm.enr, log:b.pm.log, ts:!!(G.timestop && G.timestop.pm)} : null; },
+  wager:function(ch){ if(G.timestop && G.timestop.pm) PM_wagerEnd(G.timestop.b, ch||'take'); }, start:function(id){ var b = G.bossRef; if(b && b.pm && !b.pm.act) PM_start(b, id, PM_fav(b)); }, shapes:function(){ return BG_live.length; }, mv:function(){ var b = G.bossRef; return b && b.pm ? PM_move(b, PM_fav(b), 2) : null; } }; }
 /* ---------- 81-stormwright2.js — Stormwright rework (wave 20): "Conduct the Storm". Spec: design/ARENA-SW.md, "v2 rework". Prefix SW2_. ----------
    Overrides pieces of 56-stormwright.js (each wrapper calls the original where it still applies):
    - removed: the x0.55 Storm Mantle, the 2.5%/s cap, Temper and the Temper Quench, Twin Hammerfall, Storm Crown;
@@ -20561,6 +21044,12 @@ var HINTS = {
   tether:function(){ return 'Stay inside the chain\'s reach. Shooting the <b>heart</b> hurts him!'; },
   tempt:function(){ return '<b style="color:#ffd27a">Gold orbs</b> add Glory to your stake, but each one unleashes a hazard.'; },
   trimortar:function(){ return 'Three colors land in a row. Switch wards '+ICON('flame')+ICON('frost')+ICON('storm')+' as they land!'; },
+  /* the Pitmaster, "The Wager Duel" (80-pitmaster.js) */
+  pmCatch:function(){ return 'A <b>spear lane</b>! Stand in it with its colour to <b>CATCH</b> the spear and disarm him, or step out of it.'+(PTY_size()>1 ? ' In a party, <b>two bodies</b> in the lane brace the catch (gold markers).' : ''); },
+  pmFeint:function(){ return '<b>Feint!</b> The spear changed colour just before the throw. Switch late to still catch it.'; },
+  pmChain:function(){ return 'Chained! Stay inside the <b>dashed ring</b> or he yanks you. Drag the chain across a <b>pillar</b> to snap it, or hold it for bonus damage.'+(PTY_size()>1 ? ' A free ally can stand on the chain to cut it.' : ''); },
+  pmWager:function(){ return '<b style="color:#ffd27a">The Final Wager.</b> Stand in <b style="color:#ffd27a">RISK IT</b> (the win pays ×2.5, harder sequences) or <b>TAKE IT</b>.'; },
+  pmSeq:function(){ return '<b>Numbered circles</b> land in order, the last one under you. Step into 1, then 2, switching '+ICON('flame')+ICON('frost')+ICON('storm')+' to each colour, and catch them all to disarm him. Or stay clear and leave the last one.'; },
   bleed:function(){ return 'You <b style="color:#ff6b8a">bleed</b> while moving. Stand still a moment to stop the blood loss.'; },
   bomber:function(){ return 'Bombers explode in their color. Match your ward or dash away!'; },
   stalker:function(){ return '<b>The Pale</b> cannot be killed and its claws sear Brands. Match the colour it burns in, and watch it turn.'; }
