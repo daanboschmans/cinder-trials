@@ -15739,7 +15739,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 03:23',h:'c442055'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 11:45',h:'c32ece9'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -17427,7 +17427,11 @@ if(A3.um === undefined) A3.um = null;
 '.a3opt.dn{box-shadow:inset 0 0 0 1px #8a4a20,inset 0 0 34px rgba(255,110,40,.1),inset 0 -12px 24px rgba(0,0,0,.35)}.a3opt.dn .go{color:#ffd9b8;background:linear-gradient(180deg,#4a1e0e,#2c120a 60%,#1e0c07);box-shadow:inset 0 0 0 1px #b04a1c}',
 '#a3Choice{zoom:var(--uiM,1)}',
 '#dbRow{flex-wrap:wrap;row-gap:4px}#dbRow>span b{font-weight:600;color:var(--arm-gild,#e2c89a);letter-spacing:.08em;margin-left:6px}#dbRow .dbC{display:flex;align-items:center;gap:8px;margin-left:auto}#pause #dbRow input[type=range]{width:min(190px,38vw)}',
-'@media (max-aspect-ratio:9/10){#a3Lt{bottom:calc(var(--sab,0px) + max(23vh,180px))}#a3Lt h2{letter-spacing:.12em}#a3Sk{left:0;right:0;text-align:center}}',
+'@media (max-aspect-ratio:9/10){#a3Lt{bottom:calc(var(--sab,0px) + max(31vh,262px))}#a3Lt h2{letter-spacing:.12em}#a3Sk{left:0;right:0;text-align:center}}',
+/* landscape: the docked lantern hint sits low, so the lower third moves up under the HUD line (no overlap at 800x450 / 1366x768) */
+'@media (min-aspect-ratio:1/1){#a3Lt{top:calc(var(--sat,0px) + clamp(60px,15vh,118px));bottom:auto}}',
+/* the hint is drawn over the world-space "DASH TO KINDLE" label, never under it */
+'body.a3act #hint{z-index:2}',
 '@media (max-width:700px) and (orientation:portrait){body.a3act #waveTxt{white-space:nowrap;font-size:clamp(14px,2.3vh,19px)}body.a3act.a3w #waveTxt:after{font-size:.7em}.a3opts{flex-direction:column;align-items:center}.a3opt{width:min(86vw,360px);max-width:none;flex:none}}'
 ].join('\n'); document.head.appendChild(st);
   var lt = document.createElement('div'); lt.id = 'a3Lt'; lt.setAttribute('aria-live', 'polite'); lt.innerHTML = '<h2></h2><p></p>'; $('hud').appendChild(lt);
