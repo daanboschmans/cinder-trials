@@ -1990,6 +1990,101 @@ function animHollow(R, e, t, dt){ var L = R.limbs, st = e.state, dead = st==='de
   if(dead){ if(!R.dFx){ R.dFx = 1; rigDust(R,'torso',16,0x2a2427,3,0,0.6,0); rigBurst(R,'core',14,ELGLOW[R.el]||0xff6a1f,2.4,0.6,1.1); } var k = e.deadT||0; L.torso.g.rotation.x = 0.3 + 0.6*AN.easeIn(k); R.g.position.y = -1.6*AN.easeIn(cl((k-0.2)/0.8)); R.g.scale.set(1+0.2*k, Math.max(0.05, 1-0.7*AN.easeIn(k)), 1+0.2*k); } else R.dFx = 0; }
 CHARS.ashhollow = {name:'Ash Hollow', build:buildHollow, anim:animHollow, deathDur:1.0, rim:0.24, variant:function(o, el){ return (el||'')+'|'+((o&&o.elite)||''); }, finish:{gradLo:0.6, gradHi:1.15, outlineK:1.3}};
 })();
+/* OWNER: Garden agent. The Thornwall Garden's people (CHARS.gnpc), design/research/13-themes.md §3.1.
+   Variants (opts.v): 'herald' G1 Pell Greenhand, the herald (tall, a hollow gourd horn, a ribbon sash, a leaf wreath)
+                      'seed'   G5 Seedmonger Anwen, the offerings stall keeper (head-scarf, shawl, apron with seed pockets, a scoop and a packet)
+   Adults, purely visual. Rig units ~1.0 game scale (hero-sized, 1.9-2.2 tall); shown at root scale 1.3 like the hub keepers.
+   Local +Z = forward, the character's right = -X, feet at y = 0. 17-18 bones, one draw + outline.
+   anim inputs: e.npPose 'idle' | 'blow' (herald: horn raised, round start) | 'offer' (seedmonger: holds a packet out, offering due); e.npSnap.
+   No per-frame allocation. */
+(function(){
+var PI = Math.PI, TAU = PI*2, NO = {outline:false};
+var C = { SKIN:0xc8926a, SKIN2:0x9a6a4a, SKIN3:0x7a4e36, HAIR:0x3a2a20, HAIR2:0x6a4a30, GREEN:0x2f5a3a, GREEN2:0x24452c, MOSS:0x5d7a3e, CREAM:0xe0d2b0, CREAM2:0xbfae8a,
+  BRASS:0xc0904e, BRASS2:0x9a7240, ROSE:0xd8728e, ROSE2:0xb0506c, BUTTER:0xf0cf72, GOURD:0xc89a4a, GOURD2:0x9a6a2a, LEA:0x5a3e2a, LEA2:0x3a281c,
+  TEAL:0x2c5a58, TEAL2:0x1f4442, OCHRE:0xb07a30, WINE:0x6e2a3a, LEAF:0x55803a, LEAF2:0x41682e, VOID:0x0c0a0b, SEED:0xd8b070 };
+function skel(R, p){
+  R.limb('pelvis',null,0,p.hip,0); R.limb('spine','pelvis',0,0.08,0); R.limb('chest','spine',0,0.24,0); R.limb('head','chest',0,p.neck,0.02);
+  R.limb('armR','chest',-p.sw,p.sh,0); R.limb('foreR','armR',0,-p.ua,0); R.limb('handR','foreR',0,-p.fa,0);
+  R.limb('armL','chest',p.sw,p.sh,0); R.limb('foreL','armL',0,-p.ua,0); R.limb('handL','foreL',0,-p.fa,0);
+  R.limb('legR','pelvis',-p.hw,-0.05,0); R.limb('shinR','legR',0,-p.lt,0); R.limb('footR','shinR',0,-p.ls,0);
+  R.limb('legL','pelvis',p.hw,-0.05,0); R.limb('shinL','legL',0,-p.lt,0); R.limb('footL','shinL',0,-p.ls,0); R.P = p; }
+function K(R){ return { a:function(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz,o){ R.add(l,g,c,x,y,z,sx,sy,sz,rx||0,ry||0,rz||0,o); },
+  e:function(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz){ R.emit(l,g,c,x,y,z,sx,sy,sz,rx||0,ry||0,rz||0,NO); } }; }
+function legs(R, k, p, tr, boot, w){ R.mirror(function(s){ var L = s==='L', lg = L ? 'legL' : 'legR', sh = L ? 'shinL' : 'shinR', ft = L ? 'footL' : 'footR';
+  k.a(lg, G2.taper, tr, 0, -p.lt*0.5, 0, 0.21*w, p.lt*1.05, 0.22*w, PI, 0, 0); k.a(sh, G2.taper, tr, 0, -p.ls*0.38, 0, 0.17*w, p.ls*0.8, 0.18*w, PI, 0, 0);
+  k.a(sh, G2.taper, boot, 0, -p.ls*0.72, 0, 0.19*w, p.ls*0.6, 0.2*w, PI, 0, 0); k.a(ft, G2.box, boot, 0, -0.045, 0.05, 0.16*w, 0.1, 0.27); }); }
+function hands(R, k, c){ R.mirror(function(s){ var h = s==='L' ? 'handL' : 'handR'; k.a(h, G2.box, c, 0, -0.06, 0, 0.1, 0.12, 0.11); k.a(h, G2.box, c, 0, -0.13, 0.015, 0.09, 0.07, 0.1, 0.4, 0, 0); }); }
+
+/* ===== Pell Greenhand, the herald: tall and lean, a long green coat with brass trim, a rose-and-butter ribbon sash, a leaf wreath, a trimmed beard;
+   the hollow gourd horn (ochre gourd, brass mouthpiece and bell) in both hands. ===== */
+function buildHerald(R){ var p = {hip:1.05, lt:0.47, ls:0.45, sw:0.27, sh:0.29, neck:0.44, ua:0.32, fa:0.3, hw:0.13}; skel(R, p);
+  R.limb('horn','handR',0,-0.12,0.05); R.limb('coat','pelvis',0,0,0); var k = K(R), a = k.a, e = k.e;
+  legs(R, k, p, C.GREEN2, C.LEA2, 1.0);
+  a('coat', G2.cap, C.GREEN, 0, -0.32, 0, 0.66, 0.72, 0.52); a('coat', G2.box, C.BRASS2, 0, -0.67, 0.0, 0.66, 0.04, 0.53, 0, 0, 0, NO); a('coat', G2.box, C.CREAM2, 0, -0.32, 0.25, 0.1, 0.66, 0.04, -0.12, 0, 0);
+  a('pelvis', G2.box, C.LEA, 0, 0.04, 0, 0.42, 0.09, 0.3); a('pelvis', G2.box, C.BRASS, 0, 0.04, 0.155, 0.08, 0.08, 0.03, 0, 0, 0, NO);
+  a('spine', G2.taper, C.GREEN, 0, 0.12, 0, 0.44, 0.32, 0.3); a('chest', G2.taper, C.GREEN, 0, 0.18, 0, 0.62, 0.46, 0.38, 0, 0, PI);
+  a('chest', G2.box, C.CREAM, 0, 0.2, 0.18, 0.16, 0.36, 0.04, -0.1, 0, 0); for(var bt=0;bt<4;bt++) a('chest', G2.oct, C.BRASS, 0.1, 0.32 - bt*0.1, 0.19, 0.035, 0.035, 0.02, 0, 0, 0, NO);
+  a('chest', G2.box, C.ROSE, 0, 0.12, 0.2, 0.12, 0.72, 0.04, 0, 0, 0.75); a('chest', G2.box, C.BUTTER, 0.03, 0.1, 0.215, 0.05, 0.72, 0.02, 0, 0, 0.75, NO);       // the ribbon sash
+  a('chest', G2.box, C.ROSE2, -0.2, -0.18, 0.2, 0.12, 0.14, 0.04, 0, 0, 0.3); a('chest', G2.cyl6, C.BRASS, 0, 0.38, 0, 0.22, 0.06, 0.2, 0, 0, 0, NO);
+  R.mirror(function(s){ var X = s==='L' ? 1 : -1; a('chest', G2.box, C.BRASS2, X*0.28, 0.33, 0, 0.16, 0.05, 0.24, 0, 0, X*-0.25); });
+  /* head: long face, trimmed beard, the wreath of leaves with two small rose buds */
+  a('head', G2.sph8, C.SKIN, 0, 0.17, 0, 0.3, 0.36, 0.32); a('head', G2.box, C.HAIR2, 0, 0.29, -0.04, 0.31, 0.12, 0.3);
+  a('head', G2.taper, C.HAIR2, 0, 0.04, 0.1, 0.26, 0.2, 0.18, PI, 0, 0); a('head', G2.cone4, C.SKIN2, 0, 0.15, 0.17, 0.06, 0.1, 0.07, 0.3, PI/4, 0);
+  R.mirror(function(s){ var X = s==='L' ? 1 : -1; a('head', G2.box, C.VOID, X*0.065, 0.19, 0.155, 0.05, 0.025, 0.02, 0, 0, 0, NO); a('head', G2.box, C.HAIR, X*0.07, 0.225, 0.155, 0.08, 0.025, 0.02, 0, 0, X*-0.15, NO); });
+  for(var w=0;w<9;w++){ var wa = w/9*TAU; a('head', G2.cone4, w%2 ? C.LEAF : C.LEAF2, Math.sin(wa)*0.17, 0.31, Math.cos(wa)*0.16, 0.08, 0.14, 0.04, PI/2, wa, 0.5, NO); }
+  a('head', G2.oct, C.ROSE, 0.1, 0.33, 0.12, 0.06, 0.06, 0.05, 0, 0, 0, NO); a('head', G2.oct, C.ROSE, -0.12, 0.33, 0.1, 0.06, 0.06, 0.05, 0, 0, 0, NO);
+  /* sleeves with cream cuffs */
+  R.mirror(function(s){ var L = s==='L', ar = L ? 'armL' : 'armR', fo = L ? 'foreL' : 'foreR';
+    a(ar, G2.ico0, C.GREEN, 0, 0, 0, 0.19, 0.19, 0.19); a(ar, G2.taper, C.GREEN, 0, -0.16, 0, 0.15, 0.32, 0.15, PI, 0, 0);
+    a(fo, G2.taper, C.GREEN, 0, -0.14, 0, 0.14, 0.3, 0.14, PI, 0, 0); a(fo, G2.box, C.CREAM, 0, -0.26, 0, 0.17, 0.07, 0.17); });
+  hands(R, k, C.SKIN);
+  /* the gourd horn: a long curving gourd (three tapering sections), a brass mouthpiece, a flared brass bell; a rose ribbon tied on */
+  a('horn', G2.cyl6, C.BRASS, 0, 0.12, 0, 0.05, 0.18, 0.05); a('horn', G2.taper, C.GOURD, 0, -0.12, 0.04, 0.1, 0.36, 0.1, 0.15, 0, 0);
+  a('horn', G2.taper, C.GOURD, 0, -0.42, 0.13, 0.2, 0.36, 0.2, 0.45, 0, 0); a('horn', G2.sph8, C.GOURD2, 0, -0.72, 0.34, 0.34, 0.42, 0.34, 0.8, 0, 0);
+  a('horn', G2.cyl, C.BRASS, 0, -0.95, 0.6, 0.46, 0.16, 0.46, 1.0, 0, 0); a('horn', G2.cyl, C.BRASS2, 0, -1.0, 0.66, 0.56, 0.05, 0.56, 1.0, 0, 0, NO);
+  a('horn', G2.box, C.ROSE, 0.06, -0.3, 0.1, 0.03, 0.22, 0.05, 0.3, 0, 0.3, NO); a('horn', G2.tor8, C.GOURD2, 0, -0.55, 0.2, 0.17, 0.17, 0.17, 0.6, 0, 0, NO); }
+
+/* ===== Seedmonger Anwen: sturdy, a moss head-scarf, an ochre shawl, a cream apron with seed pockets over a teal skirt, rolled sleeves;
+   a brass scoop of seeds in her right hand, a seed packet in her left, a satchel on the hip. ===== */
+function buildSeed(R){ var p = {hip:0.9, lt:0.39, ls:0.38, sw:0.28, sh:0.25, neck:0.39, ua:0.29, fa:0.27, hw:0.14}; skel(R, p);
+  R.limb('tool','handR',0,-0.1,0.04); R.limb('pk','handL',0,-0.12,0.06); R.limb('skirt','pelvis',0,0,0); R.limb('tail','head',0,0.12,-0.16); var k = K(R), a = k.a, e = k.e;
+  legs(R, k, p, C.LEA, C.LEA2, 1.05);
+  a('skirt', G2.cap, C.TEAL2, 0, -0.34, 0, 0.74, 0.7, 0.62); a('skirt', G2.cap, C.TEAL, 0, -0.24, 0.01, 0.66, 0.52, 0.56);
+  a('skirt', G2.box, C.CREAM, 0, -0.32, 0.27, 0.46, 0.6, 0.04, -0.12, 0, 0); a('skirt', G2.box, C.CREAM2, 0, -0.6, 0.31, 0.46, 0.04, 0.05, -0.12, 0, 0, NO);
+  [-0.13, 0.13].forEach(function(x){ a('skirt', G2.box, C.CREAM2, x, -0.34, 0.31, 0.16, 0.14, 0.03, -0.12, 0, 0); a('skirt', G2.box, C.SEED, x, -0.27, 0.32, 0.12, 0.05, 0.03, -0.12, 0, 0, NO); });
+  a('pelvis', G2.box, C.LEA, 0, 0.05, 0, 0.5, 0.09, 0.36); a('pelvis', G2.box, C.LEA2, 0.3, -0.05, 0.02, 0.14, 0.2, 0.2, 0, 0, -0.15); a('pelvis', G2.box, C.BRASS2, 0.31, 0.02, 0.12, 0.06, 0.05, 0.02, 0, 0, 0, NO);
+  a('spine', G2.sph8, C.CREAM2, 0, 0.1, 0.02, 0.5, 0.32, 0.4); a('chest', G2.taper, C.WINE, 0, 0.17, 0, 0.68, 0.42, 0.44, 0, 0, PI);
+  a('chest', G2.box, C.CREAM, 0, 0.12, 0.2, 0.36, 0.3, 0.04, -0.06, 0, 0); a('chest', G2.box, C.CREAM2, 0, 0.27, 0.21, 0.38, 0.03, 0.05, -0.06, 0, 0, NO);
+  /* the shawl: a wide ochre wedge over both shoulders, knotted in front */
+  a('chest', G2.sph8, C.OCHRE, 0, 0.3, -0.01, 0.8, 0.22, 0.52); a('chest', G2.cone4, C.OCHRE, 0, 0.14, 0.2, 0.34, 0.3, 0.08, PI, PI/4, 0); a('chest', G2.oct, C.GOURD2, 0, 0.24, 0.24, 0.1, 0.1, 0.08, 0, 0, 0, NO);
+  a('chest', G2.cone4, C.OCHRE, 0, 0.1, -0.24, 0.36, 0.4, 0.06, PI, PI/4, 0);
+  /* head: round face, the moss scarf with a knotted tail, ear-rings */
+  a('head', G2.sph8, C.SKIN2, 0, 0.16, 0, 0.32, 0.34, 0.32); a('head', G2.sph8, C.MOSS, 0, 0.23, -0.03, 0.36, 0.3, 0.36); a('head', G2.box, C.MOSS, 0, 0.3, 0.1, 0.33, 0.06, 0.12, 0.3, 0, 0);
+  R.mirror(function(s){ var X = s==='L' ? 1 : -1; a('head', G2.box, C.VOID, X*0.065, 0.17, 0.155, 0.05, 0.025, 0.02, 0, 0, 0, NO); e('head', G2.oct, C.BRASS, X*0.16, 0.1, 0.02, 0.03, 0.04, 0.03); });
+  a('head', G2.cone4, C.SKIN3, 0, 0.13, 0.17, 0.05, 0.08, 0.06, 0.3, PI/4, 0); a('head', G2.box, C.ROSE2, 0, 0.07, 0.155, 0.08, 0.02, 0.02, 0, 0, 0, NO);
+  a('tail', G2.taper, C.MOSS, 0, -0.12, 0, 0.12, 0.26, 0.06, 0.2, 0, 0); a('tail', G2.oct, C.LEAF2, 0, 0, 0.02, 0.1, 0.08, 0.08, 0, 0, 0, NO);
+  /* arms: shawl over the shoulders, rolled sleeves, bare forearms */
+  R.mirror(function(s){ var L = s==='L', ar = L ? 'armL' : 'armR', fo = L ? 'foreL' : 'foreR';
+    a(ar, G2.ico0, C.OCHRE, 0, 0, 0, 0.22, 0.2, 0.22); a(ar, G2.taper, C.WINE, 0, -0.15, 0, 0.17, 0.3, 0.17, PI, 0, 0); a(ar, G2.box, C.CREAM2, 0, -0.27, 0, 0.19, 0.06, 0.19);
+    a(fo, G2.taper, C.SKIN2, 0, -0.13, 0, 0.14, 0.28, 0.14, PI, 0, 0); });
+  hands(R, k, C.SKIN2);
+  /* the brass seed scoop with a heap of seeds; the packet (folded paper with a printed bloom) */
+  a('tool', G2.cyl6, C.LEA, 0, 0.02, 0, 0.04, 0.16, 0.04); a('tool', G2.cyl6, C.BRASS, 0, -0.12, 0.06, 0.16, 0.14, 0.16, 0.6, 0, 0); a('tool', G2.sph8, C.SEED, 0, -0.1, 0.1, 0.13, 0.08, 0.12, 0.6, 0, 0, NO);
+  a('pk', G2.box, C.CREAM, 0, 0, 0, 0.16, 0.2, 0.03); a('pk', G2.box, C.ROSE, 0, 0.02, 0.018, 0.08, 0.08, 0.01, 0, 0, PI/4, NO); a('pk', G2.box, C.LEAF2, 0, -0.06, 0.018, 0.02, 0.07, 0.01, 0, 0, 0, NO); }
+
+var POSE = {
+  herald:{ idle:{armR:[-0.55,0,-0.1], foreR:[-1.35,0.3,0], handR:[0.2,0,0.6], armL:[-0.55,0,0.15], foreL:[-1.25,-0.4,0], handL:[0,0,0], head:[0.05,0,0], chest:[0,0,0]},
+           blow:{armR:[-1.1,0.35,-0.45], foreR:[-1.75,0.2,0.2], handR:[-0.5,0,0.2], armL:[-1.05,0,0.2], foreL:[-0.75,-0.3,0], handL:[0,0,0], head:[-0.35,0,0], chest:[-0.18,0,0]} },
+  seed:  { idle:{armR:[-0.35,0,-0.12], foreR:[-1.0,0.2,0], handR:[0.1,0,0], armL:[-0.3,0,0.15], foreL:[-1.1,-0.2,0], handL:[0.2,0,0], head:[0.1,0.2,0], chest:[0.05,0,0]},
+           offer:{armR:[-0.35,0,-0.12], foreR:[-1.0,0.2,0], handR:[0.1,0,0], armL:[-1.25,-0.3,0.15], foreL:[-0.35,0,0], handL:[-0.4,0,0], head:[0.0,-0.25,0], chest:[-0.06,-0.15,0]} } };
+var NB = ['armR','foreR','handR','armL','foreL','handL','head','chest'];
+CHARS.gnpc = { name:'Garden NPC', rim:0.1, deathDur:0, variant:function(o){ return (o && o.v) || 'herald'; },
+  finish:{ outlineK:1.3, gradLo:0.72, gradHi:1.1, shininess:8, specular:0x1a1a14 },
+  build:function(R, el, o){ var v = (o && o.v) || 'herald'; R.v = v; if(v==='seed') buildSeed(R); else buildHerald(R); R.J = NB.map(function(n){ return R.limbs[n].g; }); R.init = false; },
+  anim:function(R, e, t, dt){ var set = POSE[R.v] || POSE.herald, P = set[e.npPose] || set.idle, k = (dt>0 && !e.npSnap && R.init) ? 1 - Math.exp(-8*dt) : 1; R.init = true;
+    for(var i=0;i<NB.length;i++){ var g = R.J[i].rotation, q = P[NB[i]]; g.x += (q[0]-g.x)*k; g.y += (q[1]-g.y)*k; g.z += (q[2]-g.z)*k; }
+    var br = Math.sin(t*1.6 + (R.v==='seed' ? 1 : 0))*0.02; R.limbs.chest.g.rotation.x += br; if(e.npPose==='blow') R.limbs.chest.g.scale.set(1 + 0.03*Math.sin(t*9), 1, 1 + 0.03*Math.sin(t*9)); } };
+})();
 /* OWNER: hero agent. CHARS.hero — the player, 3 classes (opts.cls = 'mage' | 'blade' | 'archer'). Contract: design/ART.md
    Light-on-dark adult heroes: warm skin, steel, ivory, gold trim; class cloth as accent; gold is the only glow.
    Custom 23-bone skeleton (spine/chest split, hands, feet) + class bones. Pose is built in a flat Float32Array each frame
@@ -2641,6 +2736,161 @@ function animHero(R, P, t, dt){ var S = R.S; if(!S) return; var J = S.J, A = S.A
 CHARS.hero = {build:buildHero, anim:animHero, variant:function(o){ return (o.cls || 'mage') + '|' + skinId(o) + gearKey(o.gear); }, skins:SKINS, rim:0.18, deathDur:0.9,
   finish:{outlineK:1.3, shininess:22, specular:0x3a332c, gradLo:0.8, gradHi:1.1}};
 })();
+/* OWNER: Garden agent. Hub and dev preview only for now (the fights are pending). HESK, THE THORNWALL COLOSSUS (CHARS.hesk), wave-20 boss of the Thornwall Garden.
+   Spec: design/research/13-themes.md §3.2. A giant of bronze-rooted hedge seated in a stone planter bed; his head is a lightning-struck oak stump
+   split in two, the halves carrying the canopy; thorns run down his arms and end in flame-orange thorn blooms; storm-violet bark glow (element
+   glow channel: build him as 'storm'); frost pools at his feet. ~7.3 u to the canopy top at world scale 1 (Stormwright-like after ARENA-SW).
+   Rig: 20 bones, one draw + outline (+ shadow). Local +Z = forward, his right = -X, feet (the bed) at y = 0.
+   Phase looks (anim inputs, all optional, read-only):
+     e.hkPose  'idle' | 'root' (P1 Rootbind: right palm slams down, two roots rear up) | 'fire' (P2 Canopy Fire: head back, arms wide, the canopy burns)
+               | 'storm' (P3 Lightning Oak: arms raised, the split crown spreads, arcs jump between the halves) | 'regrow' (P3 regrowth: hunched, blooms swell)
+               | 'kneel' (beaten, hub) — or derived from e.act.id ('root','fire','arc','regrow') when the boss logic exists.
+     e.hkFire  0..1 canopy fire (P2)   e.hkArc  0..1 storm arcs (P3)   e.hkScale  world-scale multiplier (hub statue scale)   e.hkSnap  snap to pose
+   No per-frame allocation. */
+(function(){
+var PI = Math.PI, TAU = PI*2, NO = {outline:false};
+var C = { HEDGE:0x41602c, HEDGE2:0x55762f, HEDGE3:0x6b8c3a, HEDGE4:0x2f4722, LEAF:0x5a8434, LEAF2:0x46702c, LEAF3:0x76a044,
+  BARK:0x5a4330, BARK2:0x3a2b20, BARK3:0x7a5c3e, CHAR:0x231a16, BRZ:0x9a7240, BRZ2:0xc0904e, BRZ3:0x6e5030,
+  STONE:0xcbbb94, STONE2:0xb09f7b, STONE3:0x8a7a5c, SOIL:0x4a3626, VOID:0x0d0a0b,
+  EYE:0xe9ffb8, EYE2:0x9fd860, FLAME:0xff7a33, FLAME2:0xffb050, FCORE:0xffe2a8, POOL:0x8fd8ea, POOL2:0xc4eef6, STORM:0xc27cff, STORM2:0xf0d4ff };
+var HK_WS = 0.64;   /* authored ~11.4 u to the canopy top; shown at ~7.3 u (Stormwright-like after ARENA-SW) */
+function cl(x){ return x<0?0:x>1?1:x; }
+
+function buildHesk(R){ var G = G2;
+  /* the head chain (head, jaw, crown halves and their fire) is authored small and baked ×HS so the face reads at play scale */
+  var HS = 1.3, LS = {head:HS, jaw:HS, crownL:HS, crownR:HS, fireL:HS, fireR:HS, arc:HS};
+  function A(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz,o){ var k = LS[l]||1; R.add(l,g,c,x*k,y*k,z*k,sx*k,sy*k,sz*k,rx||0,ry||0,rz||0,o); }
+  function L(l,g,x,y,z,sx,sy,sz,rx,ry,rz,v){ var k = LS[l]||1; R.glow(l,g,x*k,y*k,z*k,sx*k,sy*k,sz*k,rx||0,ry||0,rz||0,{v:v==null?1:v, outline:false}); }
+  function E(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz){ var k = LS[l]||1; R.emit(l,g,c,x*k,y*k,z*k,sx*k,sy*k,sz*k,rx||0,ry||0,rz||0,NO); }
+  function B(n,p,x,y,z){ var k = (p && LS[n] && LS[p]) ? LS[p] : 1; R.limb(n,p,x*k,y*k,z*k); }
+  R.limb('bed',null,0,0,0); R.limb('pelvis','bed',0,1.55,-0.2); R.limb('torso','pelvis',0,0.4,0); R.limb('head','torso',0,3.0,0.55); B('jaw','head',0,-0.32,0.5);
+  B('crownL','head',0.3,0.75,-0.2); B('crownR','head',-0.3,0.75,-0.2); B('fireL','crownL',0,0,0); B('fireR','crownR',0,0,0); B('arc','head',0,1.6,-0.2);
+  R.limb('armL','torso',2.05,2.15,0.1); R.limb('foreL','armL',0,-1.75,0); R.limb('handL','foreL',0,-1.6,0);
+  R.limb('armR','torso',-2.05,2.15,0.1); R.limb('foreR','armR',0,-1.75,0); R.limb('handR','foreR',0,-1.6,0);
+  R.limb('rootA','bed',1.7,0.75,1.4); R.limb('rootB','bed',-1.75,0.75,1.3); R.limb('rootC','bed',2.2,0.6,-0.9); R.limb('rootD','bed',-2.2,0.6,-1.0);
+
+  /* ---- the planter bed: an octagonal limestone planter, soil, clipped edging, frost pools at his feet ---- */
+  var oct = new THREE.CylinderGeometry(0.5,0.5,1,8);
+  A('bed',oct,C.STONE2,0,0.42,0,5.6,0.84,5.0,0,PI/8,0); A('bed',oct,C.STONE,0,0.88,0,5.8,0.16,5.2,0,PI/8,0); A('bed',oct,C.SOIL,0,0.9,0,5.1,0.1,4.5,0,PI/8,0,NO);
+  A('bed',oct,C.STONE3,0,0.07,0,5.9,0.14,5.3,0,PI/8,0,NO);
+  for(var e=0;e<8;e++){ var ea = e/8*TAU + PI/8; A('bed',G.box,C.STONE3,Math.sin(ea)*2.65,0.45,Math.cos(ea)*2.36,0.08,0.6,0.5,0,ea,0,NO); }    // panel seams
+  E('bed',G.cyl6,C.POOL,0.95,0.97,1.55,1.2,0.02,0.75,0,0.3,0); E('bed',G.cyl6,C.POOL2,1.05,0.98,1.6,0.55,0.02,0.32,0,0.3,0);
+  E('bed',G.cyl6,C.POOL,-1.2,0.97,1.35,0.95,0.02,0.6,0,-0.4,0); E('bed',G.cyl6,C.POOL2,-1.15,0.98,1.4,0.4,0.02,0.26,0,-0.4,0);
+  /* bronze roots: the lower body is a knot of roots that pours over the rim into the soil */
+  var rts = [[0.5,1.05],[1.5,0.9],[2.5,1.0],[3.75,0.95],[4.8,0.9],[5.7,1.0]];
+  var ROOTG = new THREE.CylinderGeometry(0.3,0.5,1,5);
+  function radial(l, g, c, a, r, y, len, th, tilt, o){ var st = Math.sin(tilt), dx = Math.sin(a)*st, dy = Math.cos(tilt), dz = Math.cos(a)*st;
+    A(l, g, c, Math.sin(a)*r + dx*len*0.5, y + dy*len*0.5, Math.cos(a)*r*0.9 + dz*len*0.5, th, len, th*0.9, 0, a - PI/2, -tilt, o); }
+  function chain(l, a, r, y, segs){ var x = Math.sin(a)*r, z = Math.cos(a)*r*0.9;
+    for(var q=0;q<segs.length;q++){ var sg = segs[q], st = Math.sin(sg[1]), dx = Math.sin(a)*st, dy = Math.cos(sg[1]), dz = Math.cos(a)*st, len = sg[0];
+      A(l, q===segs.length-1 ? G.cone4 : ROOTG, sg[3], x + dx*len*0.5, y + dy*len*0.5, z + dz*len*0.5, sg[2], len*(q===segs.length-1 ? 1.0 : 1.08), sg[2]*0.9, 0, a - PI/2, -sg[1]);
+      x += dx*len; y += dy*len; z += dz*len; } }
+  rts.forEach(function(r, k){ var a = r[0], w = r[1];
+    chain('bed', a, 0.7, 2.1, [[1.35, 1.7, 1.1*w, k%2?C.BRZ:C.BRZ3], [1.15, 2.3, 0.85*w, k%2?C.BRZ3:C.BRZ], [0.7, 2.7, 0.55*w, C.BRZ2]]);
+    if(k%2===0) A('bed', G.ico0, C.HEDGE3, Math.sin(a)*1.6, 1.85, Math.cos(a)*1.35, 0.6, 0.35, 0.6, 0, a, 0); });
+  /* ---- pelvis: the root knot (bark + bronze) ---- */
+  A('pelvis',G.dod,C.BARK,0,0,0,2.9,1.5,2.4); A('pelvis',G.dod,C.BRZ3,0,-0.3,0.3,2.4,1.1,2.1,0.3,0.5,0); A('pelvis',G.box,C.BRZ,0,0.25,1.05,1.6,0.18,0.25,0,0,0.08);
+  /* ---- torso: clipped hedge mass over a bark frame; storm-violet seam up the chest; leaf shoulders ---- */
+  A('torso',G.sph8,C.HEDGE,0,0.9,0.05,3.2,2.0,2.5); A('torso',G.sph8,C.HEDGE2,0,1.85,0.15,3.9,1.9,2.6); A('torso',G.sph8,C.HEDGE,0,2.45,-0.15,3.0,1.0,2.0);
+  A('torso',G.sph8,C.HEDGE3,-0.75,1.95,1.05,1.5,1.1,0.7,0.2); A('torso',G.sph8,C.HEDGE3,0.75,1.95,1.05,1.5,1.1,0.7,0.2);       // pec masses (clipped)
+  A('torso',G.box,C.BARK2,0,1.15,1.18,0.55,1.6,0.3,0.15,0,0); A('torso',G.box,C.BARK,-0.55,0.75,1.12,0.22,1.0,0.25,0.1,0,0.35); A('torso',G.box,C.BARK,0.6,0.8,1.12,0.22,0.9,0.25,0.1,0,-0.4);
+  L('torso',G.box,0.05,1.45,1.34,0.07,0.75,0.05,0.15,0,0.35,1.1); L('torso',G.box,-0.08,0.85,1.33,0.07,0.7,0.05,0.12,0,-0.4,1.1); L('torso',G.box,0.08,0.3,1.3,0.06,0.55,0.05,0.1,0,0.45,1.0);
+  for(var rb=0;rb<3;rb++) A('torso',G.box,C.BARK,0,0.55+rb*0.55,-1.1,2.6-rb*0.2,0.22,0.3,0,0,(rb-1)*0.1);                  // bark ribs on the back
+  [-1,1].forEach(function(s){ A('torso',G.dod,C.HEDGE2,s*1.85,2.45,0.05,1.75,1.25,1.7,0.2,s,0); A('torso',G.ico0,C.LEAF3,s*2.15,2.85,0.0,1.1,0.7,1.1,0.5,s*2,0);
+    A('torso',G.ico0,C.LEAF2,s*1.3,1.4,0.9,1.0,0.8,0.8,0.3,s,0); A('torso',G.cone4,C.BARK2,s*2.15,3.3,-0.1,0.28,0.9,0.28,0,0,-s*0.5);
+    E('torso',G.oct,C.FLAME,s*1.55,2.95,0.85,0.26,0.26,0.18); E('torso',G.oct,C.FCORE,s*1.55,2.95,0.92,0.12,0.12,0.1); });
+  A('torso',G.cyl6,C.BARK,0,2.85,0.4,1.2,0.9,1.0);                                                                          // stump neck
+  /* ---- head: a bark mask on an oak stump: heavy V brow, deep sockets with pale green eyes, knot nose, moss beard ---- */
+  var stump = new THREE.CylinderGeometry(0.42,0.5,1,7);
+  A('head',stump,C.BARK,0,0.25,-0.1,1.55,1.45,1.4); A('head',G.box,C.BARK3,0,0.15,0.5,1.2,1.0,0.35,0.08,0,0);
+  A('head',G.box,C.BARK3,-0.3,0.55,0.66,0.66,0.24,0.38,0.3,0.28,-0.32); A('head',G.box,C.BARK3,0.3,0.55,0.66,0.66,0.24,0.38,0.3,-0.28,0.32);
+  A('head',G.box,C.BARK2,-0.28,0.44,0.76,0.6,0.07,0.2,0.1,0.28,-0.32,NO); A('head',G.box,C.BARK2,0.28,0.44,0.76,0.6,0.07,0.2,0.1,-0.28,0.32,NO);
+  A('head',G.box,C.VOID,-0.27,0.3,0.68,0.4,0.22,0.12,0,0,-0.15,NO); A('head',G.box,C.VOID,0.27,0.3,0.68,0.4,0.22,0.12,0,0,0.15,NO);
+  E('head',G.oct,C.EYE2,-0.27,0.3,0.74,0.3,0.15,0.06,0,0,-0.15); E('head',G.oct,C.EYE2,0.27,0.3,0.74,0.3,0.15,0.06,0,0,0.15);
+  E('head',G.oct,C.EYE,-0.25,0.3,0.77,0.15,0.08,0.04,0,0,-0.15); E('head',G.oct,C.EYE,0.25,0.3,0.77,0.15,0.08,0.04,0,0,0.15);
+  A('head',G.prism,C.BARK3,0,0.08,0.78,0.3,0.45,0.32,-0.25,PI,0); A('head',G.box,C.CHAR,0,-0.18,0.69,0.75,0.1,0.12,0,0,0.04,NO);
+  L('head',G.box,0.02,0.8,0.6,0.07,0.55,0.05,0.25,0,0.3,1.15); L('head',G.box,-0.03,0.62,0.68,0.06,0.25,0.05,0.25,0,-0.4,1.15);                  // the scar runs down the brow
+  for(var k2=0;k2<5;k2++){ var fa = 1.4 + k2*0.85; A('head',G.box,C.BARK2,Math.sin(fa)*0.72,0.2,Math.cos(fa)*0.64-0.1,0.08,1.1,0.06,0,fa,0,NO); }
+  A('jaw',G.box,C.BARK,0,-0.05,0,1.1,0.32,0.5); A('jaw',G.ico0,C.LEAF2,0,-0.4,0.05,1.2,0.75,0.55,0.3,0,0); A('jaw',G.ico0,C.HEDGE3,0,-0.75,0.05,0.7,0.6,0.4,0.6,0,0);
+  for(var bd=0;bd<4;bd++) A('jaw',G.cone4,C.BRZ3,-0.36+bd*0.24,-0.75,0.1,0.13,0.75,0.13,PI,0,(bd-1.5)*0.15);
+  /* ---- the split crown: the oak's two halves rise from his head in a V, charred inner faces, the lightning scar glowing in the cleft;
+         each half carries boughs and its share of the canopy (so the canopy spreads with the halves in P3) ---- */
+  [['crownL',1,'fireL'],['crownR',-1,'fireR']].forEach(function(cw){ var n = cw[0], s = cw[1], fz = cw[2];
+    A(n,G.taper,C.BARK,s*0.32,0.9,0,0.95,2.0,0.95,0,0,-s*0.38); A(n,G.taper,C.BARK3,s*0.85,2.35,0,0.7,1.4,0.7,0,0,-s*0.48);
+    A(n,G.box,C.CHAR,-s*0.05,0.95,0,0.1,1.8,0.75,0,0,-s*0.38,NO); L(n,G.box,-s*0.1,1.0,0.1,0.08,1.6,0.08,0,0,-s*0.38,1.2); L(n,G.box,s*0.45,2.2,0.05,0.07,0.9,0.06,0,0,-s*0.5,1.0);
+    A(n,G.taper,C.BARK,s*1.5,2.4,0.3,0.36,1.5,0.36,0.3,0,-s*1.15); A(n,G.taper,C.BARK,s*0.9,2.9,-0.45,0.32,1.3,0.32,-0.35,0,-s*0.35); A(n,G.taper,C.BARK3,s*0.55,2.2,0.55,0.26,1.0,0.26,0.6,0,s*0.2);
+    A(n,G.cyl6,C.BRZ2,s*0.8,2.0,0,0.62,0.16,0.62,0,0,-s*0.48);                                                   // brass band: the storm-rod anchor
+    [[2.0,3.0,0.35,2.1],[1.15,3.7,-0.4,1.9],[2.5,2.45,-0.6,1.5],[0.7,3.25,0.8,1.35],[1.6,3.55,0.85,1.2],[2.75,3.2,0.4,1.1]].forEach(function(c, k){
+      A(n,G.ico0,[C.LEAF,C.LEAF2,C.LEAF3,C.HEDGE2,C.LEAF,C.LEAF3][k],s*c[0],c[1],c[2],c[3],c[3]*0.72,c[3],k*0.4,k*s,0); });
+    E(n,G.oct,C.FLAME,s*2.3,2.95,0.95,0.24,0.24,0.16); E(n,G.oct,C.FLAME2,s*1.0,3.75,0.4,0.2,0.2,0.14);
+    /* canopy fire (P2): one upright flame per leaf mass (orange shell, gold heart, hot core) plus a side tongue */
+    [[2.0,3.0,0.35,2.1],[1.15,3.7,-0.4,1.9],[2.5,2.45,-0.6,1.5],[0.7,3.25,0.8,1.35]].forEach(function(c, k){ var x = s*c[0], y = c[1] + c[3]*0.25, z = c[2], q = c[3];
+      E(fz,G.cone,C.FLAME,x,y + q*0.55,z,q*1.05,q*1.15,q*1.05,0,k,0); E(fz,G.cone,C.FLAME2,x,y + q*0.45,z + q*0.1,q*0.7,q*0.85,q*0.7,0,k+0.4,0);
+      E(fz,G.oct,C.FCORE,x,y + q*0.3,z + q*0.16,q*0.4,q*0.45,q*0.4); E(fz,G.cone,C.FLAME,x + s*q*0.5,y + q*0.35,z - q*0.2,q*0.45,q*0.7,q*0.45,0,0,-s*0.35); }); });
+  /* ---- storm arcs (P3): broken zig-zags between the crown halves and down to the rod bands ---- */
+  [[0,-0.3,0.2,0.9,0.3],[0.05,0.5,0.2,0.8,-0.45],[-0.05,1.25,0.2,0.8,0.4],[-0.75,0.7,0.1,0.9,1.2],[0.75,0.75,0.1,0.9,-1.15],[0.2,1.95,0.2,0.7,-0.3]].forEach(function(z){
+    E('arc',G.box,C.STORM,z[0],z[1],z[2],0.11,z[3],0.08,0,0,z[4]); E('arc',G.box,C.STORM2,z[0],z[1],z[2]+0.03,0.05,z[3]*0.9,0.05,0,0,z[4]); });
+  /* ---- arms: hedge-wrapped upper arms; bark forearms with thorn rows and flame-orange thorn blooms; root-claw hands ---- */
+  [['armL','foreL','handL',1],['armR','foreR','handR',-1]].forEach(function(ar){ var a = ar[0], f = ar[1], h = ar[2], s = ar[3];
+    A(a,G.sph8,C.HEDGE2,0,-0.7,0,1.55,2.1,1.5); A(a,G.ico0,C.LEAF,s*0.1,-0.25,0.1,1.7,1.2,1.6,0.3,0,0); A(a,G.ico0,C.LEAF3,s*0.25,-1.1,0.35,1.0,0.9,0.9,0.5,1,0);
+    A(a,G.taper,C.BARK,0,-1.0,0,0.8,1.9,0.8,PI,0,0);
+    A(f,G.taper,C.BARK,0,-0.8,0,1.15,1.8,1.05,0,0,0); A(f,G.taper,C.BARK3,s*0.15,-0.9,0.2,0.7,1.5,0.6,0,0,0); A(f,G.cyl6,C.BRZ,0,-0.2,0,1.2,0.25,1.15,0,0,0);
+    L(f,G.box,s*0.32,-0.6,0.45,0.06,0.6,0.05,0.2,0,s*0.35,1.0); L(f,G.box,s*0.3,-1.15,0.4,0.06,0.55,0.05,0.2,0,-s*0.3,1.0);
+    for(var t=0;t<5;t++){ var ty = -0.3-t*0.3, tz = (t%2 ? -0.1 : 0.15); A(f,G.cone4,C.BARK2,s*0.55,ty,tz,0.18,0.55,0.18,0,0,-s*1.25);
+      if(t%2===0){ E(f,G.oct,C.FLAME,s*0.85,ty+0.05,tz,0.24,0.24,0.18); E(f,G.oct,C.FCORE,s*0.88,ty+0.05,tz+0.04,0.1,0.1,0.08); } }
+    A(f,G.cone4,C.BARK2,0,-0.6,-0.55,0.2,0.6,0.2,-1.3,0,0); E(f,G.oct,C.FLAME2,0,-0.6,-0.85,0.18,0.18,0.14);
+    A(h,G.dod,C.BRZ3,0,-0.3,0.1,1.2,0.85,1.2); A(h,G.dod,C.BARK,0,-0.2,-0.1,1.0,0.7,1.0);
+    for(var fi=0;fi<3;fi++){ var fx = (fi-1)*0.38; A(h,G.taper,fi%2?C.BRZ:C.BRZ3,fx,-0.75,0.32,0.36,0.85,0.36,0.55,0,(fi-1)*0.15); A(h,G.cone4,C.BRZ2,fx*1.15,-1.2,0.62,0.22,0.55,0.22,1.1,0,0); }
+    A(h,G.taper,C.BRZ,s*0.55,-0.6,0.5,0.28,0.85,0.28,0.5,0,-s*0.5); });
+  /* ---- lashing roots (P1 Rootbind): coiled at rest, they rear up when he binds a lane ---- */
+  ['rootA','rootB','rootC','rootD'].forEach(function(n, k){ var s = k%2 ? -1 : 1;
+    A(n,G.taper,C.BRZ3,0,0.3,0,0.6,1.0,0.55,0,0,0); A(n,G.taper,C.BRZ,0,1.05,0.1,0.42,0.9,0.4,0.25,0,0); A(n,G.cone4,C.BRZ2,0,1.7,0.3,0.26,0.7,0.26,0.5,0,0);
+    E(n,G.oct,C.FLAME,0,1.25,0.32,0.2,0.2,0.14); L(n,G.box,s*0.18,0.7,0.2,0.06,0.7,0.05,0,0,s*0.2,1.0); });
+}
+
+/* ---------------- poses (rx, ry, rz per bone + root y) ---------------- */
+var HB = ['pelvis','torso','head','jaw','crownL','crownR','arc','armL','foreL','handL','armR','foreR','handR','rootA','rootB','rootC','rootD'];
+var NB = HB.length, IGY = NB*3, NCH = NB*3+1;
+function PO(o){ var a = new Float32Array(NCH); for(var k in o){ if(k==='gy'){ a[IGY] = o[k]; continue; } var i = HB.indexOf(k); if(i<0) continue; a[i*3] = o[k][0]; a[i*3+1] = o[k][1]; a[i*3+2] = o[k][2]; } return a; }
+var ROOT_REST = {rootA:[1.25,0,-0.9], rootB:[1.2,0,0.9], rootC:[-1.3,0,-1.0], rootD:[-1.3,0,1.0]};
+function PR(o){ for(var k in ROOT_REST) if(!o[k]) o[k] = ROOT_REST[k]; return PO(o); }
+var POSES = {
+  idle:  PR({ torso:[0.12,0,0], head:[0.1,0,0], armL:[-0.25,0,0.22], foreL:[-0.85,0,0.05], handL:[0.6,0,0], armR:[-0.25,0,-0.22], foreR:[-0.85,0,-0.05], handR:[0.6,0,0], crownL:[0,0,-0.04], crownR:[0,0,0.04] }),
+  root:  PR({ pelvis:[0.05,-0.25,0], torso:[0.42,-0.3,0], head:[-0.25,0.2,0], jaw:[0.25,0,0], armL:[-0.1,0,0.55], foreL:[-0.5,0,0.2], handL:[0.3,0,0], armR:[-1.25,0.2,-0.35], foreR:[-0.45,0,0], handR:[1.1,0,0],
+          rootA:[0.25,0,-0.25], rootB:[0.1,0,0.15], crownL:[0,0,-0.05], crownR:[0,0,0.05] }),
+  fire:  PR({ torso:[-0.3,0,0], head:[-0.55,0,0], jaw:[0.45,0,0], armL:[-0.6,0,1.25], foreL:[-0.55,0,0.3], handL:[-0.3,0,0], armR:[-0.6,0,-1.25], foreR:[-0.55,0,-0.3], handR:[-0.3,0,0], crownL:[0,0,-0.12], crownR:[0,0,0.12] }),
+  storm: PR({ torso:[-0.18,0,0], head:[-0.35,0,0], jaw:[0.3,0,0], armL:[-2.55,0,0.5], foreL:[-0.35,0,-0.1], handL:[0.2,0,0], armR:[-2.55,0,-0.5], foreR:[-0.35,0,0.1], handR:[0.2,0,0], crownL:[0,0,-0.32], crownR:[0,0,0.32] }),
+  regrow:PR({ torso:[0.5,0,0], head:[0.35,0,0], armL:[-0.6,0,0.15], foreL:[-1.2,0,0.4], handL:[0.4,0,0], armR:[-0.6,0,-0.15], foreR:[-1.2,0,-0.4], handR:[0.4,0,0], crownL:[0,0,0.05], crownR:[0,0,-0.05] }),
+  kneel: PR({ torso:[0.62,0,0], head:[0.45,0,0], armL:[-0.15,0,0.3], foreL:[-0.4,0,0], handL:[0.9,0,0], armR:[-0.15,0,-0.3], foreR:[-0.4,0,0], handR:[0.9,0,0], crownL:[0,0,0.08], crownR:[0,0,-0.08], gy:-0.35 })
+};
+var _T = new Float32Array(NCH);
+function actPose(e){ var a = e.act; if(!a) return null; switch(a.id){ case 'root': return 'root'; case 'fire': return 'fire'; case 'arc': return 'storm'; case 'regrow': return 'regrow'; } return null; }
+
+function animHesk(R, e, t, dt){ var J = R.J, Cu = R.Cu, dead = e.state==='dead', rs = Math.max(0.05, R.root.scale.y||1), ws = HK_WS*(e.hkScale||1)/rs;
+  var name = e.hkPose || actPose(e) || (dead ? 'kneel' : 'idle'); if(!POSES[name]) name = 'idle';
+  if(!R.init){ R.init = true; for(var i0=0;i0<NCH;i0++) Cu[i0] = POSES[name][i0]; R.fireK = 0; R.arcK = 0; }
+  R.g.scale.setScalar(ws); R.outlineK = 1.6/(ws*rs);
+  var P0 = POSES[name]; for(var i=0;i<NCH;i++) _T[i] = P0[i];
+  /* breathing + canopy sway (additive); the free roots writhe slowly */
+  var br = Math.sin(t*1.3)*0.03; _T[3] += br; _T[14] += Math.sin(t*0.7)*0.03; _T[17] -= Math.sin(t*0.7+0.6)*0.03;
+  for(var r=0;r<4;r++){ var ri = (13+r)*3; _T[ri] += Math.sin(t*1.1 + r*1.7)*0.06; _T[ri+2] += Math.sin(t*0.8 + r)*0.05; }
+  if(!dead && e.hurtT>0){ var hk = e.hurtT/0.25; _T[3] -= 0.08*hk; _T[6] -= 0.08*hk; }
+  var k = dt>0 ? 1-Math.exp(-7*dt) : 1; if(e.hkSnap) k = 1;
+  for(var j=0;j<NCH;j++) Cu[j] += (_T[j]-Cu[j])*k;
+  for(var b=0;b<NB;b++){ var g = J[b].rotation; g.x = Cu[b*3]; g.y = Cu[b*3+1]; g.z = Cu[b*3+2]; }
+  R.g.position.y = Cu[IGY]*ws;
+  J[1].scale.set(1+br*0.5, 1, 1+br*0.7);
+  /* phase looks: canopy fire and storm arcs fade in / out by scale; the fire licks, the arcs flicker */
+  var wf = e.hkFire!=null ? e.hkFire : (name==='fire' ? 1 : 0), wa = e.hkArc!=null ? e.hkArc : (name==='storm' ? 1 : 0), kk = e.hkSnap ? 1 : Math.min(1, (dt||0)*4);
+  R.fireK += (wf - R.fireK)*kk; R.arcK += (wa - R.arcK)*kk;
+  var F = R.limbs.fireL.g, F2 = R.limbs.fireR.g, Ar = R.limbs.arc.g; F.visible = F2.visible = R.fireK > 0.02; Ar.visible = R.arcK > 0.02;
+  F.scale.set(R.fireK, R.fireK*(1 + 0.12*Math.sin(t*13)), R.fireK); F2.scale.set(R.fireK, R.fireK*(1 + 0.12*Math.sin(t*13+1)), R.fireK); var fl = (Math.sin(t*31)*0.5+0.5) > 0.25 ? 1 : 0.8; Ar.scale.set(R.arcK*fl, R.arcK, R.arcK*fl);
+  var gk = (e.wind ? 1.2 : 1)*(1 + 0.2*R.arcK); if(dead) gk = 0.3; var gh = ELGLOW[e.el]!=null ? ELGLOW[e.el] : ELGLOW.storm; R.u.uGlow.value.setHex(gh).multiplyScalar(gk);
+  R.u.uRim.value.setHex(gh).multiplyScalar(0.18); }
+
+CHARS.hesk = { name:'Hesk, the Thornwall Colossus', build:function(R){ buildHesk(R); R.J = HB.map(function(n){ return R.limbs[n].g; }); R.Cu = new Float32Array(NCH); R.init = false; },
+  anim:animHesk, deathDur:90, rim:0.2, variant:function(){ return 'v1'; }, finish:{ outlineK:1.6, gradLo:0.6, gradHi:1.18, shininess:10, specular:0x1a1e14 }, POSES:POSES };
+})();
 /* OWNER: melee agent. "Cinder Whelp" (imp): knuckle-walking pit runt, horizontal wedge, forward horns,
    shape-coded dorsal crest + tail tip (one set per element, toggled by joint visibility). Contract: design/ART.md */
 (function(){
@@ -2857,6 +3107,127 @@ function anim(R, e, t, dt){ var J = R.J; resetPose(R);
   blendPose(R, dt, rate); }
 
 CHARS.imp = {build:build, anim:anim, deathDur:0.6, variant:function(o, el){ return (el || 'flame') + '|' + (o.elite || ''); }, rim:0.24, finish:{outlineK:1.0}};
+})();
+/* OWNER: Garden agent. Hub and dev preview only for now (the fights are pending). MORROW VINE, THE BLOOMKEEPER (CHARS.morrow), wave-30 boss of the Thornwall Garden.
+   Spec: design/research/13-themes.md §3.3. A tall hooded gardener of woven vine and brass shears standing on the north rim. Her crown is a ring of
+   blooms; her chest is one large flower. Deep green vine, brass shears; the BLOOM colour cycles through the wards: every petal is an element-tint
+   part and every flower heart an element-glow part, so R.setElement(el) re-colours the bloom (flame / frost / storm) with no rebuild.
+   ~8.2 u to the hood peak at world scale MV_WS. Rig: 19 bones, one draw + outline (+ shadow). Local +Z = forward, her right = -X, feet at y = 0.
+   anim inputs (all optional, read-only):
+     e.mvPose  'idle' | 'prune' (P1 Pruning: shears raised and open) | 'seed' (P2 Seed Rain: left hand lifted, pods loosed) | 'bloom' (P3 Full Bloom:
+               arms wide, the chest flower fully open) | 'kneel' (beaten, hub) — or from e.act.id ('prune','seed','bloom')
+     e.mvOpen  0..1 chest flower opening (default by pose)   e.mvShear 0..1 shears open   e.mvScale world-scale multiplier   e.mvSnap  snap
+   No per-frame allocation. */
+(function(){
+var PI = Math.PI, TAU = PI*2, NO = {outline:false};
+var C = { VINE:0x2e4a2a, VINE2:0x3d5e34, VINE3:0x4f7440, LEAF:0x55803a, LEAF2:0x41682e, LEAF3:0x6a9446, MOSS:0x5d7a3e,
+  BARK:0x5a4330, BARK2:0x3a2b20, PALE:0xb8a27e, PALE2:0x8e7a5c, VOID:0x0c0a0b, EYE:0xf2f6d8, EYE2:0xb8d878,
+  BRASS:0xc0904e, BRASS2:0x9a7240, BRASS3:0x6e5030, EDGE:0xe6cf98, WOOD:0x6a4a2e, SEPAL:0x3f6a2c, GOLD:0xf2d27a };
+var MV_WS = 1.12;   /* authored ~7.3 u to the hood peak; shown at ~8.2 u */
+function cl(x){ return x<0?0:x>1?1:x; }
+
+function buildMorrow(R){ var G = G2;
+  function A(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz,o){ R.add(l,g,c,x,y,z,sx,sy,sz,rx||0,ry||0,rz||0,o); }
+  function T(l,g,x,y,z,sx,sy,sz,rx,ry,rz,v){ R.tint(l,g,x,y,z,sx,sy,sz,rx||0,ry||0,rz||0,{v:v==null?1:v}); }
+  function L(l,g,x,y,z,sx,sy,sz,rx,ry,rz,v){ R.glow(l,g,x,y,z,sx,sy,sz,rx||0,ry||0,rz||0,{v:v==null?1:v, outline:false}); }
+  function E(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz){ R.emit(l,g,c,x,y,z,sx,sy,sz,rx||0,ry||0,rz||0,NO); }
+  /* a 5-petal flower facing +Z in the limb's space: tint petals, glow heart */
+  function flower(l, x, y, z, s, rz0, v){ for(var p=0;p<5;p++){ var a = rz0 + p/5*TAU; T(l,G.sph8,x+Math.sin(a)*0.42*s,y+Math.cos(a)*0.42*s,z,0.5*s,0.72*s,0.16*s,0,0,-a,v); }
+    L(l,G.ico0,x,y,z+0.06*s,0.36*s,0.36*s,0.24*s,0,0,0,1.15); }
+  R.limb('pelvis',null,0,3.3,0); R.limb('skirt','pelvis',0,0,0); R.limb('skirt2','skirt',0,-1.4,-0.6); R.limb('spine','pelvis',0,0.3,0); R.limb('chest','spine',0,1.1,0);
+  R.limb('bloom','chest',0,0.5,0.62); R.limb('head','chest',0,1.4,0.1); R.limb('crown','head',0,0.35,0.0);
+  R.limb('armR','chest',-0.95,0.95,0); R.limb('foreR','armR',0,-1.35,0); R.limb('handR','foreR',0,-1.3,0); R.limb('shears','handR',0,-0.2,0.05); R.limb('shearB','shears',0,0,0);
+  R.limb('armL','chest',0.95,0.95,0); R.limb('foreL','armL',0,-1.35,0); R.limb('handL','foreL',0,-1.3,0);
+  R.limb('pods','pelvis',0,0.05,0); R.limb('vineL','chest',0.8,1.0,-0.4); R.limb('vineR','chest',-0.8,1.0,-0.4);
+
+  /* ---- the robe: woven vine flaring to the ground, rings of braided stems, leaf skirts, roots at the hem ---- */
+  A('skirt',G.cap,C.VINE,0,-1.6,0,3.0,3.4,2.6); A('skirt',G.cap,C.VINE2,0,-1.2,0.12,2.4,2.6,2.1);
+  for(var pp=0;pp<8;pp++){ var pa0 = pp/8*TAU + 0.4; A('skirt',G.taper,pp%2?C.LEAF2:C.VINE3,Math.sin(pa0)*1.3,-2.15,Math.cos(pa0)*1.1,1.15,2.5,0.28,-0.18,pa0,0); A('skirt',G.box,C.VINE,Math.sin(pa0)*1.32,-2.15,Math.cos(pa0)*1.12,0.05,2.3,0.3,-0.18,pa0,0,NO); }
+  for(var b=0;b<4;b++){ var by = -0.45 - b*0.75, bw = 1.65 + b*0.25; A('skirt',G.tor8,b%2?C.VINE3:C.BARK,0,by,0.05,bw,bw*0.86,2.2,PI/2,0,0); }
+  for(var v=0;v<10;v++){ var va = v/10*TAU; A('skirt',G.box,C.VINE3,Math.sin(va)*0.85,-1.55,Math.cos(va)*0.75,0.07,3.0,0.07,Math.cos(va)*0.22,0,-Math.sin(va)*0.22,NO); }
+  for(var lf=0;lf<14;lf++){ var la = lf/14*TAU + 0.2, ly = -0.6 - (lf%4)*0.62; A('skirt',G.cone4,lf%3?C.LEAF2:C.LEAF,Math.sin(la)*(0.95 + (lf%4)*0.16),ly,Math.cos(la)*(0.85 + (lf%4)*0.14),0.42,0.85,0.14,PI + Math.cos(la)*0.4,la,0); }
+  A('skirt',G.box,C.PALE2,0,-1.4,1.0,0.5,2.4,0.12,0.12,0,0); A('skirt',G.box,C.VINE,0,-1.4,1.06,0.36,2.3,0.06,0.12,0,0,NO);            // the coat's front opening
+  for(var r=0;r<9;r++){ var ra = r/9*TAU + 0.3; A('skirt',G.taper,r%2?C.BARK:C.BARK2,Math.sin(ra)*1.55,-3.15,Math.cos(ra)*1.35,0.32,1.3,0.32,Math.cos(ra)*1.25,0,-Math.sin(ra)*1.25); }
+  for(var fl=0;fl<4;fl++){ var fa = fl/4*TAU + 0.8; T('skirt',G.oct,Math.sin(fa)*1.2,-2.4 + (fl%2)*0.6,Math.cos(fa)*1.05,0.2,0.2,0.2,0,0,0,1.0); }
+  /* the trailing train: vines dragging behind her */
+  A('skirt2',G.cap,C.VINE,0,-0.95,-0.4,1.6,1.9,1.6,0.35,0,0); for(var tr=0;tr<5;tr++){ A('skirt2',G.taper,C.VINE2,(tr-2)*0.4,-1.7,-1.0 - (tr%2)*0.3,0.18,1.3,0.18,1.2,0,(tr-2)*0.15); }
+  /* ---- belt + hanging seed pods (element tint husks with glowing seams) ---- */
+  A('pelvis',G.cyl6,C.BARK,0,0.05,0,1.6,0.25,1.35); A('pelvis',G.box,C.BRASS,0,0.05,0.67,0.3,0.3,0.08);
+  [[0.75,0.45,0],[0.35,0.62,0.6],[-0.65,0.5,0.2]].forEach(function(p, k){ var x = p[0], z = p[1];
+    A('pods',G.box,C.VINE3,x,-0.25,z,0.04,0.45,0.04,0,0,0,NO); T('pods',G.sph8,x,-0.62,z,0.38,0.52,0.38,0,k,0,0.75); L('pods',G.box,x,-0.62,z+0.17,0.05,0.4,0.04,0,0,0,1.0); A('pods',G.cone4,C.SEPAL,x,-0.35,z,0.3,0.22,0.3,PI,0,0); });
+  /* ---- torso: slender coat of vine, a leaf mantle over the shoulders, the bud cradle around the chest flower ---- */
+  A('spine',G.taper,C.VINE2,0,0.5,0,1.25,1.1,0.95,0,0,0); A('chest',G.taper,C.VINE,0,0.35,-0.05,1.9,1.5,1.2,0,0,PI);
+  A('chest',G.box,C.PALE2,0,0.1,0.55,0.35,1.1,0.08,0.1,0,0);
+  for(var m=0;m<11;m++){ var ma = (m/10 - 0.5)*PI*1.5; A('chest',G.cone4,m%2?C.LEAF:C.LEAF2,Math.sin(ma)*1.15,1.0 - Math.abs(ma)*0.12,Math.cos(ma)*0.5 - 0.3,1.05,1.7,0.24,PI + 0.25,ma,-ma*0.6); }
+  A('chest',G.box,C.VINE,0,-0.9,-0.75,1.9,3.6,0.22,-0.12,0,0); A('chest',G.box,C.VINE2,0,-1.0,-0.85,1.5,3.4,0.12,-0.12,0,0); for(var cv=0;cv<5;cv++) A('chest',G.cone4,C.LEAF2,(cv-2)*0.4,-2.85,-1.0,0.42,0.7,0.12,PI,0,0);
+  for(var sp=0;sp<6;sp++){ var sa = sp/6*TAU; A('chest',G.cone4,C.SEPAL,Math.sin(sa)*0.62,0.5 + Math.cos(sa)*0.62,0.48,0.32,0.75,0.12,PI/2 - 0.5,0,-sa); }   // sepals cradle the flower
+  /* ---- the chest flower (bloom bone scales open): outer petals tint, inner petals tint brighter, heart glow ---- */
+  for(var p=0;p<6;p++){ var pa = p/6*TAU; T('bloom',G.sph8,Math.sin(pa)*0.55,Math.cos(pa)*0.55,0.02,0.62,0.95,0.2,0.25,0,-pa,0.85); }
+  for(var q=0;q<5;q++){ var qa = q/5*TAU + 0.3; T('bloom',G.sph8,Math.sin(qa)*0.3,Math.cos(qa)*0.3,0.12,0.4,0.6,0.18,0.35,0,-qa,1.15); }
+  L('bloom',G.dod,0,0,0.18,0.42,0.42,0.3,0,0,0,1.25); L('bloom',G.ico0,0,0,0.3,0.2,0.2,0.16,0,0,0,1.6);
+  /* ---- head: a deep leaf hood with a drooping peak, the void face, two pale eyes, a carved pale-wood chin ---- */
+  A('head',G.sph8,C.VINE,0,0.12,-0.1,1.4,1.45,1.4); A('head',G.cone4,C.VINE2,0,0.7,-0.6,0.9,1.5,0.9,-1.05,PI/4,0);
+  for(var h=0;h<7;h++){ var ha = (h/6 - 0.5)*PI*1.4; A('head',G.cone4,h%2?C.LEAF2:C.LEAF,Math.sin(ha)*0.66,0.18,Math.cos(ha)*0.6 - 0.05,0.5,1.25,0.18,0.2,ha,0); }
+  A('head',G.box,C.VOID,0,0.05,0.36,0.62,0.66,0.14,0,0,0,NO); A('head',G.box,C.PALE,0,-0.32,0.38,0.4,0.18,0.14,0.2,0,0); A('head',G.box,C.PALE2,0,-0.2,0.44,0.24,0.06,0.04,0,0,0,NO);
+  E('head',G.oct,C.EYE2,-0.15,0.12,0.44,0.18,0.08,0.04,0,0,-0.2); E('head',G.oct,C.EYE2,0.15,0.12,0.44,0.18,0.08,0.04,0,0,0.2);
+  E('head',G.oct,C.EYE,-0.14,0.12,0.46,0.09,0.045,0.03,0,0,-0.2); E('head',G.oct,C.EYE,0.14,0.12,0.46,0.09,0.045,0.03,0,0,0.2);
+  /* ---- crown: a circlet of vine carrying seven blooms ---- */
+  A('crown',G.tor8,C.BARK,0,0,0,1.4,1.3,2.0,PI/2 - 0.15,0,0);
+  for(var c=0;c<7;c++){ var ca = (c/6 - 0.5)*PI*1.35, cx = Math.sin(ca)*0.68, cz = Math.cos(ca)*0.6 - 0.04; 
+    for(var cp=0;cp<5;cp++){ var cpa = cp/5*TAU; T('crown',G.oct,cx + Math.sin(cpa)*0.14*Math.cos(ca),0.12 + Math.cos(cpa)*0.14,cz + 0.02,0.2,0.3,0.1,0,ca,-cpa,c===3?1.15:0.95); }
+    L('crown',G.ico0,cx,0.12,cz + 0.06,0.12,0.12,0.1,0,0,0,1.2); }
+  /* ---- arms: vine sleeves with leaf cuffs; long tendril fingers ---- */
+  [['armL','foreL','handL',1],['armR','foreR','handR',-1]].forEach(function(ar){ var a = ar[0], f = ar[1], hd = ar[2], s = ar[3];
+    A(a,G.ico0,C.LEAF2,0,-0.05,0,1.0,0.8,1.0,0,0,0); A(a,G.taper,C.VINE2,0,-0.65,0,0.62,1.35,0.62,PI,0,0); A(a,G.tor8,C.BARK,0,-0.9,0,0.5,0.5,0.6,PI/2,0,0);
+    A(f,G.cap,C.VINE,0,-0.65,0,0.85,1.35,0.85,PI,0,0); A(f,G.tor8,C.BARK,0,-1.25,0,0.95,0.95,1.2,PI/2,0,0); for(var cf=0;cf<6;cf++){ var cfa = cf/6*TAU; A(f,G.cone4,cf%2?C.LEAF:C.LEAF2,Math.sin(cfa)*0.42,-1.35,Math.cos(cfa)*0.42,0.42,0.75,0.12,PI - 0.45,cfa,0); }
+    A(hd,G.box,C.BARK,0,-0.12,0,0.3,0.3,0.18); for(var fi=0;fi<4;fi++) A(hd,G.taper,C.BARK2,(fi-1.5)*0.08,-0.42,0.04,0.07,0.5,0.07,0.15,0,(fi-1.5)*0.12,NO);
+    A(hd,G.taper,C.BARK2,s*0.16,-0.22,0.1,0.07,0.38,0.07,0.4,0,-s*0.6,NO); });
+  /* left palm: a seed pod ready to loose */
+  T('handL',G.sph8,0,-0.35,0.32,0.36,0.5,0.36,0.6,0,0,0.8); L('handL',G.box,0,-0.35,0.49,0.05,0.38,0.04,0.6,0,0,1.05);
+  /* ---- the great shears: wooden handles with brass loops, two long brass blades with a pale edge, a pivot bolt ---- */
+  A('shears',G.cyl6,C.WOOD,0.0,0,0,0.2,1.3,0.2,0,0,0); A('shears',G.torus,C.BRASS2,0,0.72,0,0.5,0.5,0.8,0,PI/2,0);
+  A('shears',G.cyl6,C.BRASS,0,-0.72,0,0.32,0.2,0.32); A('shears',G.box,C.BRASS,0.0,-2.05,0.0,0.34,2.6,0.08,0,0,0.03); A('shears',G.box,C.EDGE,-0.18,-2.05,0.0,0.06,2.5,0.06,0,0,0.03,NO);
+  A('shears',G.cone4,C.BRASS,0.05,-3.5,0,0.3,0.4,0.08,PI,0,0);
+  A('shearB',G.cyl6,C.WOOD,0.0,0.05,0.12,0.2,1.3,0.2,0,0,0); A('shearB',G.torus,C.BRASS2,0,0.77,0.12,0.5,0.5,0.8,0,PI/2,0);
+  A('shearB',G.box,C.BRASS2,0.0,-2.0,0.12,0.34,2.5,0.08,0,0,-0.03); A('shearB',G.box,C.EDGE,0.18,-2.0,0.12,0.06,2.4,0.06,0,0,-0.03,NO); A('shearB',G.cone4,C.BRASS2,-0.05,-3.4,0.12,0.3,0.4,0.08,PI,0,0);
+  A('shears',G.cyl6,C.BRASS3,0,-0.75,0.06,0.26,0.36,0.26,PI/2,0,0);
+  /* ---- tendrils trailing from the shoulders ---- */
+  ['vineL','vineR'].forEach(function(n, k){ var s = k ? -1 : 1; A(n,G.taper,C.VINE3,s*0.1,-0.7,0,0.12,1.5,0.12,0,0,s*0.15); A(n,G.taper,C.VINE2,s*0.25,-1.9,0.1,0.09,1.2,0.09,0,0,-s*0.2); A(n,G.cone4,C.LEAF3,s*0.3,-2.55,0.12,0.3,0.5,0.1,PI,0,0); T(n,G.oct,s*0.18,-1.3,0.1,0.15,0.15,0.15,0,0,0,1.0); });
+}
+
+/* ---------------- poses ---------------- */
+var MB = ['pelvis','skirt','skirt2','spine','chest','head','crown','armR','foreR','handR','shears','shearB','armL','foreL','handL','pods','vineL','vineR'];
+var NB = MB.length, IGY = NB*3, NCH = NB*3+1;
+function PO(o){ var a = new Float32Array(NCH); for(var k in o){ if(k==='gy'){ a[IGY] = o[k]; continue; } var i = MB.indexOf(k); if(i<0) continue; a[i*3] = o[k][0]; a[i*3+1] = o[k][1]; a[i*3+2] = o[k][2]; } return a; }
+var POSES = {
+  idle:  PO({ chest:[0.06,0,0], head:[0.12,0,0], armR:[-0.35,0.2,-0.22], foreR:[-1.25,0.3,0], handR:[0.15,0,0.3], shears:[0.4,0,0.9], armL:[-0.25,0,0.2], foreL:[-1.15,0,-0.1], handL:[0.4,0,0], vineL:[0.1,0,0.05], vineR:[0.1,0,-0.05] }),
+  prune: PO({ spine:[-0.12,0,0], chest:[-0.1,0.35,0], head:[0.2,-0.2,0], armR:[-2.5,0.2,-0.35], foreR:[-0.6,0,0], handR:[-0.4,0,0], shears:[0.2,0,0.4], armL:[-2.3,0,0.4], foreL:[-0.7,0,0], handL:[0.2,0,0], skirt:[0.08,0,0], vineL:[0.4,0,0.3], vineR:[0.4,0,-0.3] }),
+  seed:  PO({ chest:[-0.2,0,0], head:[-0.35,0.15,0], armR:[-0.4,0,-0.3], foreR:[-1.1,0.3,0], handR:[0.1,0,0.3], shears:[0.4,0,0.9], armL:[-2.85,0,0.25], foreL:[-0.25,0,0], handL:[-0.5,0,0], vineL:[0.6,0,0.4], vineR:[0.3,0,-0.2] }),
+  bloom: PO({ chest:[-0.22,0,0], head:[-0.25,0,0], armR:[-0.5,0,-1.3], foreR:[-0.4,0,-0.2], handR:[0.2,0,0], shears:[0.2,0,0.3], armL:[-0.5,0,1.3], foreL:[-0.4,0,0.2], handL:[0.2,0,0], vineL:[0.5,0,0.6], vineR:[0.5,0,-0.6], skirt:[-0.04,0,0] }),
+  kneel: PO({ pelvis:[0,0,0], spine:[0.4,0,0], chest:[0.35,0,0], head:[0.45,0,0], armR:[-0.2,0,-0.25], foreR:[-0.6,0,0], shears:[1.2,0,0.4], armL:[-0.3,0,0.2], foreL:[-0.9,0,0], gy:-1.1 })
+};
+var _T = new Float32Array(NCH);
+function actPose(e){ var a = e.act; if(!a) return null; switch(a.id){ case 'prune': return 'prune'; case 'seed': return 'seed'; case 'bloom': return 'bloom'; } return null; }
+function animMorrow(R, e, t, dt){ var J = R.J, Cu = R.Cu, dead = e.state==='dead', rs = Math.max(0.05, R.root.scale.y||1), ws = MV_WS*(e.mvScale||1)/rs;
+  var name = e.mvPose || actPose(e) || (dead ? 'kneel' : 'idle'); if(!POSES[name]) name = 'idle';
+  if(!R.init){ R.init = true; for(var i0=0;i0<NCH;i0++) Cu[i0] = POSES[name][i0]; R.openK = 0.6; R.shearK = 0; }
+  R.g.scale.setScalar(ws); R.outlineK = 1.6/(ws*rs);
+  var P0 = POSES[name]; for(var i=0;i<NCH;i++) _T[i] = P0[i];
+  var br = Math.sin(t*1.2)*0.025; _T[12] += br; _T[3] += Math.sin(t*0.8)*0.03; _T[6] += Math.sin(t*0.9)*0.03; _T[48] += Math.sin(t*1.3)*0.08; _T[51] += Math.sin(t*1.3+1.4)*0.08;
+  if(!dead && e.hurtT>0){ var hk = e.hurtT/0.25; _T[12] -= 0.1*hk; _T[15] -= 0.1*hk; }
+  var k = dt>0 ? 1-Math.exp(-7*dt) : 1; if(e.mvSnap) k = 1;
+  for(var j=0;j<NCH;j++) Cu[j] += (_T[j]-Cu[j])*k;
+  for(var b=0;b<NB;b++){ var g = J[b].rotation; g.x = Cu[b*3]; g.y = Cu[b*3+1]; g.z = Cu[b*3+2]; }
+  R.g.position.y = Cu[IGY]*ws;
+  var wo = e.mvOpen!=null ? e.mvOpen : (name==='bloom' ? 1 : name==='seed' ? 0.75 : name==='kneel' ? 0.2 : 0.55), ws2 = e.mvShear!=null ? e.mvShear : (name==='prune' ? 1 : 0), kk = e.mvSnap ? 1 : Math.min(1, (dt||0)*4);
+  R.openK += (wo - R.openK)*kk; R.shearK += (ws2 - R.shearK)*kk;
+  var bs = 0.55 + 0.6*R.openK; R.limbs.bloom.g.scale.set(bs*(1 + 0.03*Math.sin(t*2)), bs*(1 + 0.03*Math.sin(t*2)), 0.8 + 0.4*R.openK);
+  R.limbs.shearB.g.rotation.z = -0.65*R.shearK; R.limbs.shears.g.rotation.z += 0.3*R.shearK;
+  var gk = (e.wind ? 1.25 : 1)*(0.9 + 0.25*R.openK); if(dead) gk = 0.3; var gh = ELGLOW[e.el]!=null ? ELGLOW[e.el] : ELGLOW.flame; R.u.uGlow.value.setHex(gh).multiplyScalar(gk);
+  R.u.uRim.value.setHex(gh).multiplyScalar(0.16); }
+
+CHARS.morrow = { name:'Morrow Vine, the Bloomkeeper', build:function(R){ buildMorrow(R); R.J = MB.map(function(n){ return R.limbs[n].g; }); R.Cu = new Float32Array(NCH); R.init = false; },
+  anim:animMorrow, deathDur:90, rim:0.22, variant:function(){ return 'v1'; }, finish:{ outlineK:1.6, gradLo:0.6, gradHi:1.2, shininess:12, specular:0x1a1e14 }, POSES:POSES };
 })();
 /* OWNER: hub agent. The Vigil's keepers (CHARS.npc) and the target-range dummy (CHARS.dummy). Contract: design/ART.md.
    CHARS.npc variants (opts.v): 'smith' Brannoch Cinderhand · 'arch' Sister Ashwen · 'dyer' Oona the Dyer · 'crier' Kesh the Crier.
@@ -11046,7 +11417,7 @@ var HX_CARDS = [
  /* 8 ---------- what's next ---------- */
  { id:'next', tag:'The long trial', cap:'', title:'Seventy rounds deep',
    text:function(){ return 'Banked Glory buys <b>armour</b>, <b>relics</b> and <b>skill mastery</b> in the Armoury. The trial runs <b>70 rounds deep</b>, with a boss every 10.'; },
-   keys:function(){ return HX_krow(HX_kc('I'), 'The Pit · rounds 1–10 · the Pitmaster')+HX_krow(HX_kc('II'), 'Storm Spire · 11–20 · gusts, falling edges · the Stormwright')+HX_krow(HX_kc('III'), 'Kindling Deeps · 21–30 · fight by light · the Undermaw')+HX_krow(HX_kc('…'), 'Rounds 31–70: still sealed'); },
+   keys:function(){ return HX_krow(HX_kc('I'), 'The Pit · rounds 1–10 · the Pitmaster')+HX_krow(HX_kc('II'), 'Storm Spire · 11–20 · gusts, falling edges · the Stormwright')+HX_krow(HX_kc('III'), 'Thornwall Garden · 21–30 · hedge gates, new foes · the Undermaw')+HX_krow(HX_kc('…'), 'Rounds 31–70: still sealed'); },
    spr:function(){ return ['hero_front']; },
    art:function(){ var D = 6, o = '', T = [[16,'ARMOURY','Gear · relics','Spend Glory',0,'Gear, relics'],[170,'CODEX','Every foe, recorded','Learn the pit',1,'Foe records'],[324,'ACT II','The Storm Spire','Rounds 11–20',2,'Storm Spire']];
      T.forEach(function(t){ var x = t[0], w = 140; o += HX_plate(x, 16, w, 268, 7);
@@ -15887,7 +16258,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:22',h:'277a4cc'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:31',h:'15015f0'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -16833,7 +17204,13 @@ STEP_HOOKS.push(PIL_step);
 
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.pillars = { PIL:PIL, charge:function(i, k){ var p = pillars[i||0]; if(!p.pcEl) PIL_assign(G.wave||1); p.pcN = k==null ? PIL.need : k; return p.pcEl; },
   shatter:function(i){ return PIL_shatter(pillars[i||0]); }, assign:function(){ PIL_assign(G.wave||1); }, hero:function(){ return P; }, render:function(){ PIL_render(); }, state:function(){ return pillars.filter(function(p){ return !p.temp; }).map(function(p){ return {el:p.pcEl, n:p.pcN, dead:p.dead}; }); } }; }
-/* ---------- ACT III · KINDLING DEEPS: "The Cinderdark" (waves 21-30). Owned by the Act III agent. Prefix A3_. ----------
+/* ---------- ACT III · THE THORNWALL GARDEN (waves 21-30). Owned by the Act III / Garden agent. Prefix A3_. ----------
+   2026-10-10: the owner replaced the dark "Cinderdark" look with the daylit Thornwall Garden (design/research/13-themes.md §3; the arena,
+   NPCs and hub gates live in 73-garden.js). A3_DARK = false switches the darkness off: no dark quad, no lift pass, no eye-glints or
+   lantern crowd, and every light rule that only made sense in the dark is neutral (Gloamlings and Ash Hollows play as their base foes,
+   wick-moths only hover around heroes, kindle / ember / gutter rounds became slay / survive). The light pool still runs on the CPU, because
+   the wave-30 Undermaw keeps its fight unchanged for now (P2 armour and P3 Gaze read lantern light; a warm floor glow shows that light).
+   The notes below describe the original dark design, kept behind A3_DARK.
    Design: design/ACT3.md (as built) and design/research/12-act3.md §4 (Concept A, owner-approved).
    Core rule: in the dark you see BODIES only inside light (your ward-lantern, sconces you kindle by dashing through them, burning / flame-marked foes,
    charged pillars, dropped warden lanterns, ember pools). Every attack, telegraph, ward ring, mark pip and enemy eye is drawn ABOVE the dark.
@@ -16846,26 +17223,29 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.pillars = { PIL:PIL,
    showOver, updateHud, updateHudStatic, updateRigs, PTY_think, PIL_shatter, RX_run, CSK_castP, CX_rounds. Uses STEP_HOOKS / RENDER_HOOKS. */
 G.act = G.act || 1;
 var A3_ASC_DUR = 4.2, A3_ASC_SWAP = 1.6, A3_ASC_SKIP = 0.3, A3_LAND_WAIT = 1.6;
+var A3_DARK = false;   /* the Cinderdark darkness (dark quad, lift, eye-glints, light-bound foe rules). Off since the Garden. */
 var A3T = {lantern:5.5, allyLantern:4.0, wide:1.5, flare:1.5, mothDrain:1.0, minLantern:3.0, carry:8.0, sconceR:4.8, sconceRing:11.6, burn:25, gutter:3,
   kindleR:1.15, kindleDash:2.0, burnR:2.4, poolR:2.0, poolT:3.0, dropR:3.4, dropT:12, pillarR:2.8, shatterR:4.6, shatterT:3, chainR:2.2, chainT:1.0,
   gloamLit:0.6, gloamDark:1.35, gloamDmg:1.4, hollowLit:0.35, mothSpd:3.3, snuffT:2.0, darkGlory:0.25, ovT:4, ovAmb:0.3, maxLights:16, lowLights:10};
 /* wave plan (design/ACT3.md): one new thing per wave, a gentle arrival, a breather before the boss */
 var A3_PLAN = {
   21:{type:'slay',     amb:0.66, need:24, max:9,  lit:6, burn:0,  mix:[['gloam',5],['imp',3],['slinger',2]], hint:'a3_gloam'},
-  22:{type:'survive',  amb:0.70, T:35,    max:9,  lit:6, burn:25, mix:[['gloam',4],['wickmoth',3],['imp',2],['slinger',2]], hint:'a3_moth'},
-  23:{type:'kindle',   amb:0.74, need:4,  max:9,  lit:2, burn:20, mix:[['gloam',4],['wickmoth',2],['imp',3],['caster',1]], hint:'a3_kindle'},
-  24:{type:'slay',     amb:0.80, need:30, max:11, lit:4, burn:25, mix:[['gloam',4],['snuffw',3],['imp',3],['slinger',2],['bomber',1]], hint:'a3_warden'},
-  25:{type:'ember',    amb:0.80, need:3,  max:9,  lit:3, burn:0,  mix:[['gloam',4],['wickmoth',2],['snuffw',2],['imp',2]], hint:'a3_ember'},
-  26:{type:'survive',  amb:0.82, T:40,    max:11, lit:6, burn:25, gutter:1, mix:[['gloam',4],['wickmoth',2],['snuffw',2],['imp',2],['bomber',1],['caster',1]], hint:'a3_gutter'},
-  27:{type:'slay',     amb:0.84, need:30, max:11, lit:4, burn:25, mix:[['ashhollow',2],['gloam',4],['imp',3],['snuffw',2],['bomber',1]], hint:'a3_hollow'},
-  28:{type:'kindle',   amb:0.84, need:5,  max:11, lit:2, burn:18, mix:[['gloam',4],['wickmoth',3],['ashhollow',1],['snuffw',2],['imp',2]]},
+  22:{type:'survive',  amb:0.70, T:35,    max:9,  lit:6, burn:0,  mix:[['gloam',4],['wickmoth',3],['imp',2],['slinger',2]], hint:'a3_moth'},
+  23:{type:'slay',     amb:0.74, need:28, max:9,  lit:6, burn:0,  mix:[['gloam',4],['wickmoth',2],['imp',3],['caster',1]]},
+  24:{type:'slay',     amb:0.80, need:30, max:11, lit:6, burn:0,  mix:[['gloam',4],['snuffw',3],['imp',3],['slinger',2],['bomber',1]], hint:'a3_warden'},
+  25:{type:'survive',  amb:0.80, T:40,    max:9,  lit:6, burn:0,  mix:[['gloam',4],['wickmoth',2],['snuffw',2],['imp',2]]},
+  26:{type:'survive',  amb:0.82, T:40,    max:11, lit:6, burn:0,  mix:[['gloam',4],['wickmoth',2],['snuffw',2],['imp',2],['bomber',1],['caster',1]]},
+  27:{type:'slay',     amb:0.84, need:30, max:11, lit:6, burn:0,  mix:[['ashhollow',2],['gloam',4],['imp',3],['snuffw',2],['bomber',1]], hint:'a3_hollow'},
+  28:{type:'slay',     amb:0.84, need:32, max:11, lit:6, burn:0,  mix:[['gloam',4],['wickmoth',3],['ashhollow',1],['snuffw',2],['imp',2]]},
   29:{type:'vigil',    amb:0.80, T:25,    max:6,  lit:6, burn:0,  mix:[['gloam',4],['wickmoth',2],['imp',2]], hint:'a3_vigil'},
   30:{type:'undermaw', amb:0.80, lit:6, burn:0}
 };
-OBJS.kindle = {name:'KINDLE THE DEEP', sub:'Dash through sconces: keep enough lit at once'};
-OBJS.ember = {name:'BEAR THE EMBER', sub:'Carry the ember-heart to an unlit sconce'};
-OBJS.vigil = {name:'THE VIGIL', sub:'A breather: hold the light until the Deep wakes'};
-OBJS.undermaw = {name:'THE UNDERMAW', sub:'Break the furnace idol to conquer the Deeps'};
+/* the Cinderdark plan (A3_DARK): 23 kindle 4, 25 ember 3, 26 gutter pulse, 28 kindle 5, sconces burning out */
+if(A3_DARK){ A3_PLAN[23] = {type:'kindle', amb:0.74, need:4, max:9, lit:2, burn:20, mix:A3_PLAN[23].mix, hint:'a3_kindle'}; A3_PLAN[25] = {type:'ember', amb:0.80, need:3, max:9, lit:3, burn:0, mix:A3_PLAN[25].mix, hint:'a3_ember'};
+  A3_PLAN[26].gutter = 1; A3_PLAN[26].burn = 25; A3_PLAN[26].hint = 'a3_gutter'; A3_PLAN[28] = {type:'kindle', amb:0.84, need:5, max:11, lit:2, burn:18, mix:A3_PLAN[28].mix}; }
+if(A3_DARK){ OBJS.kindle = {name:'KINDLE THE DEEP', sub:'Dash through sconces: keep enough lit at once'}; OBJS.ember = {name:'BEAR THE EMBER', sub:'Carry the ember-heart to an unlit sconce'}; }
+OBJS.vigil = {name:'THE VIGIL', sub:'A breather: hold on until the last round wakes'};
+OBJS.undermaw = {name:'THE UNDERMAW', sub:'Break the furnace idol to conquer the Garden'};
 var A3_OWN = {kindle:1, ember:1, vigil:1, undermaw:1};
 /* the four Deeps foes (variants ride on a base type so the CMB scheduler, party AI and Codex keep working) */
 ETYPES.gloam = {hp:30, spd:3.4, r:0.45, dmg:9, h:1.1};
@@ -16895,18 +17275,18 @@ function A3_mix(a, b, t){ _a3C.setHex(a); _a3C2.setHex(b); _a3C.lerp(_a3C2, t); 
 function A3_sm(x){ x = x<0?0:x>1?1:x; return x*x*(3-2*x); }
 /* hints (HINTS lives in 40-ui-loop; registered on first use, like Act II) */
 var A3_HINT_TXT = {
-  a3_dark:function(){ return 'The Deeps are dark. <b>Bodies show only in light</b>; every attack and every eye still glows.'; },
-  a3_gloam:function(){ return '<b>Gloamlings</b> hunt from the dark. <b>Light slows them</b>, and they take more damage in it.'; },
-  a3_moth:function(){ return '<b>Wick-moths</b> drink light. One hit kills them, and they burst into a few sparks of their colour.'; },
-  a3_kindle:function(){ return (G.touch ? 'Dash' : '<b class="kc">Space</b>-dash')+' <b>through an unlit sconce</b> to kindle it. Lit sconces gutter out after a while.'; },
-  a3_warden:function(){ return '<b>Snuff-wardens</b> open their lantern hood before they fire. Kill one and its lantern keeps burning.'; },
+  a3_dark:function(){ return A3_DARK ? 'The Deeps are dark. <b>Bodies show only in light</b>; every attack and every eye still glows.' : 'The <b>Thornwall Garden</b>. New foes come through the hedge gates; every attack is still coloured.'; },
+  a3_gloam:function(){ return A3_DARK ? '<b>Gloamlings</b> hunt from the dark. <b>Light slows them</b>, and they take more damage in it.' : '<b>Gloamlings</b> circle to your side and lunge low. Watch the colour on their claws.'; },
+  a3_moth:function(){ return A3_DARK ? '<b>Wick-moths</b> drink light. One hit kills them, and they burst into a few sparks of their colour.' : '<b>Wick-moths</b> hover close but never strike. One hit kills them, and they burst into a few sparks of their colour.'; },
+  a3_kindle:function(){ return (G.touch ? 'Dash' : '<b class="kc">Space</b>-dash')+' <b>through an unlit lantern</b> to light it.'+(A3_DARK ? ' Lit sconces gutter out after a while.' : ''); },
+  a3_warden:function(){ return A3_DARK ? '<b>Snuff-wardens</b> open their lantern hood before they fire. Kill one and its lantern keeps burning.' : '<b>Snuff-wardens</b> open their lantern hood before they fire a fan of bolts: that is your tell.'; },
   a3_ember:function(){ return 'Walk over the <b>ember-heart</b>, then carry it to an <b>unlit sconce</b>. Dashing drops it.'; },
   a3_gutter:function(){ return 'When the sconces <b>groan</b>, the Deep gutters: every light dims for a few seconds.'; },
-  a3_hollow:function(){ return '<b>Ash Hollows</b> only take damage <b>in light</b> and only move in the dark. Hold one in your lantern.'; },
-  a3_vigil:function(){ return 'A breather. Hold the vigil: <b>the Undermaw wakes next round</b>.'; },
-  a3_um1:function(){ return 'Watch the <b>door that opens</b>: its light shows where the breath falls. Match its colour or step out of the light.'; },
-  a3_um2:function(){ return 'Its doors are shut. <b>Kindle 2 sconces</b> so their light reaches the idol and its armour opens.'; },
-  a3_um3:function(){ return 'The maw opens. <b>Standing in sconce light</b> draws its gaze. Strike it from the dark.'; }
+  a3_hollow:function(){ return A3_DARK ? '<b>Ash Hollows</b> only take damage <b>in light</b> and only move in the dark. Hold one in your lantern.' : '<b>Ash Hollows</b> are slow, heavy brutes. Watch for the slam and the charge.'; },
+  a3_vigil:function(){ return 'A breather. Hold on: <b>the Undermaw wakes next round</b>.'; },
+  a3_um1:function(){ return 'Watch the <b>door that opens</b>: its light shows where the breath falls. Match its colour or step out of the cone.'; },
+  a3_um2:function(){ return 'Its doors are shut. <b>Light 2 hedge lanterns</b> (dash through them) so their glow reaches the idol and its armour opens.'; },
+  a3_um3:function(){ return 'The maw opens. <b>Standing in a lantern\'s glow</b> draws its gaze. Strike it from outside the glow.'; }
 };
 function A3_hint(id, delay){ if(typeof HINTS==='undefined' || typeof hintOnce!=='function') return; if(!HINTS[id]) for(var k in A3_HINT_TXT) HINTS[k] = A3_HINT_TXT[k];
   if(delay){ after(delay, function(){ if(A3_on() && G.state==='play') hintOnce(id); }); } else hintOnce(id); }
@@ -16966,9 +17346,14 @@ function A3_build(){ if(A3.built) return; A3.built = true; var N = LOWTIER ? A3T
   var parts = [], BX = new THREE.BoxGeometry(1,1,1), CY = new THREE.CylinderGeometry(0.5,0.5,1,6), CO = new THREE.ConeGeometry(0.5,1,8), TO = new THREE.TorusGeometry(0.5,0.07,5,18), DO = new THREE.DodecahedronGeometry(0.5,0);
   A3.sc.length = 0;
   for(var si=0;si<6;si++){ var sa = si/6*TAU + Math.PI/6, sx = Math.cos(sa)*A3T.sconceRing, sz = Math.sin(sa)*A3T.sconceRing;
-    parts.push({geo:CY, c:0x241c1c, m:A3_mtx(sx, 0.15, sz, 1.15, 0.3, 1.15)}, {geo:CY, c:0x2e2424, m:A3_mtx(sx, 1.1, sz, 0.3, 2.0, 0.3)}, {geo:CO, c:0x4a3524, m:A3_mtx(sx, 2.25, sz, 1.15, 0.55, 1.15, Math.PI)},
+    if(A3_DARK){ parts.push({geo:CY, c:0x241c1c, m:A3_mtx(sx, 0.15, sz, 1.15, 0.3, 1.15)}, {geo:CY, c:0x2e2424, m:A3_mtx(sx, 1.1, sz, 0.3, 2.0, 0.3)}, {geo:CO, c:0x4a3524, m:A3_mtx(sx, 2.25, sz, 1.15, 0.55, 1.15, Math.PI)},
       {geo:TO, c:0x8a6a3a, m:A3_mtx(sx, 3.02, sz, 1.0, 1.0, 1.0, Math.PI/2)}, {geo:DO, c:0x3a3433, m:A3_mtx(sx, 2.42, sz, 0.55, 0.3, 0.55)});
-    for(var pk=0;pk<4;pk++){ var pa = pk/4*TAU+0.4; parts.push({geo:BX, c:0x6a4f2c, m:A3_mtx(sx+Math.cos(pa)*0.48, 2.65, sz+Math.sin(pa)*0.48, 0.08, 0.8, 0.08)}); }
+      for(var pk=0;pk<4;pk++){ var pa = pk/4*TAU+0.4; parts.push({geo:BX, c:0x6a4f2c, m:A3_mtx(sx+Math.cos(pa)*0.48, 2.65, sz+Math.sin(pa)*0.48, 0.08, 0.8, 0.08)}); } }
+    else { /* Garden: a hedge lantern (clipped box-hedge plinth, brass post, brass bowl and cage); same flame height, visual only */
+      parts.push({geo:BX, c:0x3a6630, m:A3_mtx(sx, 0.4, sz, 1.0, 0.8, 1.0, 0, sa)}, {geo:BX, c:0x5a8a3e, m:A3_mtx(sx, 0.83, sz, 1.04, 0.1, 1.04, 0, sa)}, {geo:DO, c:0x4f7d36, m:A3_mtx(sx, 0.95, sz, 0.8, 0.35, 0.8)},
+        {geo:CY, c:0x8a6a3a, m:A3_mtx(sx, 1.65, sz, 0.16, 1.6, 0.16)}, {geo:CO, c:0xb08a4a, m:A3_mtx(sx, 2.5, sz, 0.85, 0.4, 0.85, Math.PI)},
+        {geo:TO, c:0xb08a4a, m:A3_mtx(sx, 3.02, sz, 0.8, 0.8, 0.8, Math.PI/2)}, {geo:CO, c:0x5f9a86, m:A3_mtx(sx, 3.55, sz, 0.75, 0.35, 0.75)});
+      for(var pk2=0;pk2<4;pk2++){ var pa2 = pk2/4*TAU+0.4; parts.push({geo:BX, c:0x8a6a3a, m:A3_mtx(sx+Math.cos(pa2)*0.36, 3.05, sz+Math.sin(pa2)*0.36, 0.06, 0.95, 0.06)}); } }
     A3.sc.push({i:si, a:sa, x0:sx, z0:sz, x:sx, z:sz, lit:false, k:0, life:0, forever:false, snuff:0, kick:0, L:null, ring:0, held:0}); }
   var sb = new THREE.Mesh(A3_merge(parts), new THREE.MeshPhongMaterial({vertexColors:true, flatShading:true, shininess:12, specular:0x2a2018})); sb.castShadow = false; sb.receiveShadow = true; sb.visible = false; scene.add(sb); A3E.sbody = sb;
   A3E.flame = A3_inst(new THREE.ConeGeometry(0.5, 1, 7), A3_addMatT(0xffffff, 0.9), 12, 18.6); scene.add(A3E.flame);
@@ -16985,6 +17370,9 @@ function A3_build(){ if(A3.built) return; A3.built = true; var N = LOWTIER ? A3T
   A3E.wings = A3_inst(new THREE.PlaneGeometry(0.62, 0.42), (function(){ var m = A3_addMatT(0xffffff, 0.8); m.side = THREE.DoubleSide; return m; })(), 2*14, 18.2); scene.add(A3E.wings);
   /* warm shafts from kindled sconces to the idol's chest (Undermaw phase 2) */
   A3E.beam = A3_inst(new THREE.BoxGeometry(1, 1, 1), A3_addMatT(0xffffff, 0.22), 6, 18.0); scene.add(A3E.beam);
+  /* Garden: the warm floor glow of each lit lantern during the Undermaw (its P2 armour and P3 Gaze read that light; nothing else shows it now) */
+  var gg = new THREE.CircleGeometry(1, 28); gg.rotateX(-Math.PI/2); A3E.glow = A3_inst(gg, A3_addMatT(0xffffff, 1), 6, 2.2); scene.add(A3E.glow);
+  var gr = new THREE.RingGeometry(0.94, 1.0, 40); gr.rotateX(-Math.PI/2); A3E.glowR = A3_inst(gr, A3_addMatT(0xffffff, 1), 6, 2.3); scene.add(A3E.glowR);
   /* the breath cone (Undermaw phase 1): a floor sector + a brighter rim */
   var cg = new THREE.CircleGeometry(1, 20, -0.38, 0.76); cg.rotateX(-Math.PI/2); cg.rotateY(Math.PI/2);
   A3E.cone = new THREE.Mesh(cg, (function(){ var m = A3_addMatT(0xff6a1f, 0.2); m.side = THREE.DoubleSide; return m; })()); A3E.cone.renderOrder = 18.8; A3E.cone.visible = false; A3E.cone.frustumCulled = false; A3E.cone.position.y = 0.07; scene.add(A3E.cone);
@@ -16994,12 +17382,19 @@ function A3_build(){ if(A3.built) return; A3.built = true; var N = LOWTIER ? A3T
   var hg = new THREE.Group(); var hc = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), A3_addMatT(0xff8a3d, 0.95)); hc.scale.set(1, 1.35, 1); hg.add(hc);
   var hi = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), A3_addMatT(0xffd27a, 0.9)); hg.add(hi); var hh = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), A3_addMatT(0xff7a2a, 0.16)); hh.scale.setScalar(1.3); hg.add(hh);
   hg.renderOrder = 18.5; hg.visible = false; scene.add(hg); A3E.heart = hg; A3E.heartC = hc; A3E.heartH = hh;
-  [A3E.flame, A3E.halo, A3E.ring, A3E.crowd, A3E.eyes, A3E.wings, A3E.beam, A3E.cone, A3E.coneR, A3E.heart, A3E.sbody].forEach(function(o){ o.userData.a3own = 1; o.visible = false; }); }
+  [A3E.flame, A3E.halo, A3E.ring, A3E.crowd, A3E.eyes, A3E.wings, A3E.beam, A3E.cone, A3E.coneR, A3E.heart, A3E.sbody, A3E.glow, A3E.glowR].forEach(function(o){ o.userData.a3own = 1; o.visible = false; }); }
 
 /* show / hide the Deeps: the Pit arena stays (its floor, walls and stands), its crowd, watcher, balcony and lava glow give way to the dark */
 var A3_SAVE = null;
 function A3_pw(){ return typeof PW!=='undefined' && PW && PW.built ? PW : null; }
 function A3_envShow(on){ A3_build(); if(on===A3.shown) return; A3.shown = on;
+  if(!A3_DARK){ /* the Thornwall Garden (73-garden.js) replaces the Pit's arena; the lanterns, flames, kindle rings and boss shafts stay ours */
+    [A3E.sbody, A3E.flame, A3E.halo, A3E.ring, A3E.beam, A3E.glow, A3E.glowR].forEach(function(o){ o.visible = on; }); [A3E.seams, A3E.crowd, A3E.eyes, A3E.wings].forEach(function(o){ o.visible = false; });
+    if(!A3.desc) A3E.dark.visible = false;
+    if(on){ if(typeof GARDEN!=='undefined') GARDEN.enter(); A3_SAVE = {crowd:crowd && crowd.body ? crowd.body.visible : true}; if(crowd && crowd.body){ crowd.body.visible = false; crowd.head.visible = false; } A3.lastN = -1; A3.liftT = 0; }
+    else { if(typeof GARDEN!=='undefined') GARDEN.exit(); if(A3_SAVE){ if(crowd && crowd.body){ crowd.body.visible = A3_SAVE.crowd; crowd.head.visible = A3_SAVE.crowd; } A3_SAVE = null; }
+      A3E.dark.visible = false; A3E.cone.visible = A3E.coneR.visible = false; A3E.heart.visible = false; A3_unlift(); var pw0 = A3_pw(); if(pw0){ ['cB','cH','cA','bal'].forEach(function(k){ if(pw0[k]) pw0[k].visible = true; }); } }
+    return; }
   [A3E.dark, A3E.seams, A3E.sbody, A3E.flame, A3E.halo, A3E.ring, A3E.crowd, A3E.eyes, A3E.wings, A3E.beam].forEach(function(o){ o.visible = on; });
   if(on){ var h = null; scene.children.forEach(function(o){ if(o.isHemisphereLight) h = o; });
     A3_SAVE = {bg:scene.background, fc:scene.fog.color.getHex(), fn:scene.fog.near, ff:scene.fog.far, lava:lava.material.color.getHex(), gr:glowRing.visible, si:sun.intensity, hemi:h, hi:h ? h.intensity : 0, ll:lavaLight.intensity,
@@ -17062,7 +17457,16 @@ function A3_scRender(t){ var F = A3E.flame, Hh = A3E.halo, Rg = A3E.ring, showRi
     if(k > 0.02){ _a3M.compose(_a3V.set(S.x, 2.7, S.z), _a3Q, _a3S.set(2.0*kk, 2.0*kk, 2.0*kk)); Hh.setMatrixAt(i, _a3M); Hh.setColorAt(i, _a3C.setHex(0xff8a3a).multiplyScalar(0.13*kk)); } else Hh.setMatrixAt(i, _a3Zero);
     var rv = showRing && !S.lit ? 1 : 0; S.ring += (rv - S.ring)*0.12;
     if(S.ring > 0.02){ _a3E.set(0, t*0.4 + i, 0); _a3Q.setFromEuler(_a3E); var rs = 1 + 0.05*Math.sin(t*4 + i); _a3M.compose(_a3V.set(S.x, 0.06, S.z), _a3Q, _a3S.set(rs, 1, rs)); Rg.setMatrixAt(i, _a3M); Rg.setColorAt(i, _a3C.setHex(0xffa040).multiplyScalar(0.6*S.ring)); } else Rg.setMatrixAt(i, _a3Zero); }
-  _a3Q.identity(); F.instanceMatrix.needsUpdate = true; F.instanceColor.needsUpdate = true; Hh.instanceMatrix.needsUpdate = true; Hh.instanceColor.needsUpdate = true; Rg.instanceMatrix.needsUpdate = true; Rg.instanceColor.needsUpdate = true; }
+  _a3Q.identity(); F.instanceMatrix.needsUpdate = true; F.instanceColor.needsUpdate = true; Hh.instanceMatrix.needsUpdate = true; Hh.instanceColor.needsUpdate = true; Rg.instanceMatrix.needsUpdate = true; Rg.instanceColor.needsUpdate = true;
+  if(!A3_DARK && A3E.glow) A3_glowRender(t); }
+/* Garden, wave 30 only: each lit lantern's glow on the floor (radius = where the Gaze sees you, A3_litAt > 0.4), warm, never white, ramped with the lantern */
+var A3_GLOWR = 0.71;
+function A3_glowRender(t){ var Gm = A3E.glow, Gr = A3E.glowR, U = A3.um, on = !!(U && U.on && U.e && !U.dying);
+  for(var i=0;i<6;i++){ var S = A3.sc[i]; if(!S || !on || S.k < 0.02){ Gm.setMatrixAt(i, _a3Zero); Gr.setMatrixAt(i, _a3Zero); continue; }
+    var rr = A3T.sconceR*A3_GLOWR*(S.L && S.L.on ? S.L.r/A3T.sconceR : 1)*(0.985 + 0.015*Math.sin(t*2.2 + i)), k = S.k*(U.phase===3 ? 1.25 : 1);
+    _a3M.compose(_a3V.set(S.x, 0.035, S.z), _a3Q.identity(), _a3S.set(rr, 1, rr)); Gm.setMatrixAt(i, _a3M); Gm.setColorAt(i, _a3C.setHex(0xff7a1a).multiplyScalar(0.12*k));
+    Gr.setMatrixAt(i, _a3M); Gr.setColorAt(i, _a3C.setHex(0xff6a10).multiplyScalar(0.5*k)); }
+  Gm.instanceMatrix.needsUpdate = true; Gm.instanceColor.needsUpdate = true; Gr.instanceMatrix.needsUpdate = true; Gr.instanceColor.needsUpdate = true; }
 function A3_ringsOn(){ var rt = G.round; if(!A3_on()) return false; if(rt==='kindle') return true; if(rt==='ember') return !!(A3.em && A3.em.car); var U = A3.um; if(U && U.on && U.phase===2) return true; return rt==='slay' || rt==='survive' ? !!A3.ringHint : false; }
 
 /* =====================================================================================
@@ -17108,18 +17512,18 @@ function A3_foesPost(dt){ var H = A3_heroes(), i, e;
   for(i=0;i<enemies.length;i++){ e = enemies[i]; if(e.dead) continue;
     if(e.a3frz){ e.a3frz = 0; e.spawnT = 0; }
     if(e.spawnT>0 && e.a3!=='wickmoth') continue;
-    if(e.a3==='gloam'){ var lk = A3_litAt(e.x, e.z, false); e.a3lit = lk > 0.5; var m = (A3T.gloamDark + (A3T.gloamLit - A3T.gloamDark)*A3_sm(lk))*(ETYPES.gloam.spd/ETYPES.imp.spd);
+    if(e.a3==='gloam'){ var lk = A3_DARK ? A3_litAt(e.x, e.z, false) : 0; e.a3lit = A3_DARK && lk > 0.5; var m = (A3_DARK ? A3T.gloamDark + (A3T.gloamLit - A3T.gloamDark)*A3_sm(lk) : 1)*(ETYPES.gloam.spd/ETYPES.imp.spd);
       e.x = e.px + (e.x - e.px)*m; e.z = e.pz + (e.z - e.pz)*m; }
     else if(e.a3==='wickmoth') A3_mothStep(e, dt, H);
     else if(e.a3==='snuffw'){ var L = e.a3L; if(!L || !L.on || L.ref!==e){ L = e.a3L = A3_light('warden', e.x, e.z, 1.6, A3_mix(ELC[e.el], 0xffa04a, 0.3), -1, 2, true); if(L) L.ref = e; }
       if(L){ var open = e.state==='wind' ? 1 : (e.fireT||0) > 0 ? 0.8 : 0; L.x = e.x + Math.sin(e.face||0)*0.7; L.z = e.z + Math.cos(e.face||0)*0.7; L.rt = 1.5 + 1.6*open; L.kt = 0.55 + 0.4*open; L.rate = 3; } }
-    else if(e.a3==='ashhollow'){ e.a3lit = A3_litAt(e.x, e.z, false) > A3T.hollowLit; if(!e.a3lit && Math.random() < dt*10) glowP.emit(e.x+rnd(-0.8,0.8), rnd(0.4,2.4), e.z+rnd(-0.8,0.8), 0, rnd(0.3,0.9), 0, 0.7, 0.8, 0x6a6072, 0, 0.6); }
+    else if(e.a3==='ashhollow' && A3_DARK){ e.a3lit = A3_litAt(e.x, e.z, false) > A3T.hollowLit; if(!e.a3lit && Math.random() < dt*10) glowP.emit(e.x+rnd(-0.8,0.8), rnd(0.4,2.4), e.z+rnd(-0.8,0.8), 0, rnd(0.3,0.9), 0, 0.7, 0.8, 0x6a6072, 0, 0.6); }
     if(e.um) A3_umPin(e); } }
-function A3_foesPre(dt){ for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT>0) continue;
+function A3_foesPre(dt){ if(!A3_DARK) return; for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT>0) continue;
     if(e.a3==='ashhollow'){ e.a3lit = A3_litAt(e.x, e.z, false) > A3T.hollowLit; if(e.a3lit && (e.state==='move' || e.state==='rec')){ e.a3frz = 1; e.spawnT = 1e-4; } } } }
 /* wick-moths fly to the nearest light (a hero's lantern or a lit sconce) and drink it; they never attack */
 function A3_mothStep(e, dt, H){ if(e.spawnT>0){ e.y = 1.7; return; } var best = null, bd = 1e9, kind = '', i, d, U = A3.um, pref = U && U.on && U.phase===2;
-  for(i=0;i<A3.sc.length;i++){ var S = A3.sc[i]; if(!S.lit) continue; d = Math.hypot(S.x-e.x, S.z-e.z)*(pref ? 0.4 : 0.8); if(d < bd){ bd = d; best = S; kind = 's'; } }
+  if(A3_DARK || (U && U.on)) for(i=0;i<A3.sc.length;i++){ var S = A3.sc[i]; if(!S.lit) continue; d = Math.hypot(S.x-e.x, S.z-e.z)*(pref ? 0.4 : 0.8); if(d < bd){ bd = d; best = S; kind = 's'; } }
   for(i=0;i<H.length;i++){ var st = H[i]; if(st.dead) continue; d = Math.hypot(st.x-e.x, st.z-e.z); if(d < bd){ bd = d; best = st; kind = 'h'; } }
   if(e.a3st==='drink' && e.a3tg && !e.a3tg.dead){ best = e.a3tg; kind = 'h'; } else if(e.a3st==='snuff' && e.a3sn && e.a3sn.lit){ best = e.a3sn; kind = 's'; }
   var spd = A3T.mothSpd*(e.slowT>0 ? 0.5 : 1)*(G.mods ? G.mods.espd : 1), tx = best ? best.x : 0, tz = best ? best.z : 0;
@@ -17171,7 +17575,7 @@ function A3_umPin(e){ var U = A3.um; if(!U) return; e.x = e.px = U.bx; e.z = e.p
 function A3_freeCol(eta, prefs){ var L = CMB_threats(null), best = prefs[0], bd = 9; for(var i=0;i<prefs.length;i++){ var t = CMB_slot(eta, prefs[i], L), dl = t - eta; if(dl < bd - 0.01){ bd = dl; best = prefs[i]; } if(dl <= 0.001) break; } return best; }
 function A3_umStart(){ var U = A3.um = {on:true, e:null, ent:{t:0, spawned:false, said:false}, phase:1, act:null, actT:2.0, last:'', addT:9, mothT:6, gazeT:3, doorT:9, door:'F', dying:null, cam:{x:0, z:0, zoom:1, iso:null}, arm:0, armOpen:false, n:0};
   var p = A3_umPos(); U.bx = p.x; U.bz = p.z; G.need = 9999; G.maxAlive = 0; $('objBox').hidden = true;
-  banner('ROUND 30', 'The Deeps fall silent…', 1.8); mus.int = 2; A3.ambT = 0.8; for(var i=0;i<A3.sc.length;i++){ var S = A3.sc[i]; if(!S.lit) A3_kindle(S, null, true); S.forever = true; }
+  banner('ROUND 30', A3_DARK ? 'The Deeps fall silent…' : 'The Garden falls silent…', 1.8); mus.int = 2; A3.ambT = 0.8; for(var i=0;i<A3.sc.length;i++){ var S = A3.sc[i]; if(!S.lit) A3_kindle(S, null, true); S.forever = true; }
   tone(55, 2.2, 'sawtooth', 0.07, 38); noise(2.2, 0.08, 260, 'lowpass'); }
 function A3_umSpawn(){ var U = A3.um, e = A3_spawn('undermaw', 'flame', {x:U.bx, z:U.bz, a:UM_A}); e.type = 'boss'; e.um = true; e.spawnT = 0; e.r = UM_R; e.hp = e.maxHp = A3_umHp(); U.hp0 = e.hp;
   e.face = Math.atan2(-U.bx, -U.bz); e.phase = 1; e.act = null; e.wind = 0; e.invuln = true; e.umPose = 'sunk'; e.umRate = 1.6; e.umSnap = true; e.umDoor = ''; e.umSlit = false; e.tier = 2; e.leap = null; e.y = 0;
@@ -17296,10 +17700,10 @@ function A3_canDescend(){ return G.act===2 && G.wave===20 && !G.endless && !A3_d
 /* lower third + skip prompt (bottom third, never over the hero) */
 function A3_lt(h, p){ var el = $('a3Lt'); if(!el) return; if(!h){ el.classList.remove('on'); return; } el.querySelector('h2').textContent = h; el.querySelector('p').textContent = p || ''; el.classList.add('on'); }
 function A3_showChoice(){ G.state = 'over'; CG.gameplayStop(); unlockPointer(); var s = G.stake, box = $('a3Choice');
-  box.innerHTML = '<div class="panel a3ch pe"><h2>Spirebreaker</h2><div class="sub">The Stormwright kneels. Far below the Pit, something old is breathing.</div>'+
+  box.innerHTML = '<div class="panel a3ch pe"><h2>Spirebreaker</h2><div class="sub">The Stormwright kneels. Beyond the hedge gates, the Thornwall Garden waits.</div>'+
     '<div class="bigStake">STAKE ⚜ '+s+'<div class="sub">Tripled by the Stormwright\'s fall</div></div>'+
     '<div class="a3opts"><button class="a3opt take" id="a3Take"><h3>Take your winnings</h3><p>Bank <b>⚜ '+s+'</b> now and leave the trials a champion.</p><span class="go">Bank ⚜ '+s+'</span></button>'+
-    '<button class="a3opt dn" id="a3Down"><h3>Descend to the Deeps</h3><p>Rounds 21–30 in the Kindling Deeps. Your <b>⚜ '+s+'</b> stays at stake. Curses break; boons, spells and relics stay.</p><span class="go">Descend ▼</span></button></div></div>';
+    '<button class="a3opt dn" id="a3Down"><h3>Enter the Garden</h3><p>Rounds 21–30 in the Thornwall Garden. Your <b>⚜ '+s+'</b> stays at stake. Curses break; boons, spells and relics stay.</p><span class="go">Enter ▼</span></button></div></div>';
   $('a3Take').addEventListener('click', function(){ audioInit(); SFX.click(); A3_take(); });
   $('a3Down').addEventListener('click', function(){ audioInit(); SFX.click(); A3_startDescent(); });
   showScreen('a3Choice'); }
@@ -17317,15 +17721,16 @@ function A3_startDescent(){ if(A3.desc) return; A3.pendingBank = false; G.lastKe
   A3E.dark.visible = true; A3.amb = 0; A3.ambT = 0.9; var sk = $('a3Sk'); if(sk) sk.textContent = G.touch ? 'Tap to skip' : 'Click · Space · Enter to skip'; tone(48, 3.6, 'sine', 0.12, 30); noise(3.2, 0.05, 240, 'lowpass'); }
 function A3_swap(){ var D = A3.desc; if(!D || D.swapped) return; D.swapped = true; A3_enterAct(); resetPillars(); if(P){ P.x = P.px = 0; P.z = P.pz = 0.6; P.vx = P.vz = 0; } A3_scReset(0); A3.amb = 0.9; A3.ambT = 0.9; updateHudStatic(); }
 function A3_stepDescent(dt){ var D = A3.desc; if(!D) return; D.t += dt; if(P){ P.vx = P.vz = 0; }
-  if(D.lt===0 && D.t >= 0.3){ D.lt = 1; A3_lt('Descending to the Kindling Deeps', 'Curses break · boons stay'+(G.testRun ? ' · practice run, no Glory' : '')); }
-  if(P && Math.random() < dt*40){ var ra = Math.random()*TAU, rr = rnd(2, 9); glowP.emit(P.x+Math.cos(ra)*rr, rnd(-1, 1), P.z+Math.sin(ra)*rr, 0, rnd(5, 9), 0, rnd(0.6, 1.1), rnd(0.6, 1.1), Math.random()<0.6 ? 0xff7a2a : 0xffb060, 0, 0.1); }
+  if(D.lt===0 && D.t >= 0.3){ D.lt = 1; A3_lt(A3_DARK ? 'Descending to the Kindling Deeps' : 'Into the Thornwall Garden', 'Curses break · boons stay'+(G.testRun ? ' · practice run, no Glory' : '')); }
+  if(P && Math.random() < dt*40){ var ra = Math.random()*TAU, rr = rnd(2, 9), pc = A3_DARK ? (Math.random()<0.6 ? 0xff7a2a : 0xffb060) : [0x8fd86a, 0xf2d27a, 0xe48aa2][(Math.random()*3)|0]; glowP.emit(P.x+Math.cos(ra)*rr, rnd(-1, 1), P.z+Math.sin(ra)*rr, 0, rnd(5, 9), 0, rnd(0.6, 1.1), rnd(0.6, 1.1), pc, 0, 0.1); }
   if(D.t >= A3_ASC_SWAP) A3_swap();
   if(D.swapped){ var want = Math.floor((D.t - 2.0)/0.22) + 1; while(D.lit < 6 && D.lit < want){ var S = A3.sc[[0,3,1,4,2,5][D.lit]]; A3_kindle(S, null, true); if(S.L) S.L.rate = 1.2; tone(196 + D.lit*30, 0.35, 'triangle', 0.04); D.lit++; }
-    if(D.t >= 2.0) A3.ambT = 0.66; }
-  if(D.lt===1 && D.t >= 3.5){ D.lt = 2; A3_lt('Act III · The Kindling Deeps', 'The Cinderdark'); SFX.slam(); shake(0.3); crowdCheer = 1; }
+    if(D.t >= 2.0) A3.ambT = A3_DARK ? 0.66 : 0; }
+  if(D.lt===1 && D.t >= 3.5){ D.lt = 2; A3_lt(A3_ACTNAME, A3_ACTSUB); SFX.slam(); shake(0.3); crowdCheer = 1; if(typeof GARDEN!=='undefined' && GARDEN.cheer) GARDEN.cheer(1); }
   if(D.t >= A3_ASC_DUR) A3_finishDescent(); }
-function A3_skipDescent(){ var D = A3.desc; if(!D || D.t < A3_ASC_SKIP) return; A3_swap(); while(D.lit < 6){ A3_kindle(A3.sc[D.lit], null, true); D.lit++; } A3.amb = 0.7; A3.ambT = 0.66; A3_finishDescent(); }
-function A3_finishDescent(){ var D = A3.desc; if(!D) return; A3_swap(); A3.desc = null; document.body.classList.remove('a3desc'); A3_lt('Act III · The Kindling Deeps', 'The Cinderdark');
+function A3_skipDescent(){ var D = A3.desc; if(!D || D.t < A3_ASC_SKIP) return; A3_swap(); while(D.lit < 6){ A3_kindle(A3.sc[D.lit], null, true); D.lit++; } A3.amb = 0.7; A3.ambT = A3_DARK ? 0.66 : 0; A3_finishDescent(); }
+var A3_ACTNAME = A3_DARK ? 'Act III · The Kindling Deeps' : 'Act III · The Thornwall Garden', A3_ACTSUB = A3_DARK ? 'The Cinderdark' : 'The hedge gates open';
+function A3_finishDescent(){ var D = A3.desc; if(!D) return; A3_swap(); A3.desc = null; document.body.classList.remove('a3desc'); A3_lt(A3_ACTNAME, A3_ACTSUB);
   if(!G.testRun){ save.acts = save.acts||{}; save.acts.a3seen = 1; persist(); } A3.land = {t:0, holds:0, rel:0}; A3_landed(); }
 function A3_stepLand(dt){ var L = A3.land; if(!L) return; L.t += dt; if(L.t >= Math.max(A3_LAND_WAIT, L.rel) && !L.holds){ A3.land = null; A3_lt(''); if(G.act===3 && G.state==='play' && P && !P.dead && !G.waveActive && G.wave<21) startWave(21); } }
 function A3_allyRing(dt){ if(typeof PTY==='undefined' || !PTY.on || typeof HEROES==='undefined' || HEROES.length < 2 || !P || !(A3.desc || (A3.land && A3.land.t < 0.4))) return; var n = 0;
@@ -17337,7 +17742,7 @@ function A3_finale(){ if(!G.waveActive) return; G.waveActive = false; var n = G.
   persist(); heal(P.maxHp*0.15); crowdCheer = 1; SFX.cheer(); after(0.8, function(){ banner('THE UNDERMAW COOLS', '+'+gain+' Glory'+(P.flawless?'  •  FLAWLESS ×1.3':'')+'  •  STAKE TRIPLED', 2.2); }); CG.happytime(); mus.int = 0;
   A3_bank0('victory'); after(4.0, A3_showVictory); }
 function A3_showVictory(){ if(!P) return; G.state = 'over'; CG.gameplayStop(); unlockPointer(); var C = CLASSES[P.cls]; $('oTitle').textContent = 'Ashbreaker';
-  $('oSub').innerHTML = 'The furnace idol cools. The Deeps are lit for the first time, by the '+C.name+'.<div class="bigStake">+⚜ '+G.lastKept+' banked'+(G.testRun ? '<div class="sub">Deeps trial: practice run, no Glory.</div>' : '<div class="sub">Three times the stake you carried into the dark.</div>')+'</div><div class="sub" style="margin-top:6px;color:#ffc890">Below the Deeps the ladder goes on. Act IV is still sealed.</div>';
+  $('oSub').innerHTML = 'The furnace idol cools. The Thornwall Garden is won, by the '+C.name+'.<div class="bigStake">+⚜ '+G.lastKept+' banked'+(G.testRun ? '<div class="sub">Garden trial: practice run, no Glory.</div>' : '<div class="sub">Three times the stake you carried into the Garden.</div>')+'</div><div class="sub" style="margin-top:6px;color:#ffc890">Beyond the Garden the ladder goes on. Act IV is still sealed.</div>';
   $('oStats').innerHTML = statsHtml(); $('oNext').textContent = nextUnlockText(); var b = $('oBtns'); b.innerHTML = ''; addBtn(b, 'Fight again', 'main', function(){ beginRun(P.cls); }); addBtn(b, 'Camp', '', function(){ showMenu(); }); showScreen('over'); }
 
 /* =====================================================================================
@@ -17403,12 +17808,12 @@ var A3_darkT = 0;
 hurtEnemy = function(e, dmg, kx, kz, o){ if(G.act===3 && e && !e.dead){
     if(e.um){ arguments[1] = dmg*A3_umMul(e); var U = A3.um; if(U && U.phase===2 && A3_umLitN() < 2 && G.t - (U.armT||0) > 1.2){ U.armT = G.t; dmgText(e.x*0.86, 6.5, e.z*0.86, 'ARMOUR SHUT', '#c9a27a', 15); }
       var r0 = A3_hurtEnemy0.apply(this, arguments); if(!e.dead){ var fl = U && U.phase===1 ? 0.64 : U && U.phase===2 ? 0.29 : 0; if(e.hp < e.maxHp*fl) e.hp = Math.ceil(e.maxHp*fl); } return r0; }
-    if(e.a3==='ashhollow' && !e.a3lit){ if(G.t - (e.a3dT||0) > 0.7){ e.a3dT = G.t; dmgText(e.x, 3.0, e.z, 'DARK ARMOUR', '#9a90a8', 14); burst(e.x, 1.4, e.z, 4, 0x8a8098, 3, 0.3, 0.8); } return; }
-    if(e.a3==='gloam' && e.a3lit) arguments[1] = dmg*A3T.gloamDmg; }
+    if(A3_DARK && e.a3==='ashhollow' && !e.a3lit){ if(G.t - (e.a3dT||0) > 0.7){ e.a3dT = G.t; dmgText(e.x, 3.0, e.z, 'DARK ARMOUR', '#9a90a8', 14); burst(e.x, 1.4, e.z, 4, 0x8a8098, 3, 0.3, 0.8); } return; }
+    if(A3_DARK && e.a3==='gloam' && e.a3lit) arguments[1] = dmg*A3T.gloamDmg; }
   return A3_hurtEnemy0.apply(this, arguments); };
 var A3_killEnemy0 = killEnemy;
 killEnemy = function(e, quiet){ var was = !e || e.dead, a3 = G.act===3 && e && !e.dead && !e.um; var r = A3_killEnemy0.apply(this, arguments);
-  if(a3 && !was && e.dead){ if(!e.nc && !quiet){ A3.kills++; if(A3_litAt(e.x, e.z, false) < 0.3) A3.darkKills++; }
+  if(a3 && !was && e.dead){ if(!e.nc && !quiet && A3_DARK){ A3.kills++; if(A3_litAt(e.x, e.z, false) < 0.3) A3.darkKills++; }
     if(e.a3==='wickmoth' && !quiet) A3_mothPuff(e);
     else if(e.a3==='snuffw'){ if(e.a3L){ A3_lightOff(e.a3L); e.a3L = null; } var D = A3_light('drop', e.x, e.z, A3T.dropR, A3_mix(ELC[e.el], 0xffa040, 0.5), A3T.dropT, 2, true); if(D) D.rate = 1.5; A3.hz.push({x:e.x, z:e.z, t:A3T.dropT, c:ELC[e.el]}); if(e===A3.lastW) A3.lastW = null; }
     else if(!quiet){ A3_light('pool', e.x, e.z, A3T.poolR*(e.r>0.8 ? 1.4 : 1), 0xff8a3a, A3T.poolT, 1, true); } }
@@ -17427,13 +17832,13 @@ updatePlayer = function(dt){ if(G.act!==3 && !A3.desc) return A3_updatePlayer0.a
 var A3_openBargain0 = openBargain;
 openBargain = function(){ if(G.act!==3) return A3_openBargain0.apply(this, arguments); var saved = CURSES; CURSES = saved.filter(function(c){ return A3_POOL.indexOf(c.id)>=0; });
   try { var r = A3_openBargain0.apply(this, arguments); } finally { CURSES = saved; }
-  var nx = G.wave+1, bt = $('bgTitle'), bs = $('bgSub'); if(bt) bt.textContent = nx>=30 ? 'The Last Offering of the Deeps' : 'The Deep Offering';
-  if(bs && nx>=30) bs.textContent = 'Round 30: the Undermaw itself. Break it to TRIPLE your stake, or take it now.'; else if(bs && bs.textContent.indexOf('Pitmaster')>=0) bs.textContent = bs.textContent.replace(/the Pitmaster/g, 'the Deep');
+  var nx = G.wave+1, bt = $('bgTitle'), bs = $('bgSub'); if(bt) bt.textContent = nx>=30 ? 'The Last Offering of the Garden' : 'The Garden Offering';
+  if(bs && nx>=30) bs.textContent = 'Round 30: the Undermaw itself. Break it to TRIPLE your stake, or take it now.'; else if(bs && bs.textContent.indexOf('Pitmaster')>=0) bs.textContent = bs.textContent.replace(/the Pitmaster/g, 'the Garden');
   return r; };
 var A3_showOver0 = showOver;
 showOver = function(){ var a3 = G.act===3 && P, rs = P && P.deathReason; var r = A3_showOver0.apply(this, arguments); if(!a3) return r;
-  var sub = $('oSub'); sub.innerHTML = sub.innerHTML.replace('The Pitmaster sneers. The crowd counts your coin.', 'The lanterns lift in the dark. Your winnings are banked.').replace(/The Pitmaster claims your stake\./g, 'The Deep claims your stake.');
-  if(rs!=='take') $('oTitle').textContent = 'Swallowed by the Dark';
+  var sub = $('oSub'); sub.innerHTML = sub.innerHTML.replace('The Pitmaster sneers. The crowd counts your coin.', 'The hedge lanterns sway. Your winnings are banked.').replace(/The Pitmaster claims your stake\./g, 'The Garden claims your stake.');
+  if(rs!=='take') $('oTitle').textContent = A3_DARK ? 'Swallowed by the Dark' : 'Lost in the Thornwall';
   if(!G.testRun){ var ac = save.acts = save.acts||{}; ac.a3best = Math.max(ac.a3best||0, G.wave - (rs==='take' ? 0 : 1)); persist(); } return r; };
 var A3_updateHud0 = updateHud;
 updateHud = function(){ if(G.act!==3 || !P) return A3_updateHud0.apply(this, arguments); var rt = G.round, own = !!A3_OWN[rt];
@@ -17444,7 +17849,7 @@ updateHud = function(){ if(G.act!==3 || !P) return A3_updateHud0.apply(this, arg
     else if(rt==='vigil'){ f = 1-G.roundT/G.need; t = 'HOLD '+fmtT(G.need-G.roundT); }
     $('objFill').style.width = (clamp(f,0,1)*100)+'%'; setTxt('objTxt', t); }
   if((A3.desc || A3.land) && G.wave<21){ setTxt('waveTxt', 'ROUND 21'); $('objBox').hidden = true; }
-  var ar = A3.armEl, U = A3.um; if(ar){ var on = U && U.on && U.e && !U.e.dead && !U.dying && U.phase===2 && !U.ent; if(on){ var ln = A3_umLitN(), open = ln >= 2; var txt = open ? 'ARMOUR OPEN · '+ln+' sconces light the idol' : 'ARMOUR SHUT · kindle sconces '+ln+' / 2';
+  var ar = A3.armEl, U = A3.um; if(ar){ var on = U && U.on && U.e && !U.e.dead && !U.dying && U.phase===2 && !U.ent; if(on){ var ln = A3_umLitN(), open = ln >= 2; var txt = open ? 'ARMOUR OPEN · '+ln+' lanterns light the idol' : 'ARMOUR SHUT · light lanterns '+ln+' / 2';
       if(ar._t!==txt){ ar._t = txt; ar.textContent = txt; } var cl = 'on'+(open ? ' open' : ''); if(ar.className!==cl) ar.className = cl; } else if(ar.className) ar.className = ''; } };
 var A3_uhs0 = updateHudStatic;
 updateHudStatic = function(){ var r = A3_uhs0.apply(this, arguments); if(G.act===3 && G.round==='vigil') $('objBar').className = 'bar obj timer'; return r; };
@@ -17481,9 +17886,9 @@ function A3_allyKindle(){ if(typeof PTY==='undefined' || !PTY.on || typeof HEROE
 /* =====================================================================================
    12. OFFERINGS: three Deeps gifts (only offered in Act III)
    ===================================================================================== */
-BOONS.push({id:'a3wide', r:0, name:'Wide Lantern', icon:'🏮', desc:'Your lantern shines 1.5 m farther in the Deeps.', ok:function(){ return G.act===3 && P && !(P.a3wide > 0); }, ap:function(){ P.a3wide = A3T.wide; }},
-  {id:'a3kdash', r:1, name:"Kindler's Dash", icon:'🔥', desc:'Dashing kindles any sconce within 2 m of your path.', ok:function(){ return G.act===3 && P && !P.a3kd; }, ap:function(){ P.a3kd = 1; }},
-  {id:'a3bane', r:1, name:'Moth-bane', icon:'🦋', desc:'Wick-moths that drink your lantern burn up within a second, and drop no sparks.', ok:function(){ return G.act===3 && P && !P.a3bane; }, ap:function(){ P.a3bane = 1; }});
+BOONS.push({id:'a3wide', r:0, name:'Wide Lantern', icon:'🏮', desc:'Your lantern shines 1.5 m farther in the Deeps.', ok:function(){ return A3_DARK && G.act===3 && P && !(P.a3wide > 0); }, ap:function(){ P.a3wide = A3T.wide; }},
+  {id:'a3kdash', r:1, name:"Kindler's Dash", icon:'🔥', desc:'Dashing kindles any sconce within 2 m of your path.', ok:function(){ return A3_DARK && G.act===3 && P && !P.a3kd; }, ap:function(){ P.a3kd = 1; }},
+  {id:'a3bane', r:1, name:'Moth-bane', icon:'🦋', desc:A3_DARK ? 'Wick-moths that drink your lantern burn up within a second, and drop no sparks.' : 'Wick-moths that hover on you burn up within a second, and drop no sparks.', ok:function(){ return G.act===3 && P && !P.a3bane; }, ap:function(){ P.a3bane = 1; }});
 
 /* =====================================================================================
    13. STEP + RENDER
@@ -17492,7 +17897,7 @@ STEP_HOOKS.push(function(dt){ if(!P) return; if(A3.desc) return; if(G.act!==3) r
   A3_scStep(dt); A3_emberStep(dt); if(A3.um) A3_umStep(dt); if(A3.ovT > 0) A3.ovT -= dt; A3_allyKindle();
   for(var i=A3.hz.length-1;i>=0;i--){ var z = A3.hz[i]; z.t -= dt; if(Math.random() < dt*4) glowP.emit(z.x+rnd(-0.3,0.3), 0.4, z.z+rnd(-0.3,0.3), 0, rnd(0.6,1.4), 0, 0.6, 0.8, z.c, 0, 1); if(z.t <= 0) A3.hz.splice(i, 1); } });
 STEP_HOOKS.push(function(dt){ if(!P) return; A3_allyRing(dt); A3_stepLand(dt); });
-function A3_ambStep(dt){ var tgt = A3.ambT; if(A3.ovT > 0) tgt = Math.min(tgt, A3T.ovAmb); tgt = Math.min(tgt, A3_ambMax()); var rate = A3.ambRate || 0.6, d = tgt - A3.amb, s = rate*dt; A3.amb += d > s ? s : d < -s ? -s : d; }
+function A3_ambStep(dt){ var tgt = A3.ambT; if(!A3_DARK && !A3.desc) tgt = 0;   /* Garden: the dark quad is only the descent's curtain */ if(A3.ovT > 0) tgt = Math.min(tgt, A3T.ovAmb); tgt = Math.min(tgt, A3_ambMax()); var rate = A3.ambRate || 0.6, d = tgt - A3.amb, s = rate*dt; A3.amb += d > s ? s : d < -s ? -s : d; }
 /* upload the strongest lights (heroes and sconces first, then the rest by strength and distance to the camera focus); no allocation */
 var A3_SEL = [], A3_SCR = [];
 function A3_upload(){ var U = A3E.dm.uniforms, Lu = U.uL.value, Cu = U.uC.value, N = A3E.N, n = 0, i, j, fx = camFocus.x, fz = camFocus.z;
@@ -17500,7 +17905,7 @@ function A3_upload(){ var U = A3E.dm.uniforms, Lu = U.uL.value, Cu = U.uC.value,
   for(i=0;i<A3_LP.length;i++){ var L = A3_LP[i]; if(!L.on || L.k <= 0.004 || L.r <= 0.05) continue; var sc = L.pri*100 + L.k*L.r*4 - Math.hypot(L.x-fx, L.z-fz)*0.5;
     if(A3_SEL.length < N){ A3_SEL.push(L); A3_SCR.push(sc); } else { var lo = 0; for(j=1;j<N;j++) if(A3_SCR[j] < A3_SCR[lo]) lo = j; if(sc > A3_SCR[lo]){ A3_SEL[lo] = L; A3_SCR[lo] = sc; } } }
   for(i=0;i<N;i++){ var Q = A3_SEL[i]; if(Q){ Lu[i].set(Q.x, Q.z, Q.r, Q.k); _a3C.setHex(Q.c); Cu[i].set(_a3C.r, _a3C.g, _a3C.b); n++; } else Lu[i].set(0,0,0,0); }
-  U.uAmb.value = A3.amb; U.uTint.value = 0.16*(0.4 + 0.6*A3.amb/0.88); }
+  U.uAmb.value = A3.amb; U.uTint.value = 0.16*(0.4 + 0.6*A3.amb/0.88)*(A3_DARK ? 1 : 0.45); }
 /* eye-glints in each foe's colour, always above the dark; moth wing glows */
 function A3_eyesRender(t){ var E = A3E.eyes, W = A3E.wings, n = 0, w = 0, max = 48;
   for(var i=0;i<enemies.length && n<max;i++){ var e = enemies[i]; if(e.dead || e.um || e.type==='boss' || e.type==='heart' || e.type==='dummy' || !e.M || !e.M.root) continue;
@@ -17543,14 +17948,16 @@ RENDER_HOOKS.push(function(t, adt){ if(A3.wantChoice && G.state==='over' && !(ty
   if(G.act===3 && !A3.desc){ A3_ambStep(adt); }
   A3_camStep(adt); });
 var A3_ur0 = updateRigs;
-updateRigs = function(){ var r = A3_ur0.apply(this, arguments); if((G.act===3 || A3.desc) && A3.built && A3E.dark.visible){ try{
+updateRigs = function(){ var r = A3_ur0.apply(this, arguments); if((G.act===3 || A3.desc) && A3.built && (A3E.dark.visible || (!A3_DARK && A3.shown))){ try{
       var t = G.rt||0, adt = (G.state==='play' && !G.paused) ? 0.016 : 0; if(G.act===3 && G.state==='play' && !G.paused){ A3_heroLights(1/60); A3_burnLights(); A3_pillarLights(); }
       A3_lightsStep(G.state==='play' && !G.paused ? (G.lastFrameDt || 1/60) : 0);
-      if(G.act===3){ A3_scRender(t); A3_eyesRender(t); A3_crowdRender(t); A3_beamRender(); A3_emberRender(t); A3_labelRender();
+      if(G.act===3){ A3_scRender(t); if(A3_DARK){ A3_eyesRender(t); A3_crowdRender(t); } A3_beamRender(); A3_emberRender(t); A3_labelRender();
         var pw = A3_pw(); if(pw){ if(pw.wR && pw.wR.root) pw.wR.root.visible = false; ['cB','cH','cA','bal'].forEach(function(k){ if(pw[k]) pw[k].visible = false; }); } }
       else if(A3.desc && P){ var L = A3.hl[0]; if(!L || !L.on){ L = A3.hl[0] = A3_light('lantern', P.x, P.z, A3T.lantern, 0xffa04a, -1, 5, false); } if(L){ L.x = P.x; L.z = P.z; L.kt = 1; L.rt = A3T.lantern; L.c = A3_mix(0xffa04a, ELC[P.ward]||0xffa04a, 0.42); } }
-      A3_upload();
-      if(scene.children.length !== A3.lastN || (G.rt - A3.liftT) > 0.5){ A3.lastN = scene.children.length; A3.liftT = G.rt; A3_liftPass(); }
+      if(A3E.dark.visible){ A3_upload();
+        if(scene.children.length !== A3.lastN || (G.rt - A3.liftT) > 0.5){ A3.lastN = scene.children.length; A3.liftT = G.rt; A3_liftPass(); }
+        /* Garden: once the descent's curtain has lifted, the dark quad goes away for good (no lift outside the dark) */
+        if(!A3_DARK && !A3.desc && A3.amb <= 0.004){ A3E.dark.visible = false; A3_unlift(); } }
     }catch(err){ if(DEV) console.warn('act3 render', err); } }
   return r; };
 /* the frame dt for the light ramps (render() does not pass it to updateRigs) */
@@ -17596,7 +18003,7 @@ if(A3.um === undefined) A3.um = null;
   window.addEventListener('keydown', function(e){ if(!A3.desc) return; if(e.code==='Space' || e.code==='Enter' || e.code==='NumpadEnter'){ e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) A3_skipDescent(); } }, true);
   window.addEventListener('pointerdown', function(e){ if(!A3.desc || A3.desc.t < A3_ASC_SKIP) return; if(e.target && e.target.closest && e.target.closest('#pauseBtn')) return; e.stopImmediatePropagation(); A3_skipDescent(); }, true);
   /* Settings: "Deeps brightness" raises the darkness floor in Act III only (12% = the designed look) */
-  var anchor = $('usRow') || ($('volS') && $('volS').closest('.row')); if(anchor){ var row = document.createElement('div'); row.className = 'row pe'; row.id = 'dbRow';
+  var anchor = A3_DARK ? ($('usRow') || ($('volS') && $('volS').closest('.row'))) : null; if(anchor){ var row = document.createElement('div'); row.className = 'row pe'; row.id = 'dbRow';
     row.innerHTML = '<span>Deeps brightness<b id="dbVal"></b></span><div class="dbC"><input type="range" id="dbRange" min="12" max="45" step="1" aria-label="Deeps brightness (Act III darkness floor)"></div>';
     anchor.parentNode.insertBefore(row, anchor.nextSibling); var rg = $('dbRange');
     var lab2 = function(){ var v = Math.round(A3_floor()*100); $('dbVal').textContent = v+'%'+(v===12 ? ' · default' : ''); if(document.activeElement!==rg) rg.value = v; };
@@ -17610,28 +18017,28 @@ var A3_ls0 = loadSave; loadSave = function(){ var r = A3_ls0.apply(this, argumen
    15. CODEX entries (read by 52-codex.js), the Deeps trial (dev), DEV helpers
    ===================================================================================== */
 if(typeof CX_FOE!=='undefined'){
-  CX_FOE.gloam = {n:'Gloamling', role:'Dark-runner swarm', el:'storm', how:'A low soot creature that circles to your dark side, crouches for half a second and lunges in its colour. In light it is slow and takes 40% more damage; in the dark it runs fast.', tip:'Keep them in your lantern. Their eyes always show, even when their bodies do not.'};
-  CX_FOE.wickmoth = {n:'Wick-moth', role:'Light-thief', el:'flame', how:'Flies to the nearest light and drinks it: each moth on you shrinks your lantern by 1 m, and a moth on a sconce snuffs it in 2 s. It never attacks. One hit kills it, and it bursts into four slow sparks of its colour.', tip:'Shoot moths before they reach a sconce you need. Match the colour of their sparks.'};
-  CX_FOE.snuffw = {n:'Snuff-warden', role:'Lantern caster', el:'frost', how:'Carries a hooded lantern. The hood opens before it fires a fan of bolts in its colour, so its own light is the tell. Kill it and its lantern keeps burning on the floor for 12 s.', tip:'A dead warden is a light you can fight in.'};
-  CX_FOE.ashhollow = {n:'Ash Hollow', role:'Light-bound brute', el:'flame', pz:1.18, how:'A hollow shell of fused ash. It only takes damage while it stands in light, and it only moves while it stands in the dark. Its slam and charge are a brute\'s, in its colour.', tip:'Hold it inside your lantern: it freezes and its armour opens. Or drag it to a lit sconce.'};
+  CX_FOE.gloam = {n:'Gloamling', role:'Flanking swarm', el:'storm', how:'A low soot creature that circles to your side, crouches for half a second and lunges in its colour. It hunts in pairs from the later rounds.', tip:'Turn to face the pair. The crouch is your cue to match its colour.'};
+  CX_FOE.wickmoth = {n:'Wick-moth', role:'Lantern moth', el:'flame', how:'Flies to the nearest hero (or a lit lantern, in the last round) and hovers there. It never attacks. One hit kills it, and it bursts into four slow sparks of its colour.', tip:'Pop moths at range, then match the colour of their sparks.'};
+  CX_FOE.snuffw = {n:'Snuff-warden', role:'Lantern caster', el:'frost', how:'Carries a hooded lantern. The hood opens before it fires a fan of bolts in its colour, so its own light is the tell. Kill it and its lantern keeps burning on the floor for a while.', tip:'Watch the hood: when it lifts, the fan is coming.'};
+  CX_FOE.ashhollow = {n:'Ash Hollow', role:'Heavy brute', el:'flame', pz:1.18, how:'A hollow shell of fused ash around a glowing void. Its slam and charge are a brute\'s, in its colour.', tip:'Keep your distance and watch the wind-up: the charge runs in a straight line.'};
   if(typeof CX_FIRST!=='undefined'){ CX_FIRST.gloam = 21; CX_FIRST.wickmoth = 22; CX_FIRST.snuffw = 24; CX_FIRST.ashhollow = 27; } }
-if(typeof CX_ROUND!=='undefined'){ CX_ROUND.kindle = {g:'star', t:'Act III. Dash through unlit sconces to kindle them, and keep enough lit at the same time. They gutter out, and wick-moths snuff them.'};
-  CX_ROUND.ember = {g:'star', t:'Act III. Walk over the ember-heart in the centre and carry it to an unlit sconce. Your lantern grows while you carry it, but dashing drops it.'};
-  CX_ROUND.vigil = {g:'survive', t:'Act III, the breather before the boss. A short, quiet round: hold on until the Deep wakes.'};
+if(typeof CX_ROUND!=='undefined'){ if(A3_DARK) CX_ROUND.kindle = {g:'star', t:'Act III. Dash through unlit sconces to kindle them, and keep enough lit at the same time. They gutter out, and wick-moths snuff them.'};
+  if(A3_DARK) CX_ROUND.ember = {g:'star', t:'Act III. Walk over the ember-heart in the centre and carry it to an unlit sconce. Your lantern grows while you carry it, but dashing drops it.'};
+  CX_ROUND.vigil = {g:'survive', t:'Act III, the breather before the boss. A short, quiet round: hold on until the last round wakes.'};
   CX_ROUND.undermaw = {g:'boss', t:'Act III, the last wave. The Undermaw, the furnace idol the Pit was dug to cage.'}; }
-if(typeof CX_BOSS!=='undefined'){ CX_BOSS.undermaw = {n:'The Undermaw', act:'Act III', el:'flame', pz:0.9, round:30, where:'the Kindling Deeps',
-  lore:'The iron furnace idol the Pit was dug to cage. Its heat makes the lava above; every cheer is fuel. It hoards all the light in the Deeps: its only glow comes from its doors.',
+if(typeof CX_BOSS!=='undefined'){ CX_BOSS.undermaw = {n:'The Undermaw', act:'Act III', el:'flame', pz:0.9, round:30, where:'the Thornwall Garden',
+  lore:'The iron furnace idol the Pit was dug to cage. Its heat makes the lava above; every cheer is fuel. It broke out under the Thornwall Garden: its only glow comes from its doors.',
   moves:[['Doorlight breath','One furnace door opens and throws a cone of its colour across the floor. You can see inside the cone. A moment later the breath falls along it: match the door\'s colour or step out of the light.'],
     ['Fist slam','An arm rises and its fist glows over a circle in its colour, then slams. It breaks pillars.'],
     ['Dragging chains','Its chains drag across the floor as coloured bands. Two bands are always half a second apart.'],
-    ['The Gaze','In the last phase the maw slit opens. Anyone standing in sconce light (not their own lantern) is marked by a line and shot three times in the open door\'s colour.']],
-  phases:[['100–65%','Doorlight: light shows where its breath will fall. Gloamlings come from the dark.'], ['65–30%','Smother: the doors shut and the dark deepens. Its armour opens only while 2 kindled sconces light it (warm shafts reach its chest); otherwise it takes a third of the damage. Moths stream from its stacks to snuff them.'], ['Under 30%','The Gaze: stay out of sconce light and strike from the dark. Its slit takes extra damage.']],
-  tips:'Every attack it has carries a colour and can be absorbed. Kindle sconces with a dash; kill moths before they reach them.'}; }
+    ['The Gaze','In the last phase the maw slit opens. Anyone standing in a hedge lantern\'s glow is marked by a line and shot three times in the open door\'s colour.']],
+  phases:[['100–65%','Doorlight: light shows where its breath will fall. Gloamlings come through the hedges.'], ['65–30%','Smother: the doors shut. Its armour opens only while 2 lit hedge lanterns reach it (warm shafts reach its chest); otherwise it takes a third of the damage. Moths stream from its stacks to snuff them.'], ['Under 30%','The Gaze: stay out of the lanterns\' glow on the floor. Its slit takes extra damage.']],
+  tips:'Every attack it has carries a colour and can be absorbed. Dash through a hedge lantern to light it; kill moths before they reach them.'}; }
 if(typeof CX_rounds==='function'){ var A3_cxr0 = CX_rounds; CX_rounds = function(){ var out = A3_cxr0.apply(this, arguments);
     try{ for(var i=0;i<out.length;i++){ var id = out[i].id; if(id==='r_kindle' || id==='r_ember' || id==='r_vigil' || id==='r_undermaw'){ out[i].cat = 'Act III'; } }
-      out.push({id:'act3', grp:'Acts', g:'arch', cat:'Act', name:'Act III · The Kindling Deeps', sub:'Waves 21 to 30', known:!!(save.acts && save.acts.open && save.acts.open[3]), body:function(){
+      out.push({id:'act3', grp:'Acts', g:'arch', cat:'Act', name:A3_DARK ? 'Act III · The Kindling Deeps' : 'Act III · The Thornwall Garden', sub:'Waves 21 to 30', known:!!(save.acts && save.acts.open && save.acts.open[3]), body:function(){
         var rows = []; for(var w in A3_PLAN){ var ty = A3_PLAN[w].type; rows.push(['Wave '+w, CX_tc(OBJS[ty] ? OBJS[ty].name : ty)]); }
-        return CX_p('Break the Stormwright in a normal run and you may descend into the Cinderdark, the stokers\' galleries under the Pit. Curses break, boons stay, and the stake stays at risk. In the dark you see bodies only in light, but every attack and every eye still glows. Dash through sconces to kindle them.')+CX_tbl(rows)+CX_tbl([['Your best', save.acts && save.acts.a3best ? 'Wave '+save.acts.a3best : 'Not yet reached']]); }}); }catch(err){}
+        return CX_p('Break the Stormwright in a normal run and you may enter the Thornwall Garden, the old pleasure garden the Pit was dug in, now walled with living hedge. Curses break, boons stay, and the stake stays at risk. The Undermaw waits at round 30.')+CX_tbl(rows)+CX_tbl([['Your best', save.acts && save.acts.a3best ? 'Wave '+save.acts.a3best : 'Not yet reached']]); }}); }catch(err){}
     return out; }; }
 
 /* Deeps trial (dev, next to the Stormwright trial): wave 21 with 20 random boons, practice run */
@@ -17639,8 +18046,8 @@ function A3_trial(cls, wave){ var k = cls || (typeof LB!=='undefined' && LB.cls)
   for(var w=1; w<=20; w++){ G.wave = w; var picks = rollBoons(), b = null; for(var i=0;i<picks.length;i++) if(picks[i].spell && (!P.spells[0] || !P.spells[1])){ b = picks[i]; break; } if(!b) b = picks[Math.floor(Math.random()*picks.length)]; if(!b) continue;
     if(b.spell){ var own = null; for(var s2=0;s2<2;s2++) if(P.spells[s2] && P.spells[s2].id===b.spell) own = P.spells[s2]; if(own) own.lv++; else { var slot = !P.spells[0]?0:1; P.spells[slot] = {id:b.spell, lv:1, cd:0}; } } else if(b.ap) b.ap(); }
   G.waveActive = false; A3_enterAct(); resetPillars(); P.x = 0; P.z = 0.6; P.px = 0; P.pz = 0.6; P.hp = P.maxHp; G.stake = 0;
-  refreshSkills(); updateHudStatic(); startWave(wave||21); after(2.4, function(){ showHint('<b style="color:#ffb060">Deeps trial</b>: 20 random boons applied. Practice run, no Glory.', 4); }); }
-if(TEST_BOSS){ (function(){ var b = document.createElement('button'); b.className = 'btn'; b.id = 'a3TrialBtn'; b.textContent = '▼ Deeps trial'; var bb = $('swTrialBtn') || $('a2TrialBtn') || $('bossBtn'); if(!bb) return; bb.parentNode.insertBefore(b, bb.nextSibling); b.style.display = 'none'; b.addEventListener('click', function(){ SFX.click(); A3_trial(); }); })(); }
+  refreshSkills(); updateHudStatic(); startWave(wave||21); after(2.4, function(){ showHint('<b style="color:#ffb060">Garden trial</b>: 20 random boons applied. Practice run, no Glory.', 4); }); }
+if(TEST_BOSS){ (function(){ var b = document.createElement('button'); b.className = 'btn'; b.id = 'a3TrialBtn'; b.textContent = '▼ Garden trial'; var bb = $('swTrialBtn') || $('a2TrialBtn') || $('bossBtn'); if(!bb) return; bb.parentNode.insertBefore(b, bb.nextSibling); b.style.display = 'none'; b.addEventListener('click', function(){ SFX.click(); A3_trial(); }); })(); }
 
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.act3 = { A3:A3, PLAN:A3_PLAN, T:A3T, E:A3E, LP:A3_LP, trial:A3_trial,
   enter:function(cls){ beginRun(cls||'mage'); G.god = true; G.waveActive = false; A3_enterAct(); resetPillars(); P.x = 0; P.z = 0.6; updateHudStatic(); return G.act; },
@@ -17659,14 +18066,16 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.act3 = { A3:A3, PLAN
     boss:U ? {phase:U.phase, hp:U.e ? Math.round(U.e.hp)+'/'+Math.round(U.e.maxHp) : 0, act:U.act ? U.act.id : '', ent:!!U.ent, dying:!!U.dying, lit:A3_umLitN()} : null, lifted:A3.lifted.length, uncol:G.uncol||0}; } }; }
 /* ---------- 72 TUTORIAL: the arena briefing (owned by the tutorial agent). Prefix TUT_. ----------
    A short, skippable briefing pops up the first time the player stands in each arena: the Pit (Act I: basics + party size, swapping,
-   Glory and boss scaling), the Storm Spire (Act II) and the Kindling Deeps (Act III). The game is frozen while it is open (G.paused,
+   Glory and boss scaling), the Storm Spire (Act II) and the Thornwall Garden (Act III). The game is frozen while it is open (G.paused,
    no pause screen); Fight / Skip / Enter / Space / Escape close it and play resumes. One click from the first boot into gameplay.
+   Act I: the briefing is the full How to play (53-howto.js cards opened in play via openHowto(TUT_fight), #howto.tutOn adds a Fight button and
+   follows the UI scale --uiM). Acts II/III keep the short #tutBox page (also zoomed by --uiM).
    Save: save.tut = {a1, a2, a3} (1 = seen). The key is predeclared here, before loadSave runs, so it survives loadSave.
    The briefing replaces the pre-run auto-open of the field manual (save.hints.howto is set while a1 is unseen); How to play stays in the camp.
    Every party number is read from PARTY (60-party.js): PARTY.glory, PARTY.bossHp, PARTY.label, PARTY.swapCd.
    Wraps (each calls the original): loadSave. Hooks: RENDER_HOOKS (detects arena entry), ESC.register('tutorial'), a capture-phase keydown.
    The How-to Party card (built in 60-party.js) gets its text/keys refreshed here. DEV: window.__feat.tut / window.__TUT_OFF = true for bots. */
-var TUT = {open:false, act:0, since:0, el:null};
+var TUT = {open:false, act:0, since:0, el:null, mode:''};
 if(!save.tut || typeof save.tut!=='object' || Array.isArray(save.tut)) save.tut = {};
 function TUT_s(){ var s = save.tut; if(!s || typeof s!=='object' || Array.isArray(s)) s = save.tut = {}; return s; }
 var TUT_ls0 = loadSave; loadSave = function(){ var r = TUT_ls0.apply(this, arguments); var s = TUT_s(); if(!s.a1 && save.hints) save.hints.howto = 1; return r; };
@@ -17676,6 +18085,8 @@ if(!TUT_s().a1 && save.hints) save.hints.howto = 1;
 (function(){ var st = document.createElement('style'); st.id = 'tutCss'; st.textContent = [
 '#tutBox{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:calc(var(--sat,0px) + 10px) calc(var(--sar,0px) + 12px) calc(var(--sab,0px) + 10px) calc(var(--sal,0px) + 12px);background:radial-gradient(ellipse 120% 95% at 50% 45%,rgba(9,7,8,.55) 30%,rgba(5,4,5,.9));cursor:default}',
 '#tutBox[hidden]{display:none}',
+'#tutBox{zoom:var(--uiM,1)}#howto{zoom:var(--uiM,1)}',
+'#howto #tutFight{display:none;color:#ffd9b8;background:linear-gradient(180deg,#4a1e0e,#2c120a 60%,#1e0c07);box-shadow:inset 0 0 0 1px #b04a1c}#howto.tutOn #tutFight{display:inline-block}#howto #tutFight:hover{color:#fff1e2;box-shadow:inset 0 0 0 1px #e0662a}',
 '#tutBox .tP{position:relative;width:min(640px,100%);max-height:100%;display:flex;flex-direction:column;color:#d8cbb8;font-family:Rubik,system-ui,sans-serif;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,rgba(255,240,220,.035),transparent 35%),linear-gradient(180deg,#221b1d,#191416);box-shadow:inset 0 0 0 1px #3b3033,inset 0 1px 0 1px rgba(220,200,180,.09),0 10px 40px rgba(0,0,0,.6);clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}',
 '#tutBox .tP:before{content:"";position:absolute;left:8px;top:0;width:56px;height:2px;background:#ff7a2e}',
 '#tutBox .tTop{display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #2a2224;flex:none}',
@@ -17711,6 +18122,8 @@ if(!TUT_s().a1 && save.hints) save.hints.howto = 1;
   b.innerHTML = '<div class="tP" role="dialog" aria-modal="true" aria-labelledby="tutTtl"><header class="tTop"><div><small id="tutKick"></small><h2 id="tutTtl"></h2></div><div class="tSp"></div><button class="tBtn" id="tutSkip">Skip</button></header>'+
     '<div class="tB" id="tutBody"></div><footer class="tF"><span class="nt" id="tutNote"></span><button class="tGo" id="tutGo">Fight ›</button></footer></div>';
   document.body.appendChild(b); TUT.el = b;
+  var sk = $('htSkip'); if(sk && !$('tutFight')){ var fb = document.createElement('button'); fb.className = 'hxBtn'; fb.id = 'tutFight'; fb.textContent = 'Fight ›'; sk.parentNode.insertBefore(fb, sk);
+    fb.addEventListener('click', function(){ if(TUT.open && TUT.mode==='howto'){ audioInit(); SFX.click(); closeHowto(true); } }); }
   $('tutGo').addEventListener('click', function(){ TUT_close(); });
   $('tutSkip').addEventListener('click', function(){ TUT_close(); });
   b.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
@@ -17741,12 +18154,12 @@ function TUT_page(act){ var T = G.touch;
     TUT_r(TUT_ic('💀'), 'Knock <b>foes over the edge</b>: they die at once. A fall costs you HP.')+
     TUT_r(TUT_ic('⚡'), '<b>Copper rods</b> strike in their colour along a line: match it or step off.')+
     TUT_r(TUT_ic('👑'), 'The Court rewards a show: fill <b>Favour</b> for gifts.')};
-  if(act===3) return {kick:'Act III · first descent', title:'The Kindling Deeps', note:'The dark never hides an attack.', body:
-    '<div class="tSec">The dark</div>'+
-    TUT_r(TUT_ic('🏮'), 'You see <b>bodies only in light</b>. Every attack and every eye still glows.')+
-    TUT_r(T ? TUT_ic('💨') : TUT_k('Space'), '<b>Dash through an unlit sconce</b> to kindle it. Lit sconces gutter out.')+
-    TUT_r(TUT_dots(), 'Burning and flame-marked foes shed light. Light slows the things that hunt in the dark.')+
-    TUT_r(TUT_ic('🕯️'), '<b>Wick-moths</b> drink light: one hit kills them.')};
+  if(act===3) return {kick:'Act III · first visit', title:'The Thornwall Garden', note:'Each new foe gets its own hint the first time.', body:
+    '<div class="tSec">The Garden</div>'+
+    TUT_r(TUT_ic('🌿'), 'A daylit garden arena: <b>hedge walls</b>, a canal and pools. New foes come through the <b>hedge gates</b>.')+
+    TUT_r(TUT_dots(), '<b>Gloamlings</b> flank you in pairs and lunge low. Match the colour on their claws.')+
+    TUT_r(TUT_ic('🦋'), '<b>Wick-moths</b> never strike: one hit pops them into a few sparks of their colour.')+
+    TUT_r(TUT_ic('🏮'), 'The <b>Undermaw</b> waits at round 30. There, '+(T ? 'dash' : TUT_k('Space')+'-dash')+' through a <b>hedge lantern</b> to light it.')};
   var w = T ? null : [kl('Digit1'), kl('Digit2'), kl('Digit3')];
   var basics = '<div class="tSec">The basics</div>'+
     (T ? TUT_r(TUT_ic('🕹️'), '<b>Left thumb: move.</b> You aim and attack on your own.') :
@@ -17758,15 +18171,19 @@ function TUT_page(act){ var T = G.touch;
   return {kick:'The Pit · first entry', title:'Arena briefing', note:'Full field manual: How to play, at the camp.', body:basics+TUT_partyHtml()}; }
 
 /* ---------- open / close (frozen while open; never the pause screen) ---------- */
-function TUT_show(act){ if(TUT.open || !TUT.el) return false; var pg = TUT_page(act); TUT.open = true; TUT.act = act;
-  G.paused = true; try{ CG.gameplayStop(); }catch(err){} unlockPointer(); for(var k in keys) keys[k] = false; mouseDown = false;
-  document.body.classList.remove('playing'); var cur = $('cursor'); if(cur) cur.hidden = true;
-  save.hints.howto = 1;
+function TUT_freeze(){ G.paused = true; try{ CG.gameplayStop(); }catch(err){} unlockPointer(); for(var k in keys) keys[k] = false; mouseDown = false;
+  document.body.classList.remove('playing'); var cur = $('cursor'); if(cur) cur.hidden = true; save.hints.howto = 1; }
+/* Act I: the briefing IS the full How to play (53-howto.js cards, one source of truth), opened in play with a Fight button on every page */
+function TUT_showHowto(){ if(TUT.open || typeof openHowto!=='function') return false; TUT.open = true; TUT.act = 1; TUT.mode = 'howto'; TUT_freeze();
+  $('howto').classList.add('tutOn'); openHowto(TUT_fight); try{ $('htNext').focus({preventScroll:true}); }catch(err){} return true; }
+function TUT_fight(){ if(!TUT.open) return; TUT_s().a1 = 1; persist(); TUT.open = false; TUT.mode = ''; $('howto').classList.remove('tutOn');
+  if(G.state==='play'){ G.paused = false; showScreen(null); try{ CG.gameplayStart(); }catch(err){} requestLock(); } }
+function TUT_show(act){ if(act===1 && $('howto') && typeof HX_CARDS!=='undefined') return TUT_showHowto(); if(TUT.open || !TUT.el) return false; var pg = TUT_page(act); TUT.open = true; TUT.act = act; TUT.mode = 'box'; TUT_freeze();
   $('tutKick').textContent = pg.kick; $('tutTtl').textContent = pg.title; $('tutBody').innerHTML = pg.body; $('tutNote').textContent = pg.note; $('tutBody').scrollTop = 0;
   $('tutGo').innerHTML = act===1 ? 'Fight ›' : 'Onward ›'; TUT.el.hidden = false;
   try{ $('tutGo').focus({preventScroll:true}); }catch(err){} return true; }
-function TUT_hide(){ TUT.open = false; if(TUT.el) TUT.el.hidden = true; try{ if(document.activeElement && TUT.el.contains(document.activeElement)) document.activeElement.blur(); }catch(err){} }
-function TUT_close(){ if(!TUT.open) return; TUT_s()['a'+TUT.act] = 1; persist(); TUT_hide(); audioInit(); if(SFX && SFX.click) SFX.click();
+function TUT_hide(){ TUT.open = false; if(TUT.mode==='howto'){ $('howto').classList.remove('tutOn'); if(typeof HT!=='undefined') HT.then = null; } TUT.mode = ''; if(TUT.el) TUT.el.hidden = true; try{ if(document.activeElement && TUT.el.contains(document.activeElement)) document.activeElement.blur(); }catch(err){} }
+function TUT_close(){ if(!TUT.open) return; if(TUT.mode==='howto'){ audioInit(); SFX.click(); closeHowto(true); return; } TUT_s()['a'+TUT.act] = 1; persist(); TUT_hide(); audioInit(); if(SFX && SFX.click) SFX.click();
   if(G.state==='play'){ G.paused = false; showScreen(null); try{ CG.gameplayStart(); }catch(err){} requestLock(); } }
 
 /* which arena wants its briefing now (0 = none). Waits until the act's ascent / descent is over and no screen is up. */
@@ -17781,6 +18198,8 @@ RENDER_HOOKS.push(function TUT_render(){ if(TUT.open){ if(G.state!=='play') TUT_
 
 /* keys while open: Enter / Space = Fight; everything else is swallowed (no dash, pause, swap or ward). Escape goes to 62-escape. */
 window.addEventListener('keydown', function(e){ if(!TUT.open) return; if(e.key==='Escape' || e.code==='Escape') return; e.stopImmediatePropagation();
+  if(TUT.mode==='howto'){ if(e.code==='Tab' || e.code==='Space' || e.code.indexOf('Arrow')===0) e.preventDefault(); if(e.repeat) return;
+    if(e.code==='Enter' || e.code==='NumpadEnter'){ e.preventDefault(); TUT_close(); } else if(e.code==='ArrowRight' || e.code==='Space' || e.code==='KeyD') HX_go(1); else if(e.code==='ArrowLeft' || e.code==='KeyA') HX_go(-1); return; }
   if(e.code==='Enter' || e.code==='NumpadEnter' || e.code==='Space'){ e.preventDefault(); if(!e.repeat) TUT_close(); return; }
   var b = $('tutBody'); if(e.code==='ArrowDown' || e.code==='PageDown'){ e.preventDefault(); b.scrollTop += e.code==='PageDown' ? b.clientHeight*0.8 : 40; }
   else if(e.code==='ArrowUp' || e.code==='PageUp'){ e.preventDefault(); b.scrollTop -= e.code==='PageUp' ? b.clientHeight*0.8 : 40; }
@@ -17797,7 +18216,426 @@ if(typeof HX_CARDS!=='undefined' && typeof PARTY!=='undefined') HX_CARDS.forEach
 
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.tut = {TUT:TUT, show:function(a){ return TUT_show(a||1); }, close:function(){ TUT_close(); return TUT.open; },
   seen:function(){ return JSON.parse(JSON.stringify(TUT_s())); }, reset:function(){ save.tut = {}; persist(); return save.tut; }, off:function(v){ window.__TUT_OFF = v!==false; return window.__TUT_OFF; } }; }
-// 73-garden.js — Thornwall Garden arena (Act III look), NPCs, hub gates
+/* ---------- 73-garden.js · THE THORNWALL GARDEN: the Act III arena (waves 21-30), its people, the hub's gate bosses. Prefix GDN_ / GDH_ / GARDEN. ----------
+   Owner-approved look (design/research/13-themes.md §3, mocks design/research/shots/garden-*.png). Replaces the dark "Cinderdark" look of Act III:
+   71-act3.js (A3_DARK = false) calls GARDEN.enter() / GARDEN.exit() from A3_envShow. GARDEN.enter() hides the shell's `arena` group (floor, lava,
+   rim, Pit stands and crowd, braziers, the Pitmaster's box) and adds GDN.root; GARDEN.exit() restores everything it touched.
+   Layout (world units, ARENA_R 15.6):  floor disc 0..R (sage stone rings, worn centre medallion, gravel gate paths, four frost pools at r 11.6)
+     · curb + living hedge ring r 15.6..16.9 (gaps + topiary arches at the 4 gates, brass lanterns on the posts)
+     · pale-blue canal r 16.9..18.4 (lily pads, stone bridges at the gates; it replaces the lava trench) · limestone terraces r 18.6..24.2 (4 tiers, planters, crowd)
+     · arcade back wall r 24.4 (arches, ivy, rose trellis, pergola gate tunnels) · landmarks: the lightning-split great oak (A 150°, roots break the terraces)
+       and the tiered fountain (A 315°), the herald's pavilion (A 225°, top centre) and the seedmonger's stall (gate 0°).
+   People (CHARS.gnpc, visual only): Pell Greenhand blows his horn in the pavilion at every round start; Seedmonger Anwen's stall lamp lights while an
+   offering is due (reads OF_due / OF.on from 63-offerings.js, read-only). During the Undermaw (wave 30) the pavilion, Pell and the crowd behind it step
+   aside, because the idol rises there.
+   Draw calls (all merged / instanced): static lit 1 (+1 shadow), pavilion 1 (+1 shadow), emissive 1, water 2, floor 1, tufts 1, crowd 2 (LOD), trees 1, lawn 1.
+   Crowd LOD: ~700 figures as 2 instanced draws (a 4-sided body + an octahedron head; arms and hats are extra instances of the same two meshes).
+   Palette (doc §3): floor sage stone, hedge #2f5a2a top / #6f9a4a faces, sky #7fbfd6, fog #c4dcb4, pools #8fd8ea, brass braziers. Nothing white.
+   Decor never uses a ward hue (flame orange, frost cyan, storm violet) except the oak's storm scar (Hesk's motif).
+   Ward readability on green (§3): circle telegraphs get a dark under-ring (oxblood for flame, deep teal for frost), line telegraphs a dark under-plane.
+   No per-frame allocation in the render hooks. The dev-only mock props (hedge fire, floor lines, seed pods, pruning wall) are not part of this file. */
+var GDN = {built:false, on:false, root:null, crowd:null, cb:[], ch:0, mats:[], saved:null, R:ARENA_R, lantern:[], pool:[], fx:{}, horn:0, umHide:false, lampOn:-1};
+var GDN_C = { STONE:0x8e967a, STONE2:0x838b70, STONE3:0x7a8268, WORN:0xa3a488, MOSS:0x6a8248, MOSS2:0x55703e, GROUT:0x5f7149, GRAVEL:0xa69e80,
+  LIME:0xc2b28c, LIME2:0xaa9a77, LIME3:0x857659, LIME4:0x655845, HEDGE:0x2f5a2a, HEDGE2:0x3a6630, HEDGE3:0x5a8a3e, HEDGE4:0x6c9846,
+  BARK:0x5a4330, BARK2:0x3f2f23, BARK3:0x75583c, LEAF:0x4f7d36, LEAF2:0x3d6a2e, LEAF3:0x689a45, LEAF4:0x2f5426,
+  BRASS:0xb08a4a, BRASS2:0x8a6a3a, VERD:0x5f9a86, VERD2:0x467a6a, ROSE:0xe48aa2, ROSE2:0xc65f7e, BUTTER:0xf2d27a, CREAM:0xd4c7a5,
+  WATER:0x8fd8ea, WATER2:0x6cc3db, LILY:0x4f8a3a, WOOD:0x7a5a3a, WOOD2:0x5a412a, CANVAS:0xd9cba5, CANVAS2:0x9a6a4a, LAMP:0xffd89a, LAMP2:0xffb45a, SCAR:0xc06bff, SCAR2:0xd6a6ff };
+/* LOD geometry (the camera is always above the garden, so downward faces are never seen): boxes without their bottom face (10 tris), a low-res half
+   torus for the arches (30 tris instead of 140), a riser panel (front face only) and a seat lip (top + front) for the terraces */
+function GDN_faces(geo, keep){ var g = geo.index ? geo.toNonIndexed() : geo, pa = g.attributes.position.array, na = g.attributes.normal.array, P = [], N = [];
+  for(var t=0;t<pa.length/9;t++){ var nx = na[t*9], ny = na[t*9+1], nz = na[t*9+2], ok = false; for(var k=0;k<keep.length;k++) if(nx*keep[k][0] + ny*keep[k][1] + nz*keep[k][2] > 0.9) ok = true;
+    if(ok) for(var j=0;j<9;j++){ P.push(pa[t*9+j]); N.push(na[t*9+j]); } }
+  var o = new THREE.BufferGeometry(); o.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); o.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); return o; }
+var GDN_G = { box:GDN_faces(new THREE.BoxGeometry(1,1,1), [[1,0,0],[-1,0,0],[0,1,0],[0,0,1],[0,0,-1]]), torH:new THREE.TorusGeometry(0.5, 0.045, 3, 5, Math.PI),
+  front:GDN_faces(new THREE.BoxGeometry(1,1,1), [[0,0,-1]]), lip:GDN_faces(new THREE.BoxGeometry(1,1,1), [[0,1,0],[0,0,-1]]) };
+var GDN_GATES = [0, Math.PI/2, Math.PI, Math.PI*1.5], GDN_OAK = 150*Math.PI/180, GDN_FOUNT = 315*Math.PI/180, GDN_PAV = 225*Math.PI/180;
+
+/* ---------- merged geometry builder: parts in a parent frame, per-vertex colour, top-lit value gradient ---------- */
+var _gdM = new THREE.Matrix4(), _gdM2 = new THREE.Matrix4(), _gdQ = new THREE.Quaternion(), _gdE = new THREE.Euler(), _gdV = new THREE.Vector3(), _gdS = new THREE.Vector3(), _gdC = new THREE.Color(), _gdN3 = new THREE.Matrix3();
+function GDN_rng(seed){ var s = seed>>>0; return function(){ s = (s + 0x6D2B79F5)>>>0; var t = s; t = Math.imul(t ^ (t>>>15), t|1); t ^= t + Math.imul(t ^ (t>>>7), t|61); return ((t ^ (t>>>14))>>>0)/4294967296; }; }
+function GDN_B(lo, hi){ this.p = []; this.n = []; this.c = []; this.F = new THREE.Matrix4(); this.lo = lo==null ? -1 : lo; this.hi = hi==null ? 7 : hi; this.flat = false; }
+/* parent frame: polar (a, r) = local +X tangent, +Z outward, +Y up; or a plain position + yaw */
+GDN_B.prototype.pol = function(a, r, y){ this.F.makeRotationY(Math.PI/2 - a); this.F.setPosition(Math.cos(a)*r, y||0, Math.sin(a)*r); return this; };
+GDN_B.prototype.at = function(x, y, z, yaw, s){ this.F.makeRotationY(yaw||0); if(s) this.F.scale(_gdS.set(s, s, s)); this.F.setPosition(x||0, y||0, z||0); return this; };
+GDN_B.prototype.id = function(){ this.F.identity(); return this; };
+GDN_B.prototype.add = function(geo, x,y,z, sx,sy,sz, rx,ry,rz, col, shade){ var g = geo.index ? nonIdx(geo) : geo, pa = g.attributes.position.array, na = g.attributes.normal.array, n = pa.length/3;
+  _gdE.set(rx||0, ry||0, rz||0); _gdQ.setFromEuler(_gdE); _gdM.compose(_gdV.set(x,y,z), _gdQ, _gdS.set(sx,sy,sz)); _gdM2.multiplyMatrices(this.F, _gdM); _gdN3.getNormalMatrix(_gdM2);
+  var flip = _gdM2.determinant() < 0; _gdC.setHex(col); var r = _gdC.r, gg = _gdC.g, b = _gdC.b, sh = shade==null ? 1 : shade, span = this.hi - this.lo;
+  for(var i=0;i<n;i++){ var ii = flip ? (i - i%3) + (2 - i%3) : i; _gdV.set(pa[ii*3], pa[ii*3+1], pa[ii*3+2]).applyMatrix4(_gdM2); this.p.push(_gdV.x, _gdV.y, _gdV.z);
+    var k = this.flat ? 1 : sh*(0.8 + 0.3*Math.min(1, Math.max(0, (_gdV.y - this.lo)/span)));
+    this.c.push(r*k, gg*k, b*k); _gdV.set(na[ii*3], na[ii*3+1], na[ii*3+2]).applyMatrix3(_gdN3).normalize(); this.n.push(_gdV.x, _gdV.y, _gdV.z); }
+  return this; };
+/* raw triangle soup (floor tiles, water) in world space */
+GDN_B.prototype.tri = function(ax,ay,az, bx,by,bz, cx,cy,cz, col, ny){ _gdC.setHex(col); var cyy = (bz-az)*(cx-ax) - (bx-ax)*(cz-az);   /* keep every flat face pointing up (+Y) */
+  if(cyy < 0) this.p.push(ax,ay,az, cx,cy,cz, bx,by,bz); else this.p.push(ax,ay,az, bx,by,bz, cx,cy,cz); for(var i=0;i<3;i++){ this.c.push(_gdC.r, _gdC.g, _gdC.b); this.n.push(0, ny==null?1:ny, 0); } return this; };
+/* flat annular sector (top face, y up), k arc steps */
+GDN_B.prototype.sector = function(r0, r1, a0, a1, y, col, k){ k = k || Math.max(1, Math.ceil((a1-a0)*r1/0.9)); for(var i=0;i<k;i++){ var t0 = a0 + (a1-a0)*i/k, t1 = a0 + (a1-a0)*(i+1)/k, c0 = Math.cos(t0), s0 = Math.sin(t0), c1 = Math.cos(t1), s1 = Math.sin(t1);
+    this.tri(c0*r0, y, s0*r0, c1*r1, y, s1*r1, c1*r0, y, s1*r0, col); this.tri(c0*r0, y, s0*r0, c0*r1, y, s0*r1, c1*r1, y, s1*r1, col); } return this; };
+GDN_B.prototype.disc = function(x, z, r, y, col, k){ k = k||12; for(var i=0;i<k;i++){ var a0 = i/k*TAU, a1 = (i+1)/k*TAU; this.tri(x, y, z, x+Math.cos(a1)*r, y, z+Math.sin(a1)*r, x+Math.cos(a0)*r, y, z+Math.sin(a0)*r, col); } return this; };
+GDN_B.prototype.geo = function(){ var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3)); g.computeBoundingSphere(); return g; };
+function GDN_mat(o){ var m = new THREE.MeshPhongMaterial({vertexColors:true, flatShading:true, shininess:o&&o.shin!=null?o.shin:6, specular:o&&o.spec!=null?o.spec:0x141810}); GDN.mats.push(m); return m; }
+function GDN_mesh(B, mat, cast, recv){ var m = new THREE.Mesh(B.geo(), mat); m.castShadow = !!cast; m.receiveShadow = recv!==false; m.matrixAutoUpdate = false; m.updateMatrix(); GDN.root.add(m); return m; }
+function GDN_ad(a, b){ var d = (b-a)%TAU; if(d > Math.PI) d -= TAU; if(d < -Math.PI) d += TAU; return d; }
+function GDN_nearGate(a, w){ for(var g=0;g<4;g++) if(Math.abs(GDN_ad(a, GDN_GATES[g])) < w) return true; return false; }
+function GDN_inSector(a, c, w){ return Math.abs(GDN_ad(a, c)) < w; }
+
+/* ---------- floor: sage stone rings, moss grout, worn centre, gravel gate paths, inlaid compass medallion ---------- */
+function GDN_floor(R){ var B = new GDN_B(), rnd = GDN_rng(21), C = GDN_C; B.flat = true;
+  B.sector(0, R, 0, TAU, -0.012, C.GROUT, 96);                                                        // moss grout under everything
+  /* medallion r < 2.1: pale worn disc, an 8-point compass rose in cream / moss, a brass ring */
+  B.disc(0, 0, 2.08, 0, C.STONE3, 32); B.disc(0, 0, 1.96, 0.001, C.WORN, 32);
+  for(var i=0;i<8;i++){ var a = i/8*TAU, L = i%2 ? 1.25 : 1.85, w = i%2 ? 0.2 : 0.3, ca = Math.cos(a), sa = Math.sin(a), cp = Math.cos(a+Math.PI/2), sp = Math.sin(a+Math.PI/2);
+    B.tri(ca*L, 0.002, sa*L, cp*w, 0.002, sp*w, -cp*w, 0.002, -sp*w, i%2 ? C.MOSS : C.CREAM); }
+  B.disc(0, 0, 0.32, 0.003, C.BRASS, 10);
+  B.sector(2.08, 2.26, 0, TAU, 0.001, C.BRASS2, 64);
+  /* tile rings: rim gets mossier, gate paths get gravel, a darker band every third ring */
+  var rings = [2.3, 3.55, 4.75, 5.95, 7.15, 8.35, 9.55, 10.75, 11.95, 13.15, 14.35, R];
+  for(var q=0;q<rings.length-1;q++){ var r0 = rings[q], r1 = rings[q+1], n = Math.max(8, Math.round(TAU*r1/1.45)), off = rnd(), band = q%3===2, edge = q/(rings.length-2);
+    for(var t=0;t<n;t++){ var a0 = (t+off)/n*TAU, a1 = (t+1+off)/n*TAU, am = (a0+a1)/2, gap = 0.035/r1*4;
+      var col = band ? C.STONE2 : C.STONE, x = rnd();
+      if(x < 0.16 + edge*0.3) col = mixc(col, C.MOSS, 0.25 + rnd()*0.3); else if(x > 0.88) col = C.STONE3; else if(x > 0.78 && edge < 0.45) col = mixc(col, C.WORN, 0.45);
+      if(GDN_nearGate(am, 0.07 + 0.9/r1) && r0 > 2.3) col = mixc(C.GRAVEL, C.STONE, rnd()*0.25);
+      _gdC.setHex(col); var v = 0.96 + rnd()*0.06; col = _gdC.setRGB(_gdC.r*v, _gdC.g*v, _gdC.b*v).getHex();
+      B.sector(r0 + 0.05, r1 - 0.05, a0 + gap, a1 - gap, 0, col, 2); } }
+  var m = new THREE.Mesh(B.geo(), new THREE.MeshLambertMaterial({vertexColors:true})); GDN.mats.push(m.material); m.receiveShadow = true; m.matrixAutoUpdate = false; GDN.root.add(m);
+  /* the floor's stone skirt (seen at the rim and in portrait) */
+  var S = new GDN_B(-3, 1); S.add(new THREE.CylinderGeometry(R+0.05, R-0.4, 2.6, 64, 1, true), 0, -1.31, 0, 1, 1, 1, 0, 0, 0, C.LIME4);
+  return S; }
+
+/* ---------- frost pools in the floor (pale blue, a stone lip, lily pads) + the canal, all in one water mesh ---------- */
+var GDN_POOLS = [[45, 11.6, 1.35], [135, 11.6, 1.35], [225, 11.6, 1.35], [315, 11.6, 1.35]];
+function GDN_water(R, S){ var W = new GDN_B(), C = GDN_C, rnd = GDN_rng(7); W.flat = true;
+  GDN_POOLS.forEach(function(p){ var a = p[0]*Math.PI/180, x = Math.cos(a)*p[1], z = Math.sin(a)*p[1]; GDN.pool.push({x:x, z:z, r:p[2]});
+    W.disc(x, z, p[2], 0.006, C.WATER2, 20); W.disc(x, z, p[2]*0.78, 0.008, C.WATER, 18); W.disc(x + 0.25, z - 0.2, p[2]*0.3, 0.01, 0xa6e0ee, 10);
+    S.at(x, 0, z, 0); S.add(G2.torus, 0, 0.03, 0, p[2]*2.08, p[2]*2.08, 0.5, Math.PI/2, 0, 0, C.LIME3);   // raised stone lip (walkable, 6 cm)
+    for(var l=0;l<3;l++){ var la = rnd()*TAU, lr = p[2]*(0.3 + rnd()*0.4); S.add(G2.cyl6, Math.cos(la)*lr, 0.02, Math.sin(la)*lr, 0.42, 0.02, 0.42, 0, rnd()*3, 0, C.LILY); } });
+  /* the canal ring between the hedge and the terraces */
+  W.sector(16.9, 18.45, 0, TAU, -0.42, C.WATER2, 128); W.sector(17.15, 18.2, 0, TAU, -0.41, C.WATER, 128);
+  for(var i=0;i<26;i++){ var a = rnd()*TAU; if(GDN_nearGate(a, 0.12)) continue; W.sector(17.3 + rnd()*0.6, 17.4 + rnd()*0.6 + 0.05, a, a + 0.05 + rnd()*0.08, -0.405, 0xaee4f0, 1); }
+  return W; }
+
+/* ---------- curb, hedge ring, topiary gate arches, lanterns ---------- */
+function GDN_hedge(R, S, E, N){ var C = GDN_C, rnd = GDN_rng(33), n = 72;
+  N.id(); N.add(new THREE.CylinderGeometry(16.95, 16.95, 0.5, 72, 1, true), 0, -0.2, 0, 1, 1, 1, 0, 0, 0, C.LIME3);                // curb faces
+  N.add(new THREE.CylinderGeometry(R+0.02, R+0.02, 0.14, 72, 1, true), 0, -0.02, 0, 1, 1, 1, 0, 0, 0, C.LIME3);
+  for(var i=0;i<n;i++){ var a = (i+0.5)/n*TAU; S.pol(a, 16.25, 0); N.F.copy(S.F); N.add(GDN_G.box, 0, -0.06, 0, 1.47, 0.14, 1.4, 0, 0, 0, i%2 ? C.LIME2 : C.LIME);   // curb top
+    if(GDN_nearGate(a, 0.1)) continue;
+    var h = 1.15 + rnd()*0.12, w = 1.5;
+    S.add(GDN_G.box, 0, h*0.5, 0.05, w, h, 0.95, 0, 0, 0, C.HEDGE2); N.add(GDN_G.box, 0, h*0.5 + 0.02, -0.02, w*1.01, h*0.9, 0.92, 0, 0, 0, C.HEDGE3, 0.92);
+    N.add(GDN_G.box, 0, h + 0.06, 0.05, w*1.02, 0.14, 0.86, 0, 0, 0, C.HEDGE4);
+    for(var c=0;c<1;c++) N.add(G2.ico0, -0.1 + rnd()*0.2, h + 0.1, 0.05 + (rnd()-0.5)*0.3, 0.95 + rnd()*0.3, 0.32, 0.55, 0, rnd()*3, 0, rnd() < 0.5 ? C.HEDGE3 : C.HEDGE4);
+    if(rnd() < 0.55){ var bc = rnd() < 0.6 ? C.ROSE : C.BUTTER; for(var f=0;f<3;f++) N.add(G2.oct, (rnd()-0.5)*1.2, 0.3 + rnd()*(h-0.4), -0.5, 0.13, 0.13, 0.08, 0, 0, 0, bc); }
+    if(rnd() < 0.3) N.add(G2.ico0, (rnd()-0.5)*1.0, 0.25, -0.62, 0.6, 0.45, 0.4, 0, rnd()*3, 0, C.HEDGE2);
+  }
+  /* hedge posts + brass lanterns every 45° (between gates) */
+  for(var p=0;p<8;p++){ var pa = (p+0.5)/8*TAU; S.pol(pa, 16.25, 0); S.add(GDN_G.box, 0, 0.8, 0.05, 1.05, 1.6, 1.05, 0, 0, 0, C.HEDGE2); S.add(G2.ico0, 0, 1.7, 0.05, 1.2, 0.7, 1.2, 0, 0.3, 0, C.HEDGE3);
+    S.add(G2.cyl6, 0, 2.15, 0.05, 0.08, 0.7, 0.08, 0, 0, 0, C.BRASS2); S.add(G2.cone4, 0, 2.62, 0.05, 0.4, 0.22, 0.4, 0, Math.PI/4, 0, C.BRASS2);
+    for(var q=0;q<4;q++){ var qa = q*Math.PI/2 + Math.PI/4; S.add(GDN_G.box, Math.sin(qa)*0.16, 2.38, 0.05 + Math.cos(qa)*0.16, 0.04, 0.32, 0.04, 0, 0, 0, C.BRASS); }
+    S.add(GDN_G.box, 0, 2.22, 0.05, 0.38, 0.05, 0.38, 0, 0, 0, C.BRASS);
+    E.pol(pa, 16.25, 0); E.add(GDN_G.box, 0, 2.38, 0.05, 0.24, 0.28, 0.24, 0, 0, 0, C.LAMP); E.add(G2.oct, 0, 2.38, 0.05, 0.16, 0.22, 0.16, 0, 0, 0, 0xffd890);
+    GDN.lantern.push(pa); }
+  /* topiary arches at the gates: two clipped columns, a hedge arch, a brass crest; stone bridge over the canal */
+  GDN_GATES.forEach(function(a){ S.pol(a, 16.3, 0);
+    [-1, 1].forEach(function(s){ S.add(GDN_G.box, s*1.85, 1.55, 0, 1.0, 3.1, 1.15, 0, 0, 0, C.HEDGE2); S.add(GDN_G.box, s*1.85, 1.55, -0.02, 1.02, 2.9, 1.12, 0, 0, 0, C.HEDGE3, 0.9);
+      S.add(GDN_G.box, s*1.85, 0.12, 0, 1.2, 0.24, 1.3, 0, 0, 0, C.LIME2); S.add(G2.ico0, s*1.85, 3.25, 0, 1.25, 0.8, 1.3, 0, 0.4, 0, C.HEDGE4);
+      for(var f=0;f<4;f++) S.add(G2.oct, s*(1.4 + (f%2)*0.9), 0.6 + f*0.6, -0.6, 0.15, 0.15, 0.1, 0, 0, 0, f%2 ? C.ROSE : C.BUTTER); });
+    for(var k=0;k<7;k++){ var t = k/6, ax = Math.cos(Math.PI*t)*1.85, ay = 3.4 + Math.sin(Math.PI*t)*1.05; S.add(G2.ico0, ax, ay, 0, 1.0, 0.75, 1.15, 0, k, 0, k%2 ? C.HEDGE3 : C.HEDGE4); }
+    S.add(G2.cyl6, 0, 4.35, -0.55, 0.62, 0.1, 0.62, Math.PI/2, 0, 0, C.BRASS); S.add(G2.oct, 0, 4.35, -0.62, 0.3, 0.38, 0.1, 0, 0, 0, C.BRASS2);
+    /* bridge: slab + two low balustrades */
+    S.pol(a, 17.7, 0); S.add(GDN_G.box, 0, -0.12, 0, 3.1, 0.24, 2.4, 0, 0, 0, C.LIME); S.add(GDN_G.box, 0, -0.45, 0, 2.7, 0.5, 2.3, 0, 0, 0, C.LIME3);
+    [-1, 1].forEach(function(s){ S.add(GDN_G.box, s*1.5, 0.22, 0, 0.22, 0.44, 2.4, 0, 0, 0, C.LIME2); S.add(GDN_G.box, s*1.5, 0.48, 0, 0.3, 0.08, 2.5, 0, 0, 0, C.LIME); });
+  }); }
+
+/* ---------- terraces (4 tiers), planters, arcade back wall with ivy and rose trellis, gate tunnels ---------- */
+var GDN_TIERS = [[18.6, 20.0, 0.5], [20.0, 21.4, 1.5], [21.4, 22.8, 2.5], [22.8, 24.2, 3.5]];
+function GDN_skip(a){ return GDN_nearGate(a, 0.14) || GDN_inSector(a, GDN_OAK, 0.2) || GDN_inSector(a, GDN_FOUNT, 0.2) || GDN_inSector(a, GDN_PAV, 0.11); }
+function GDN_stands(R, S){ var C = GDN_C, rnd = GDN_rng(55), n = 80;
+  for(var i=0;i<n;i++){ var a = (i+0.5)/n*TAU, gate = GDN_nearGate(a, 0.14), oak = GDN_inSector(a, GDN_OAK, 0.2), fnt = GDN_inSector(a, GDN_FOUNT, 0.18);
+    for(var t=0;t<4;t++){ var T = GDN_TIERS[t], rm = (T[0]+T[1])/2, d = T[1]-T[0], w = TAU*rm/n*1.02, h = T[2] + 1.0;
+      if(gate && t < 4) continue;
+      if(oak && t > 0 && GDN_inSector(a, GDN_OAK, 0.15)) continue;                       // the oak's roots broke the upper terraces
+      S.pol(a, rm, 0); var y0 = -1.0;
+      var edge = oak || GDN_nearGate((i-0.5)/n*TAU, 0.14) || GDN_nearGate((i+1.5)/n*TAU, 0.14) || GDN_inSector((i-0.5)/n*TAU, GDN_OAK, 0.15) || GDN_inSector((i+1.5)/n*TAU, GDN_OAK, 0.15) || t===3;
+      S.add(edge ? GDN_G.box : GDN_G.lip, 0, (y0 + T[2])/2, 0, w, T[2]-y0, d, 0, oak ? (rnd()-0.5)*0.12 : 0, oak ? (rnd()-0.5)*0.1 : 0, i%2 ? C.LIME : C.LIME2);
+      S.add(GDN_G.lip, 0, T[2] - 0.08, -d/2 + 0.12, w, 0.16, 0.26, 0, 0, 0, C.CREAM);          // seat lip
+      S.add(GDN_G.front, 0, (y0 + T[2])/2 - 0.1, -d/2 - 0.005, w*0.98, T[2]-y0-0.3, 0.02, 0, 0, 0, C.LIME3);   // riser shadow face
+      rnd();   // (the moss decals were dropped for the triangle budget; the draw keeps the seeded layout)
+    }
+    /* planter of clipped box-hedge along the front of tier 1 */
+    if(!gate && !oak && !fnt && i%2===0){ S.pol(a, 18.85, 0); S.add(GDN_G.box, 0, 0.62, 0, TAU*18.85/n*1.6, 0.28, 0.42, 0, 0, 0, C.LIME3); S.add(GDN_G.box, 0, 0.9, 0, TAU*18.85/n*1.5, 0.34, 0.36, 0, 0, 0, C.HEDGE3);
+      if(rnd() < 0.6) S.add(G2.oct, (rnd()-0.5)*0.8, 1.1, -0.1, 0.14, 0.14, 0.1, 0, 0, 0, rnd() < 0.5 ? C.ROSE : C.BUTTER); }
+    /* the arcade: piers + arch + cornice, ivy drapes, rose trellis panels */
+    if(gate || fnt || GDN_inSector(a, GDN_OAK, 0.15)) continue;
+    S.pol(a, 24.6, 0); var aw = TAU*24.6/n*1.02;
+    S.add(GDN_G.box, 0, 2.4, 0.2, aw, 6.8, 0.5, 0, 0, 0, C.LIME3); S.add(GDN_G.box, -aw/2 + 0.2, 3.0, -0.1, 0.42, 6.0, 0.4, 0, 0, 0, C.LIME);
+    if(i%2===0){ S.add(GDN_G.torH, 0, 4.6, -0.12, aw*1.0, aw*0.9, 1.6, 0, 0, 0, C.LIME); S.add(GDN_G.box, 0, 3.3, 0.0, aw*0.7, 2.6, 0.1, 0, 0, 0, C.LIME4); }
+    /* the outer facade (seen in portrait): pilasters, arched bays in shadow, ivy */
+    S.add(GDN_G.box, -aw/2 + 0.2, 2.4, 0.5, 0.5, 6.8, 0.25, 0, 0, 0, C.LIME); if(i%2===0){ S.add(GDN_G.box, 0, 1.6, 0.47, aw*0.62, 3.6, 0.06, 0, 0, 0, C.LIME4); S.add(GDN_G.torH, 0, 3.4, 0.46, aw*0.85, aw*0.75, 0.6, 0, 0, 0, C.LIME2); }
+    else { S.add(GDN_G.box, 0, 4.4, 0.47, aw*0.5, 1.2, 0.06, 0, 0, 0, C.LIME4); }
+    if(rnd() < 0.45){ var oh = 2 + rnd()*3; S.add(GDN_G.box, (rnd()-0.5)*aw*0.5, 6.0 - oh/2, 0.52, 0.7 + rnd()*0.5, oh, 0.1, 0, 0, 0, C.LEAF2); }
+    S.add(GDN_G.box, 0, 0.0, 0.62, aw*1.04, 0.6, 0.3, 0, 0, 0, C.LIME3);
+    S.add(GDN_G.box, 0, 5.95, -0.1, aw*1.04, 0.36, 0.7, 0, 0, 0, C.CREAM); S.add(GDN_G.box, 0, 6.25, 0.0, aw*1.04, 0.24, 0.6, 0, 0, 0, C.LIME2);
+    var iv = rnd(); if(iv < 0.5){ var ih = 1.8 + rnd()*2.6; S.add(GDN_G.box, (rnd()-0.5)*aw*0.5, 6.0 - ih/2, -0.22, 0.6 + rnd()*0.5, ih, 0.12, 0, 0, (rnd()-0.5)*0.1, C.LEAF2); S.add(G2.ico0, (rnd()-0.5)*aw*0.4, 6.3, -0.15, 1.1, 0.6, 0.7, 0, rnd()*3, 0, C.LEAF); }
+    else if(iv < 0.75){ for(var tl=0;tl<3;tl++) S.add(GDN_G.box, -0.55 + tl*0.55, 4.2, -0.32, 0.05, 2.8, 0.05, 0, 0, 0, C.WOOD); for(var th=0;th<3;th++) S.add(GDN_G.box, 0, 3.2 + th*0.9, -0.33, 1.4, 0.05, 0.05, 0, 0, 0, C.WOOD);
+      for(var rz=0;rz<5;rz++) S.add(G2.ico0, (rnd()-0.5)*1.2, 3.0 + rnd()*2.6, -0.4, 0.42, 0.42, 0.25, 0, rnd()*3, 0, C.LEAF2); for(var rf=0;rf<5;rf++) S.add(G2.oct, (rnd()-0.5)*1.2, 3.0 + rnd()*2.6, -0.52, 0.16, 0.16, 0.1, 0, 0, 0, rnd()<0.7 ? C.ROSE : C.ROSE2); }
+  }
+  /* gate tunnels through the arcade: a deep stone arch with a rose pergola */
+  GDN_GATES.forEach(function(a){ S.pol(a, 21.5, 0); [-1, 1].forEach(function(s){ for(var t=0;t<4;t++){ var T = GDN_TIERS[t], z0 = T[0] - 21.5, z1 = T[1] - 21.5; S.add(GDN_G.box, s*2.3, (T[2] + 0.5 - 1.0)/2, (z0+z1)/2, 0.9, T[2] + 0.5 + 1.0, z1 - z0, 0, 0, 0, C.LIME2); S.add(GDN_G.box, s*2.3, T[2] + 0.55, (z0+z1)/2, 1.05, 0.12, z1 - z0 + 0.04, 0, 0, 0, C.CREAM); } });
+    S.add(GDN_G.box, 0, -0.5, 0, 3.8, 1.0, 6.2, 0, 0, 0, C.GRAVEL);
+    for(var k=0;k<4;k++){ var z = -2.4 + k*1.6; S.add(GDN_G.torH, 0, 3.0, z, 4.1, 3.4, 1.0, 0, 0, 0, C.WOOD); for(var f=0;f<5;f++){ var fa = f/4*Math.PI; S.add(G2.ico0, Math.cos(fa)*2.0, 3.0 + Math.sin(fa)*1.65, z, 0.55, 0.45, 0.5, 0, f, 0, f%2 ? C.LEAF : C.LEAF3); if(f%2===0) S.add(G2.oct, Math.cos(fa)*2.0, 3.0 + Math.sin(fa)*1.75, z - 0.2, 0.18, 0.18, 0.12, 0, 0, 0, C.ROSE); } }
+    S.pol(a, 24.6, 0); [-1, 1].forEach(function(s){ S.add(GDN_G.box, s*2.6, 2.6, 0.2, 1.2, 7.2, 0.9, 0, 0, 0, C.LIME); }); S.add(GDN_G.box, 0, 6.0, 0.2, 6.4, 0.9, 0.9, 0, 0, 0, C.CREAM); S.add(GDN_G.torH, 0, 3.4, 0.0, 4.0, 4.2, 2.0, 0, 0, 0, C.LIME2); S.add(G2.oct, 0, 6.0, -0.3, 0.9, 0.9, 0.2, 0, 0, 0, C.BRASS); });
+}
+
+/* ---------- the great oak (lightning-split, storm-violet scar, roots breaking the terraces) ---------- */
+function GDN_oak(S, E){ var C = GDN_C, rnd = GDN_rng(91), a = GDN_OAK, ox = Math.cos(a)*20.6, oz = Math.sin(a)*20.6, yaw = Math.PI/2 - a;
+  S.at(ox, -0.6, oz, yaw); E.at(ox, -0.6, oz, yaw);
+  /* the split trunk: two halves leaning apart, bark ridges, the charred split face */
+  [-1, 1].forEach(function(s){ S.add(G2.cap, s*0.75, 2.6, 0, 1.9, 6.2, 2.4, 0, 0, -s*0.14, C.BARK); S.add(G2.cap, s*0.95, 3.6, 0.1, 1.3, 5.2, 1.9, 0.05, 0, -s*0.2, C.BARK3, 0.95);
+    for(var r=0;r<4;r++) S.add(GDN_G.box, s*(1.2 + r*0.05), 1.4 + r*1.3, -0.4 + r*0.3, 0.18, 1.6, 0.18, 0, 0, -s*0.2, C.BARK2);
+    /* boughs: two per half, each ending in a canopy mass */
+    for(var b=0;b<3;b++){ var bl = 3.8 + b*0.6, ang = s*(0.75 + b*0.35), by = 5.2 + b*0.9, bz = (b-1)*1.3;
+      S.add(G2.taper, s*1.2 + Math.sin(ang)*bl*0.5, by + Math.cos(ang)*bl*0.5, bz, 0.6, bl, 0.6, 0, 0, -ang + Math.PI, C.BARK);
+      var cx = s*1.2 + Math.sin(ang)*bl, cy = by + Math.cos(ang)*bl;
+      for(var k=0;k<5;k++) S.add(G2.ico0, cx + (rnd()-0.5)*2.6, cy + (rnd()-0.3)*1.6, bz + (rnd()-0.5)*2.6, 2.4 + rnd()*1.4, 1.7 + rnd()*0.8, 2.4 + rnd()*1.4, rnd(), rnd()*3, 0, [C.LEAF, C.LEAF2, C.LEAF3, C.LEAF4][k%4]);
+      if(b===1){ S.add(G2.cyl6, s*1.2 + Math.sin(ang)*bl*0.7, by + Math.cos(ang)*bl*0.7, bz, 0.72, 0.22, 0.72, 0, 0, -ang, C.BRASS);              // the storm-rod anchor band
+        E.add(G2.tet, s*1.2 + Math.sin(ang)*bl*0.72, by + Math.cos(ang)*bl*0.72 + 0.45, bz, 0.36, 0.5, 0.36, 0.3, 0.4, 0, C.SCAR); } } });
+  for(var k2=0;k2<6;k2++) S.add(G2.ico0, (rnd()-0.5)*4, 10.4 + rnd()*1.6, (rnd()-0.5)*4, 3.0 + rnd(), 2.0, 3.0 + rnd(), rnd(), rnd()*3, 0, [C.LEAF3, C.LEAF, C.LEAF2][k2%3]);
+  S.add(GDN_G.box, 0, 4.0, 0.0, 0.5, 6.4, 1.6, 0, 0, 0, C.BARK2);                                                           // charred inner face
+  E.add(GDN_G.box, -0.08, 4.2, -0.75, 0.12, 5.2, 0.06, 0, 0, 0.12, C.SCAR); E.add(GDN_G.box, 0.12, 2.7, -0.76, 0.1, 2.2, 0.06, 0, 0, -0.35, C.SCAR);
+  E.add(GDN_G.box, -0.05, 5.6, -0.77, 0.06, 1.8, 0.04, 0, 0, 0.5, C.SCAR2); E.add(G2.oct, 0.0, 3.4, -0.8, 0.34, 0.55, 0.08, 0, 0, 0.3, C.SCAR2);
+  /* roots: thick tapered runs over the broken terraces and down into the canal */
+  for(var r2=0;r2<9;r2++){ var ra = -1.3 + r2*0.33 + (rnd()-0.5)*0.15, rl = 3.4 + rnd()*2.4, tilt = 0.25 + rnd()*0.3;
+    S.add(G2.taper, Math.sin(ra)*rl*0.45, 0.5 - rl*0.12, -Math.cos(ra)*rl*0.45, 0.7 + rnd()*0.35, rl, 0.6 + rnd()*0.3, Math.PI/2 - tilt, ra, 0, r2%2 ? C.BARK : C.BARK3); }
+  for(var r3=0;r3<5;r3++){ var rb = Math.PI*0.6 + r3*0.4; S.add(G2.taper, Math.sin(rb)*2.0, 0.3, -Math.cos(rb)*2.0, 0.8, 3.0, 0.7, Math.PI/2 - 0.35, rb, 0, C.BARK); }
+  /* broken terrace blocks heaved by the roots */
+  for(var q=0;q<6;q++) S.add(GDN_G.box, (rnd()-0.5)*6, 0.6 + rnd()*1.2, 1.5 + rnd()*2.5, 1.4, 0.9, 1.2, (rnd()-0.5)*0.5, rnd(), (rnd()-0.5)*0.6, q%2 ? GDN_C.LIME : GDN_C.LIME2);
+  S.id(); E.id(); }
+
+/* ---------- the tiered fountain (A 315°) ---------- */
+function GDN_fountain(S, W){ var C = GDN_C, a = GDN_FOUNT, fx = Math.cos(a)*21.0, fz = Math.sin(a)*21.0;
+  S.at(fx, 0, fz, 0); S.add(GDN_G.box, 0, -0.5, 0, 9.0, 1.0, 9.0, 0, Math.PI/2 - a, 0, C.LIME3);
+  S.add(new THREE.CylinderGeometry(3.0, 3.2, 1.1, 12), 0, 0.45, 0, 1, 1, 1, 0, 0, 0, C.LIME); S.add(new THREE.CylinderGeometry(3.15, 3.15, 0.2, 12), 0, 1.05, 0, 1, 1, 1, 0, 0, 0, C.CREAM);
+  S.add(G2.cyl6, 0, 1.8, 0, 0.9, 2.2, 0.9, 0, 0, 0, C.LIME2); S.add(new THREE.CylinderGeometry(1.7, 0.7, 0.55, 10), 0, 2.95, 0, 1, 1, 1, 0, 0, 0, C.LIME);
+  S.add(G2.cyl6, 0, 3.75, 0, 0.45, 1.2, 0.45, 0, 0, 0, C.LIME2); S.add(new THREE.CylinderGeometry(0.95, 0.4, 0.4, 10), 0, 4.45, 0, 1, 1, 1, 0, 0, 0, C.LIME);
+  S.add(G2.dod, 0, 5.0, 0, 0.6, 0.7, 0.6, 0, 0, 0, C.VERD); S.add(G2.cone4, 0, 5.6, 0, 0.3, 0.7, 0.3, 0, 0, 0, C.VERD2);
+  for(var k=0;k<6;k++){ var ka = k/6*TAU; S.add(G2.ico0, Math.cos(ka)*2.9, 1.3, Math.sin(ka)*2.9, 0.7, 0.45, 0.7, 0, k, 0, k%2 ? C.HEDGE3 : C.LEAF); if(k%2) S.add(G2.oct, Math.cos(ka)*2.9, 1.55, Math.sin(ka)*2.9, 0.18, 0.18, 0.12, 0, 0, 0, C.ROSE); }
+  W.disc(fx, fz, 2.85, 0.95, C.WATER2, 16); W.disc(fx, fz, 2.3, 0.96, C.WATER, 16); W.disc(fx, fz, 1.5, 3.2, C.WATER, 12); W.disc(fx, fz, 0.85, 4.62, C.WATER, 10);
+  /* falling sheets (thin open cones of water) */
+  var j1 = new THREE.CylinderGeometry(1.55, 1.8, 2.0, 12, 1, true), j2 = new THREE.CylinderGeometry(0.85, 1.0, 1.2, 10, 1, true);
+  W.at(fx, 0, fz, 0); W.flat = true; W.add(j1, 0, 2.15, 0, 1, 1, 1, 0, 0, 0, 0xa6e0ee); W.add(j2, 0, 3.95, 0, 1, 1, 1, 0, 0, 0, 0xa6e0ee); W.add(G2.cone4, 0, 6.0, 0, 0.18, 0.9, 0.18, 0, 0, 0, 0xb8e8f2); W.id(); S.id(); }
+
+/* ---------- the herald's pavilion (A 225°): a raised box with verdigris roof and garlands ---------- */
+function GDN_pavilion(S){ var C = GDN_C, a = GDN_PAV; S.pol(a, 20.0, 0);
+  S.add(GDN_G.box, 0, 0.0, 0.3, 4.6, 2.2, 3.6, 0, 0, 0, C.LIME2); S.add(GDN_G.box, 0, 1.14, 0.3, 4.8, 0.12, 3.8, 0, 0, 0, C.CREAM); S.add(GDN_G.box, 0, 1.2, -1.05, 4.0, 0.06, 1.2, 0, 0, 0, C.ROSE2);
+  [-1, 1].forEach(function(s){ [-1, 1].forEach(function(t){ S.add(G2.cyl6, s*2.0, 2.7, 0.3 + t*1.5, 0.26, 3.0, 0.26, 0, 0, 0, C.CREAM); S.add(GDN_G.box, s*2.0, 1.3, 0.3 + t*1.5, 0.4, 0.2, 0.4, 0, 0, 0, C.LIME); }); });
+  S.add(GDN_G.box, 0, 4.25, 0.3, 4.7, 0.25, 3.7, 0, 0, 0, C.LIME); S.add(G2.cone4, 0, 5.2, 0.3, 4.8, 1.7, 4.0, 0, Math.PI/4, 0, C.VERD); S.add(G2.oct, 0, 6.15, 0.3, 0.35, 0.5, 0.35, 0, 0, 0, C.BRASS);
+  for(var g=0;g<7;g++){ var t = g/6, gx = -2.0 + t*4.0, gy = 3.95 - Math.sin(t*Math.PI)*0.45; S.add(G2.ico0, gx, gy, -1.25, 0.4, 0.3, 0.3, 0, g, 0, C.LEAF3); S.add(G2.oct, gx, gy - 0.12, -1.38, 0.16, 0.16, 0.1, 0, 0, 0, g%2 ? C.ROSE : C.BUTTER); }
+  /* hanging banners: deep green with a brass bloom */
+  [-1, 1].forEach(function(s){ S.add(GDN_G.box, s*1.4, 0.3, -1.57, 0.8, 1.4, 0.05, 0, 0, 0, C.HEDGE); S.add(G2.oct, s*1.4, 0.45, -1.6, 0.3, 0.3, 0.05, 0, 0, 0, C.BRASS); });
+  S.id(); }
+
+/* ---------- the seedmonger's stall (bridge outside gate 0°) ---------- */
+var GDN_STALL = {a:0, r:19.75, x:1.05};
+function GDN_stall(S, E){ var C = GDN_C, T = GDN_STALL; S.pol(T.a, T.r, 0); E.pol(T.a, T.r, 0); S.F.multiply(_gdM.makeTranslation(T.x, 0, 0)); E.F.multiply(_gdM.makeTranslation(T.x, 0, 0));
+  S.add(GDN_G.box, 0, 0.75, 0, 2.0, 0.8, 1.1, 0, 0, 0, C.WOOD); S.add(GDN_G.box, 0, 1.17, 0, 2.15, 0.06, 1.2, 0, 0, 0, C.WOOD2);
+  [-1, 1].forEach(function(s){ S.add(G2.cyl6, s*0.95, 0.3, 0.55, 0.75, 0.75, 0.16, 0, Math.PI/2, Math.PI/2, C.WOOD2); S.add(GDN_G.box, s*0.95, 1.9, -0.45, 0.08, 2.0, 0.08, 0, 0, 0, C.WOOD2); S.add(GDN_G.box, s*0.95, 1.9, 0.45, 0.08, 2.0, 0.08, 0, 0, 0, C.WOOD2); });
+  for(var st=0;st<5;st++) S.add(GDN_G.box, -0.9 + st*0.45, 3.0, 0, 0.45, 0.06, 1.5, 0.28, 0, 0, st%2 ? C.CANVAS : C.CANVAS2);     // striped awning
+  var pk = [0xd88a5a, 0x9ab86a, 0xe0c070, 0xb07aa0, 0x8ab0c0, 0xd06a6a];
+  for(var p=0;p<12;p++) S.add(GDN_G.box, -0.75 + (p%6)*0.3, 1.32 + Math.floor(p/6)*0.04, -0.2 + Math.floor(p/6)*0.35, 0.22, 0.26, 0.04, -0.5, 0, 0, pk[p%6]);
+  S.add(G2.cyl6, 0.65, 1.3, 0.25, 0.3, 0.22, 0.3, 0, 0, 0, C.BRASS2); S.add(GDN_G.box, -0.6, 1.32, 0.3, 0.4, 0.2, 0.3, 0, 0, 0, C.WOOD2);
+  S.add(G2.cyl6, 0.95, 2.6, -0.55, 0.05, 0.3, 0.05, 0, 0, 0, C.BRASS2); GDN.lampA = E.c.length; E.add(GDN_G.box, 0.95, 2.35, -0.55, 0.2, 0.26, 0.2, 0, 0, 0, C.LAMP); E.add(G2.oct, 0.95, 2.35, -0.55, 0.14, 0.2, 0.14, 0, 0, 0, 0xffd890);
+  GDN.lampB = E.c.length; GDN.lampC = E.c.slice(GDN.lampA, GDN.lampB);   /* the stall lamp: its colours toggle (GDN_lamp) */
+  S.id(); E.id(); }
+
+/* ---------- crowd (LOD): ~700 seated figures in 2 instanced draws. Body draw = 4-sided tapered bodies (cloth) + raised arms (thin instances of the same
+   body, cloth); head draw = octahedron heads (skin) + hats (flattened instances of the same octahedron). ---------- */
+function GDN_crowd(){ var rnd = GDN_rng(77), list = [], nA = 0, nH = 0;
+  for(var t=0;t<4;t++){ var T = GDN_TIERS[t], rr = T[0] + 0.62, n = Math.round(TAU*rr/0.62);
+    for(var i=0;i<n;i++){ var a = (i + rnd()*0.4)/n*TAU; if(GDN_skip(a) || rnd() < 0.2) continue; var c = {a:a, r:rr + (rnd()-0.5)*0.15, y:T[2], ph:rnd()*TAU, sp:1.6 + rnd()*1.8, arms:rnd() < 0.12, hat:rnd() < 0.3, wave:rnd() < 0.1, um:Math.abs(GDN_ad(a, GDN_PAV)) < 0.34};
+      if(c.arms) nA++; if(c.hat) nH++; list.push(c); } }
+  var bodyG = GDN_faces(new THREE.CylinderGeometry(0.2, 0.3, 0.7, 4, 1, false), [[0.96,0.27,0],[-0.96,0.27,0],[0,0.27,0.96],[0,0.27,-0.96],[0,1,0]]); bodyG.rotateY(Math.PI/4); bodyG.translate(0, 0.35, 0);
+  var headG = new THREE.OctahedronGeometry(0.19, 0);
+  var N = list.length, mat = new THREE.MeshLambertMaterial({}); GDN.mats.push(mat);
+  var body = new THREE.InstancedMesh(bodyG, mat, N + 2*nA), head = new THREE.InstancedMesh(headG, mat, N + nH);
+  var cloth = [0x7a4a3a, 0x3e5a6e, 0x6a6a3a, 0x8a6a4a, 0x5a3e5a, 0x2f5a4a, 0xa08a5a, 0x6e3a3a, 0x4a5a7a, 0xb09a7a], skin = [0xe0b090, 0xc08a68, 0x9a6a4a, 0x7a4e36, 0xd8a47a], hats = [0xd8c08a, 0xc8a870, 0x5a6e3a, 0x8a4a3a];
+  var col = new THREE.Color(), ka = N, kh = N;
+  for(var j=0;j<N;j++){ var L = list[j], cc = cloth[(rnd()*cloth.length)|0]; body.setColorAt(j, col.setHex(cc)); head.setColorAt(j, col.setHex(skin[(rnd()*skin.length)|0]));
+    if(L.arms){ L.ai = ka; body.setColorAt(ka, col.setHex(cc)); body.setColorAt(ka+1, col.setHex(cc)); ka += 2; } else L.ai = -1;
+    if(L.hat){ L.hi = kh; head.setColorAt(kh, col.setHex(hats[(rnd()*hats.length)|0])); kh++; } else L.hi = -1; }
+  [body, head].forEach(function(m){ m.instanceColor.needsUpdate = true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; m.receiveShadow = true; GDN.root.add(m); });
+  GDN.crowd = {list:list, body:body, head:head}; GDN_crowdPose(0, 0); }
+var _gdCM = new THREE.Matrix4(), _gdCM2 = new THREE.Matrix4(), _gdCQ = new THREE.Quaternion(), _gdCQ2 = new THREE.Quaternion(), _gdCV = new THREE.Vector3(), _gdCV2 = new THREE.Vector3(), _gdCS = new THREE.Vector3(), _gdY = new THREE.Vector3(0,1,0), _gdZv = new THREE.Vector3(0,0,1), _gdZ0 = new THREE.Matrix4().makeScale(0,0,0);
+var GDN_HEADL = new THREE.Matrix4().makeTranslation(0, 0.86, 0), GDN_HATL = new THREE.Matrix4().compose(new THREE.Vector3(0, 1.0, 0), new THREE.Quaternion(), new THREE.Vector3(1.55, 0.42, 1.55));
+function GDN_crowdPose(t, cheer){ var K = GDN.crowd; if(!K) return; var L = K.list, amp = 0.04 + cheer*0.3, hide = GDN.umHide;
+  for(var i=0;i<L.length;i++){ var c = L[i];
+    if(hide && c.um){ K.body.setMatrixAt(i, _gdZ0); K.head.setMatrixAt(i, _gdZ0); if(c.ai >= 0){ K.body.setMatrixAt(c.ai, _gdZ0); K.body.setMatrixAt(c.ai+1, _gdZ0); } if(c.hi >= 0) K.head.setMatrixAt(c.hi, _gdZ0); continue; }
+    var b = Math.max(0, Math.sin(t*c.sp*(1 + cheer) + c.ph))*amp;
+    _gdCQ.setFromAxisAngle(_gdY, -c.a - Math.PI/2); _gdCV.set(Math.cos(c.a)*c.r, c.y + b, Math.sin(c.a)*c.r); _gdCS.set(1, 1, 1); _gdCM.compose(_gdCV, _gdCQ, _gdCS);
+    K.body.setMatrixAt(i, _gdCM); _gdCM2.multiplyMatrices(_gdCM, GDN_HEADL); K.head.setMatrixAt(i, _gdCM2);
+    if(c.hi >= 0){ _gdCM2.multiplyMatrices(_gdCM, GDN_HATL); K.head.setMatrixAt(c.hi, _gdCM2); }
+    if(c.ai >= 0){ if(cheer > 0.15 || c.wave){ var ly = 0.72 + 0.22*Math.sin(t*6 + c.ph);
+        for(var s=0;s<2;s++){ var sd = s ? 1 : -1; _gdCQ2.setFromAxisAngle(_gdZv, -sd*0.35); _gdCM2.compose(_gdCV2.set(sd*0.26, 0.6, 0.02), _gdCQ2, _gdCS.set(0.3, ly, 0.3)); _gdCM2.premultiply(_gdCM); K.body.setMatrixAt(c.ai + s, _gdCM2); } }
+      else { K.body.setMatrixAt(c.ai, _gdZ0); K.body.setMatrixAt(c.ai+1, _gdZ0); } } }
+  K.body.instanceMatrix.needsUpdate = K.head.instanceMatrix.needsUpdate = true; }
+
+/* ---------- outer ring of trees and lawn (portrait corners, far views) ---------- */
+function GDN_trees(){ var rnd = GDN_rng(13), B = new GDN_B(0, 9), C = GDN_C;
+  B.add(G2.cyl6, 0, 1.5, 0, 0.6, 3.0, 0.6, 0, 0, 0, C.BARK); B.add(G2.ico0, 0, 4.2, 0, 4.2, 3.4, 4.2, 0, 0, 0, C.LEAF); B.add(G2.ico0, 0.5, 5.3, 0.1, 3.4, 2.8, 3.4, 0.4, 1, 0, C.LEAF3);
+  var list = []; for(var i=0;i<30;i++){ var a = i/30*TAU + rnd()*0.1, r = 31 + rnd()*8; list.push([Math.cos(a)*r, -1.5, Math.sin(a)*r, 0.9 + rnd()*0.5, rnd()*TAU]); }
+  var mat = GDN_mat(), im = new THREE.InstancedMesh(B.geo(), mat, list.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
+  list.forEach(function(L, k){ q.setFromAxisAngle(_gdY, L[4]); m.compose(new THREE.Vector3(L[0], L[1], L[2]), q, new THREE.Vector3(L[3], L[3], L[3])); im.setMatrixAt(k, m); im.setColorAt(k, c.setHSL(0.27 + rnd()*0.06, 0.2, 0.62 + rnd()*0.15)); });
+  im.instanceColor.needsUpdate = true; im.castShadow = false; im.receiveShadow = true; GDN.root.add(im);
+  var lawn = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), new THREE.MeshLambertMaterial({color:0x4d6e3a})); lawn.rotation.x = -Math.PI/2; lawn.position.y = -1.0; lawn.receiveShadow = true; GDN.mats.push(lawn.material); GDN.root.add(lawn); }
+
+/* ---------- grass tufts and clover along the rim and in the seams (one instanced draw) ---------- */
+function GDN_tufts(R){ var rnd = GDN_rng(5), B = new GDN_B(0, 0.5); B.flat = true;
+  var bl = new THREE.ConeGeometry(0.5, 1, 3, 1, true); for(var k=0;k<3;k++){ var ka = k/3*TAU; B.add(bl, Math.cos(ka)*0.1, 0.16, Math.sin(ka)*0.1, 0.1, 0.36, 0.1, Math.cos(ka)*0.35, 0, Math.sin(ka)*0.35, k%2 ? 0x6f9a4a : 0x58823c); }
+  var list = []; for(var i=0;i<140;i++){ var a = rnd()*TAU, r = i < 90 ? R - 0.15 - rnd()*rnd()*3.2 : 2.6 + rnd()*12; if(GDN_nearGate(a, 0.08)) continue; list.push([Math.cos(a)*r, Math.sin(a)*r, 0.7 + rnd()*0.8, rnd()*3]); }
+  var mat = new THREE.MeshLambertMaterial({vertexColors:true}); GDN.mats.push(mat); var im = new THREE.InstancedMesh(B.geo(), mat, list.length), m = new THREE.Matrix4(), q = new THREE.Quaternion();
+  list.forEach(function(L, k){ q.setFromAxisAngle(_gdY, L[3]); m.compose(new THREE.Vector3(L[0], 0, L[1]), q, new THREE.Vector3(L[2], L[2], L[2])); im.setMatrixAt(k, m); }); im.receiveShadow = true; GDN.root.add(im); }
+
+/* ---------- the Garden's people: Pell Greenhand in the pavilion, Seedmonger Anwen behind her stall (CHARS.gnpc rigs) ---------- */
+function GDN_face(x, z){ return Math.atan2(-x, -z); }
+function GDN_cast(){ GDN.npc = []; if(!CHARS.gnpc) return;
+  function put(v, x, y, z, yaw, pose){ var R = buildChar('gnpc', 'flame', {v:v}); R.root.scale.setScalar(1.3); R.root.position.set(x, y, z); R.root.rotation.y = yaw; GDN.root.add(R.root);
+    var e = {npPose:pose, npSnap:true}; R.def.anim(R, e, 0, 0); R.updateBones(); e.npSnap = false; GDN.npc.push({R:R, e:e, v:v}); return R; }
+  var a = GDN_PAV, hx = Math.cos(a)*19.55, hz = Math.sin(a)*19.55; put('herald', hx, 1.2, hz, GDN_face(hx, hz), 'idle');
+  var T = GDN_STALL, ta = T.a, tr = T.r + 0.95, tx = Math.cos(ta)*tr + Math.sin(ta)*T.x, tz = Math.sin(ta)*tr - Math.cos(ta)*T.x; put('seed', tx, 0, tz, GDN_face(tx, tz) - 0.25, 'idle'); }
+/* Pell blows the horn for ~2.4 s at each round start; Anwen holds a packet out while an offering is due */
+function GDN_offerDue(){ try{ if(typeof OF!=='undefined' && OF && OF.on) return true; if(typeof OF_due==='function' && G.waveActive && G.act===3 && !(A3.um && A3.um.on)) return !!OF_due(G.wave); }catch(err){} return false; }
+function GDN_npcStep(t, dt){ var L = GDN.npc; if(!L) return; if(GDN.horn > 0) GDN.horn = Math.max(0, GDN.horn - dt); var due = GDN_offerDue();
+  for(var i=0;i<L.length;i++){ var n = L[i]; n.e.npPose = n.v==='herald' ? (GDN.horn > 0 ? 'blow' : 'idle') : (due ? 'offer' : 'idle'); if(n.v==='herald') n.R.root.visible = !GDN.umHide;
+    n.R.def.anim(n.R, n.e, t, dt); n.R.updateBones(); }
+  GDN_lamp(due); }
+/* the stall lamp: lit (warm) while an offering is due, dark brass otherwise (a colour write into the merged emissive mesh, no extra draw) */
+function GDN_lamp(on){ on = on ? 1 : 0; if(GDN.lampOn===on || !GDN.em) return; GDN.lampOn = on; var ca = GDN.em.geometry.attributes.color, arr = ca.array, src = GDN.lampC, A = GDN.lampA;
+  for(var i=0;i<src.length;i++) arr[A + i] = on ? src[i] : src[i]*0.3; ca.needsUpdate = true; }
+
+/* ---------- build ---------- */
+function GDN_build(){ if(GDN.built) return; GDN.built = true; var R = ARENA_R; GDN.R = R; GDN.root = new THREE.Group(); GDN.root.name = 'garden';
+  var S = GDN_floor(R), E = new GDN_B(); E.flat = true;
+  /* S = terraces, arcade, tunnels, pool lips (no shadow); SC = hedge ring, gate arches, oak, fountain, stall (they cast the shadows that read) */
+  var Pv = new GDN_B(), SC = new GDN_B(-3, 1); var W = GDN_water(R, S); GDN_hedge(R, SC, E, S); GDN_stands(R, S); GDN_oak(SC, E); GDN_pavilion(Pv); GDN_stall(SC, E);
+  GDN_fountain(SC, W); var wm = new THREE.Mesh(W.geo(), new THREE.MeshPhongMaterial({vertexColors:true, flatShading:true, shininess:90, specular:0x9fdcea, emissive:0x1d4a58, emissiveIntensity:0.55}));
+  GDN.mats.push(wm.material); wm.receiveShadow = true; wm.matrixAutoUpdate = false; GDN.root.add(wm); GDN.water = wm;
+  var sm = GDN_mat(); GDN.stat = GDN_mesh(S, sm, false, true); GDN.statC = GDN_mesh(SC, sm, true, true); GDN.pav = GDN_mesh(Pv, sm, true, true);   /* the pavilion is its own draw: it steps aside for the Undermaw */
+  var em = new THREE.Mesh(E.geo(), new THREE.MeshBasicMaterial({vertexColors:true})); GDN.mats.push(em.material); em.matrixAutoUpdate = false; GDN.root.add(em); GDN.em = em; GDN.lampOn = -1;
+  GDN_crowd(); GDN_trees(); GDN_tufts(R); GDN_cast(); }
+
+/* ---------- env: sky, fog, lights, pillar skin ---------- */
+function GDN_hemi(){ for(var i=0;i<scene.children.length;i++) if(scene.children[i].isHemisphereLight) return scene.children[i]; return null; }
+function GDN_env(on){ var H = GDN_hemi();
+  if(on){ GDN.saved = {bg:scene.background.getHex(), fc:scene.fog.color.getHex(), fn:scene.fog.near, ff:scene.fog.far, hs:H.color.getHex(), hg:H.groundColor.getHex(), hi:H.intensity, sc:sun.color.getHex(), si:sun.intensity, sp:sun.position.clone(), li:lavaLight.intensity,
+};
+    scene.background.setHex(0x8ec6dc); scene.fog.color.setHex(0xc4dcb4); scene.fog.near = 52; scene.fog.far = 110;
+    H.color.setHex(0xe8f2ff); H.groundColor.setHex(0x5a6e40); H.intensity = 0.58; sun.color.setHex(0xfff0d8); sun.intensity = 0.82; sun.position.set(-12, 28, 6); lavaLight.intensity = 0; GDN.saved.lv = lavaLight.visible; lavaLight.visible = false; }
+  else if(GDN.saved){ var s = GDN.saved; scene.background.setHex(s.bg); scene.fog.color.setHex(s.fc); scene.fog.near = s.fn; scene.fog.far = s.ff; H.color.setHex(s.hs); H.groundColor.setHex(s.hg); H.intensity = s.hi;
+    sun.color.setHex(s.sc); sun.intensity = s.si; sun.position.copy(s.sp); lavaLight.intensity = s.li; lavaLight.visible = s.lv!==false; GDN.saved = null; } }
+
+/* ---------- garden columns: the arena pillars become ivy-wrapped mossy stone (same trick as SP_pillars: hide the pillar's children, add ours) ---------- */
+var GDN_COLG = null, GDN_COLM = null, GDN_cols = [];
+function GDN_colGeo(){ if(GDN_COLG) return GDN_COLG; var B = new GDN_B(0, 3.6), C = GDN_C, rnd = GDN_rng(3), c8 = new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
+  B.add(c8, 0, 0.2, 0, 2.3, 0.4, 2.3, 0, 0, 0, C.LIME3); B.add(c8, 0, 1.75, 0, 1.75, 2.9, 1.75, 0, Math.PI/8, 0, C.STONE); B.add(c8, 0, 3.3, 0, 2.0, 0.3, 2.0, 0, 0, 0, C.LIME2);
+  B.add(c8, 0, 1.1, 0, 1.82, 0.14, 1.82, 0, Math.PI/8, 0, C.BRASS2); B.add(c8, 0, 2.4, 0, 1.82, 0.14, 1.82, 0, Math.PI/8, 0, C.BRASS2);
+  for(var k=0;k<9;k++){ var a = k*2.39, y = 0.5 + k*0.32; B.add(G2.ico0, Math.cos(a)*0.85, y, Math.sin(a)*0.85, 0.55, 0.5, 0.4, 0, -a, 0, k%2 ? C.LEAF : C.LEAF2); }
+  B.add(G2.ico0, 0.2, 3.55, 0.1, 1.5, 0.5, 1.4, 0, 0.4, 0, C.HEDGE3); B.add(GDN_G.box, 0.75, 0.55, 0.4, 0.6, 0.06, 0.6, 0, 0.5, 0, C.MOSS);
+  GDN_COLG = B.geo(); GDN_COLM = new THREE.MeshPhongMaterial({vertexColors:true, flatShading:true, shininess:6, specular:0x141810, }); return GDN_COLG; }
+function GDN_colsOn(){ GDN_colGeo(); for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(p._gdc) continue; var m = new THREE.Mesh(GDN_COLG, GDN_COLM); m.castShadow = m.receiveShadow = true;
+    for(var j=0;j<p.g.children.length;j++) p.g.children[j].visible = false; var s = p.temp ? 0.8 : 1; m.scale.set(s, 1, s); m.rotation.y = (p.x*3.1 + p.z*1.7)%TAU; p.g.add(m); p._gdc = m; GDN_cols.push(p); } }
+function GDN_colsOff(){ for(var i=0;i<GDN_cols.length;i++){ var p = GDN_cols[i]; if(p._gdc){ p.g.remove(p._gdc); p._gdc = null; } for(var j=0;j<p.g.children.length;j++) p.g.children[j].visible = true; } GDN_cols.length = 0; }
+function GDN_colSync(){ for(var i=0;i<pillars.length;i++) if(!pillars[i]._gdc){ GDN_cols.length = 0; GDN_colsOn(); return; } }
+var GARDEN = {
+  enter:function(){ GDN_build(); if(GDN.on) return; GDN.on = true; arena.visible = false; scene.add(GDN.root); GDN_env(true); GDN_colsOn(); GDN.lampOn = -1; GDN.umHide = false; if(GDN.pav) GDN.pav.visible = true; },
+  exit:function(){ if(!GDN.on) return; GDN.on = false; arena.visible = true; scene.remove(GDN.root); GDN_env(false); GDN_colsOff(); GDN.horn = 0; GDN.umHide = false; },
+  cheer:function(k){ GDN.ch = Math.max(GDN.ch, k==null ? 1 : k); },
+  horn:function(){ GDN.horn = 2.4; GDN.ch = Math.max(GDN.ch, 0.6); },
+  active:function(){ return GDN.on; }
+};
+var GDN_UP = new THREE.Vector3(-1, 2, -1).normalize(), GDN_CAM = [0.70, 4.2];   /* the Pit's landscape framing (39-pit-watch PW_EFF.cam), as in the approved mocks */
+RENDER_HOOKS.push(function(t, adt){ if(!GDN.on) return; GDN.ch = Math.max(GDN.ch, crowdCheer*0.8); GDN.ch = Math.max(0, GDN.ch - (adt||0)*0.4);
+  var um = !!(typeof A3!=='undefined' && A3.um && A3.um.on); if(um!==GDN.umHide){ GDN.umHide = um; if(GDN.pav) GDN.pav.visible = !um; }
+  GDN_crowdPose(t, GDN.ch); GDN_colSync(); GDN_npcStep(t, adt||0);
+  if(G.state==='play' && !G.camO && (camera.right - camera.left) > (camera.top - camera.bottom)){ if(camera.zoom!==GDN_CAM[0]){ camera.zoom = GDN_CAM[0]; camera.updateProjectionMatrix(); } camera.position.addScaledVector(GDN_UP, GDN_CAM[1]); camera.updateMatrixWorld(); } });
+
+/* ---------- Pell's horn at every Garden round start (visual: his pose + a crowd ripple) ---------- */
+var GDN_sw0 = startWave;
+startWave = function(n){ var r = GDN_sw0.apply(this, arguments); if(GDN.on && G.act===3) GARDEN.horn(); return r; };
+
+/* ---------- the lava embers the core loop emits around the rim (y -1.5, r > 15.5) do not rise out of a garden canal ---------- */
+var GDN_emit0 = glowP.emit;
+glowP.emit = function(x, y, z){ if(GDN.on && y===-1.5 && x*x + z*z > 240) return; return GDN_emit0.apply(this, arguments); };
+
+/* ---------- ward readability on green (§3): a dark under-ring on circle telegraphs (oxblood under flame, deep teal under frost, plum under storm)
+   and a dark under-plane on line telegraphs. Only while the Garden is up; elsewhere the pooled meshes are put back exactly as they were. ---------- */
+var GDN_UND = {flame:[0x4a0f0c, 0.8], frost:[0x0a4650, 0.8], storm:[0x2a1340, 0.6]}, GDN_UNDG = new THREE.RingGeometry(0.84, 1.12, 48);
+var GDN_tele0 = addTele;
+addTele = function(x, z, r, dur, el){ var t = GDN_tele0.apply(this, arguments); try{ GDN_teleSkin(t); }catch(err){ if(DEV) console.warn(err); } return t; };
+function GDN_teleSkin(t){ var v = t && t.v, dr = v && v.g && v.g.children[0]; if(!dr) return; var u = GDN.on ? GDN_UND[t.el] : null;
+  if(u){ if(!v.gdm){ v.gdm = new THREE.MeshBasicMaterial({transparent:true, depthWrite:false}); v.gdm0 = dr.material; v.gdg0 = dr.geometry; } v.gdm.color.setHex(u[0]); v.gdm.opacity = u[1]; dr.material = v.gdm; dr.geometry = GDN_UNDG; dr.renderOrder = -1; }
+  else if(v.gdm0){ dr.material = v.gdm0; dr.geometry = v.gdg0; dr.renderOrder = 0; } }
+var GDN_line0 = addLineTele;
+addLineTele = function(x, z, ang, len, w, dur, el){ var L = GDN_line0.apply(this, arguments); try{ GDN_lineSkin(L, len, w, el); }catch(err){ if(DEV) console.warn(err); } return L; };
+function GDN_lineSkin(L, len, w, el){ if(!L || !L.m) return; var u = GDN.on ? GDN_UND[el] : null;
+  if(!u){ if(L.gdu) L.gdu.visible = false; return; }
+  if(!L.gdu){ L.gdu = new THREE.Mesh(L.m.geometry, new THREE.MeshBasicMaterial({transparent:true, depthWrite:false, side:THREE.DoubleSide})); L.gdu.renderOrder = -1; L.m.add(L.gdu); }
+  L.gdu.visible = true; L.gdu.material.color.setHex(u[0]); L.gdu.material.opacity = u[1]*0.7; L.gdu.scale.set((w + 0.34)/Math.max(0.05, w), (len + 0.34)/Math.max(0.05, len), 1); L.gdu.position.set(0, 0, -0.004); }
+
+/* =====================================================================================
+   HUB (The Vigil): the Garden's bosses stand at their gates. Gate II shows Hesk (in place of the Stormwright's rig), gate III shows Morrow Vine
+   (the Undermaw's merged statue leaves the locked-statue mesh). Names, arena, barks and shaft colours follow the Garden. Wraps HUB_cast (always
+   calls the original) and edits HUB_BOSS text once at load; the dive, practice runs, prompts and click-to-shoot are the hub's own and unchanged.
+   NOTE: the fights themselves are unchanged for now (wave 20 is still the Stormwright, wave 30 the Undermaw); the boss-mechanics rework is pending.
+   ===================================================================================== */
+var GDH = {
+  sw:{name:'Hesk', arena:'The Thornwall Garden', col:0x9a6bff, ember:0xd8c0ff, goal:'Gate II is open. The Thornwall Colossus waits in the Garden.',
+    bark:{current:['You climbed out of the Pit. My roots go deeper.', 'The Garden grows over every champion, in the end.'], beaten:['The oak remembers you. Again, then.'], locked:['Not yet.']}},
+  um:{name:'Morrow Vine', arena:'The Thornwall Garden', col:0x8fd86a, ember:0xd8f0b0, goal:'Gate III is open. The Bloomkeeper tends the Garden.',
+    bark:{current:['Every bloom in my Garden was a champion once.', 'Come, champion. The hedges are freshly clipped.'], beaten:['Even pruned, the vine returns.']}} };
+(function(){ if(typeof HUB_BOSS==='undefined') return; ['sw','um'].forEach(function(id){ var D = HUB_BOSS[id], N = GDH[id]; if(!D) return; D.name = N.name; D.arena = N.arena; D.col = N.col; D.ember = N.ember;
+  if(D.goal) D.goal.current = N.goal; D.bark = N.bark; }); })();
+if(typeof HUB_cast==='function'){ var GDH_cast0 = HUB_cast;
+  HUB_cast = function(st){ var r = GDH_cast0.apply(this, arguments); try{ GDH_dress(st); }catch(err){ if(DEV) console.warn('garden hub', err); } return r; }; }
+function GDH_dress(st){ var i, b, um = null, sw = null; if(!CHARS.hesk || !CHARS.morrow) return;
+  for(i=0;i<HUB.boss.length;i++){ b = HUB.boss[i]; if(b.id==='sw') sw = b; else if(b.id==='um') um = b; }
+  [sw, um].forEach(function(b){ if(!b) return; if(b.R){ var k = HUB.rigs.indexOf(b.R); if(k>=0) HUB.rigs.splice(k, 1); b.R.release(); b.R = null; }
+    var isH = b.id==='sw', R = buildChar(isH ? 'hesk' : 'morrow', isH ? 'storm' : 'frost', {}); R.root.position.set(b.pos[0], 0, b.pos[1]); R.root.rotation.y = b.yaw; scene.add(R.root); HUB.rigs.push(R); b.R = R;
+    var pose = b.st==='beaten' ? 'kneel' : 'idle';
+    b.e = {type:'hub', el:isH ? 'storm' : 'frost', state:'move', st:0, mv:0, dist:0, face:0, act:null, hurtT:0, spawnT:0, alive:9, hkPose:pose, hkScale:0.8, mvPose:pose, mvScale:0.74, hkSnap:true, mvSnap:true};
+    R.def.anim(R, b.e, 0, 0); R.updateBones(); b.e.hkSnap = b.e.mvSnap = false;
+    if(b.st==='locked'){ R.mats[0].color.setRGB(0.05,0.045,0.06); R.u.uGlow.value.setRGB(0.02,0.015,0.03); R.u.uRim.value.setRGB(0.12,0.1,0.16); R.u.uTint.value.setRGB(0.05,0.04,0.06); } });
+  /* gate III: Morrow Vine stands there whether it is open or still sealed (a dark statue-rig, like the Stormwright's locked look) */
+  if(!um){ var p = HUB_L.locked[0], yaw = HUB_face(p, HUB_L.spawn[0], HUB_L.spawn[1]), R3 = buildChar('morrow', 'frost', {}); R3.root.position.set(p[0], 0, p[1]); R3.root.rotation.y = yaw; scene.add(R3.root); HUB.rigs.push(R3);
+    var e3 = {type:'hub', el:'frost', state:'move', st:0, mv:0, dist:0, face:0, act:null, hurtT:0, spawnT:0, alive:9, mvPose:'idle', mvScale:0.74, mvSnap:true}; R3.def.anim(R3, e3, 0, 0); R3.updateBones();
+    R3.mats[0].color.setRGB(0.05,0.045,0.06); R3.u.uGlow.value.setRGB(0.02,0.015,0.03); R3.u.uRim.value.setRGB(0.12,0.1,0.16); R3.u.uTint.value.setRGB(0.05,0.04,0.06); HUB.gdLocked = R3; } else HUB.gdLocked = null;
+  /* the locked statues are rebuilt without the Undermaw (gate III) and without the Stormwright placeholder (Hesk stands at gate II) */
+  if(HUB.statues){ var S = new HUB_B(); HUB_L.locked.forEach(function(q, k){ if(k===0) return; HUB_statue(S, k, q[0], q[1], HUB_face(q, HUB_L.spawn[0], HUB_L.spawn[1]), 1.05); });
+    var g = S.build(); HUB.statues.geometry = g; if(HUB.geos.indexOf(g) < 0) HUB.geos.push(g); } }
+
+/* the hub's gate-III practice hint names the act (57-hub.js text, renamed here without editing that file) */
+var GDN_hint0 = showHint;
+showHint = function(html){ if(typeof html==='string' && html.indexOf('Deeps practice')>=0) arguments[0] = html.replace('Deeps practice', 'Garden practice'); return GDN_hint0.apply(this, arguments); };
+
+/* =====================================================================================
+   DEV: window.__feat.garden (stripped from release builds with the rest of the DEV hooks; build.py sets DEV = false)
+   ===================================================================================== */
+var GD_SHOW = [];
+if(DEV){ RENDER_HOOKS.push(function(t, adt){ for(var i=0;i<GD_SHOW.length;i++){ var s = GD_SHOW[i]; s.R.def.anim(s.R, s.e, t, G.animDt!=null ? G.animDt : adt); s.R.updateBones(); } });
+  window.__feat = window.__feat || {};
+  window.__feat.garden = { GDN:GDN, GARDEN:GARDEN,
+    on:function(v){ if(v===false) GARDEN.exit(); else GARDEN.enter(); return GDN.on; },
+    /* preview a rig as a scene prop: show('hesk'|'morrow'|'gnpc', el, x, z, yaw, {hkPose:'fire'} / {mvPose:'bloom'} / {npPose:'blow'}, opts) */
+    show:function(type, el, x, z, yaw, e, opts){ var R = buildChar(type, el||'storm', opts||{}); R.root.position.set(x||0, 0, z||0); R.root.rotation.y = yaw==null ? Math.atan2(-(x||0), -(z||0)) : yaw; scene.add(R.root);
+      var ee = {type:'gd', el:el||'storm', state:'move', st:0, mv:0, dist:0, face:0, act:null, hurtT:0, spawnT:0, alive:9}; if(e) for(var k in e) ee[k] = e[k];
+      GD_SHOW.push({R:R, e:ee}); R.def.anim(R, ee, 0, 0); R.updateBones(); return {tris:R.tris, height:R.height}; },
+    set:function(i, o){ var s = GD_SHOW[i<0 ? GD_SHOW.length+i : i]; if(!s) return false; for(var k in o) s.e[k] = o[k]; return true; },
+    clear:function(){ GD_SHOW.forEach(function(s){ s.R.release(); }); GD_SHOW.length = 0; return true; },
+    horn:function(){ GARDEN.horn(); return true; },
+    tele:function(x, z, r, dur, el){ addTele(x, z, r, dur||3, el||'flame'); return true; }, line:function(x, z, ang, len, w, dur, el){ addLineTele(x, z, ang, len, w, dur||3, el||'flame'); return true; },
+    /* triangles per garden child (instanced counted × instances) */
+    tris:function(){ var out = {}, tot = 0; if(!GDN.root) return null; GDN.root.traverse(function(o){ if(!o.isMesh || !o.visible) return; var g = o.geometry, n = (g.index ? g.index.count : g.attributes.position.count)/3; if(o.isInstancedMesh) n *= o.count;
+        var k = (o.name || (o.isInstancedMesh ? 'inst' : 'mesh'))+'#'+o.id; out[k] = Math.round(n); tot += n; }); out.total = Math.round(tot); return out; },
+    calls:function(){ renderer.info.autoReset = false; renderer.info.reset(); render(1/60, 0); var o = {calls:renderer.info.render.calls, tris:renderer.info.render.triangles}; renderer.info.autoReset = true; return o; } }; }
 /* ---------- 74 SMART AUTO-CAST (owned by the auto-cast agent). Prefix AC_. ----------
    One master toggle (pause menu "Auto-cast: ON/OFF") lets the controlled hero cast every class skill (Q/E), every run spell (F/T) and the
    Overload ultimate (R) by itself, but only when the moment makes sense (rules per tag below). Per-slot overrides stay: right-click / hold the key /
