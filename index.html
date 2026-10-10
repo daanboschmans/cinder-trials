@@ -16279,7 +16279,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:43',h:'d2c79e3'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:46',h:'27d1c5b'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -20225,6 +20225,11 @@ A3_cleanup = function(){ GL_end(true); return GL_cleanup0.apply(this, arguments)
 if(typeof DT_should==='function'){ var GL_dtShould0 = DT_should;
   DT_should = function(){ if(typeof A3!=='undefined' && (A3.desc || A3.pendingBank) && !(A3.force && A3.force.noDescend)) return false; return GL_dtShould0.apply(this, arguments); }; }
 
+/* practice runs (wave picker, Stormwright trial) go straight into the lift after the wave-20 kill, as A2_autoAscend does for 10 -> 11: no victory
+   screen, no Take / Enter choice, and no dependence on 71's render-hook hand-off. Real runs keep the victory screen and the choice. */
+if(typeof A2_showSpireVictory==='function'){ var GL_spv0 = A2_showSpireVictory;
+  A2_showSpireVictory = function(){ if(G.testRun && A3.pendingBank && !A3.desc && !(A3.force && A3.force.choice) && G.act===2 && G.state==='play' && P && !P.dead){ A3.wantChoice = false; A3_startDescent(); if(A3.desc) return; }
+    return GL_spv0.apply(this, arguments); }; }
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.glift = { GL:GL, T:GL_T, comp:function(o){ GL.compO = o||null; if(GL.on) GL.on.comp = GL_comp(); return GL_comp(); },
   state:function(){ var S = GL.on, D = A3.desc; return {on:!!S, t:D ? +D.t.toFixed(2) : null, swapped:S ? S.swapped : null, dock:S ? S.dock : null, hesk:!!(S && S.R), act:G.act, wave:G.wave, state:G.state, camO:!!G.camO, zoom:+camera.zoom.toFixed(3),
     lift:!!(GL.lift && GL.lift.parent), cache:typeof RIG_CACHE!=='undefined' ? !!RIG_CACHE['hesk|v1'] : null, dark:!!(A3E.dark && A3E.dark.visible)}; } }; }
