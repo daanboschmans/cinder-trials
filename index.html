@@ -16258,7 +16258,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:21',h:'d8bc18d'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:24',h:'87c0382'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -19572,6 +19572,227 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.obj = { OBJ:OBJ, OC:
     aloft:OBJ.a ? {done:OBJ.a.done, events:OBJ.a.events, saved:OBJ.a.saved, ev:OBJ.a.ev ? {el:OBJ.a.ev.el, x:OBJ.a.ev.oc.x, z:OBJ.a.ev.oc.z, n:OBJ.a.ev.oc.n} : null} : null,
     bloom:OBJ.b ? {bloomed:OBJ.b.bloomed, beds:OBJ.b.beds.map(function(b){ return {el:b.el, x:b.x, z:b.z, st:b.st, hp:b.hp, n:b.oc ? b.oc.n : 0}; })} : null}; },
   broken:function(){ OBJ_broken('Test'); return OBJ.st; }, altar:function(){ G.round = 'altar'; showAltar(); var g0 = G.god; G.god = false; damageAltar(99999); G.god = g0; return {st:OBJ.st, dead:P.dead, ruin:P.ruin, active:G.waveActive}; }, win:function(){ OBJ_won(); return OBJ.st; } }; }
+/* ---------- 82-gardenlift.js · wave 20 -> 21: THE LIFT UP INTO THE THORNWALL GARDEN, with a glimpse of Hesk. Prefix GL_. ----------
+   Owner request: "a transition like we have from wave 10 to 11, a lift going up with a teaser of the real final boss going to the garden".
+   Replaces the old dark "descent" (71-act3.js §8: the dark quad rising around the hero's lantern) without editing 71-act3.js:
+     A3_startDescent   wrapped: the original runs first (state, HUD, choice flags, skip prompt, rumble), then the dark curtain is switched off
+                       (A3E.dark stays hidden for the whole transition) and the lift is built.
+     A3_stepDescent    REPLACED while the lift runs (the original's timings and dark ramp are the retired descent). The pieces it drove are still
+                       called, at the lift's times: the lower thirds (A3_lt), A3_swap (curses break, full heal, allies back, A3_enterAct -> GARDEN.enter)
+                       and A3_finishDescent (the landing hook and wave 21). If the lift could not be built, the original step runs.
+     A3_skipDescent / A3_finishDescent / A3_cleanup   wrapped: the lift is torn down here, then the original runs.
+     DT_should (55-teaser) wrapped: the wave-20 Ommareth glimpse is absorbed into this transition whenever the Garden choice follows (A3.pendingBank),
+                       so two colossus teasers never play back to back. Runs that end at wave 20 (daily, endless) and the Codex replay are unchanged.
+   Timeline (GL_T, 6.4 s; skippable from 0.3 s with the descent's own skip control: click / tap / Space / Enter, never Escape):
+     0.0-0.8  a garden lift (sage stone, brass rim, four lantern posts) rises out of the Spire floor under the hero and locks with a clank
+     0.9-2.6  the Spire falls away below; storm cloud cards stream down past the lift; fog and sky ease storm slate -> warm sand haze (no white)
+     2.6      under the thickest cloud the Spire is swapped for the Garden (A3_swap)
+     2.6-3.6  the haze clears into daylight, seen from above; the hedge ring, terraces and crowd settle around the rising floor; the lift docks
+              into the centre medallion (3.6 s thud, the crowd cheers)
+     3.8-5.6  the crowd hushes; the camera lifts over the far arcade: Hesk, the Thornwall Colossus, rises behind it as a dark silhouette, his eyes open
+              with a stutter, his branches stir; lower third "Hesk, the Thornwall Colossus · awaits at round 30"
+     5.35-6.2 he sinks back under the lawn; the camera blends into the exact Garden play camera (no cut); the crowd roars; the act title
+   Hesk is a CHARS.hesk rig built for the transition only and fully released afterwards (materials; and the cached geometry when this file created the
+   cache entry). The lift, cloud cards and haze card are disposed at the end too. Nothing is allocated per frame. Party allies stand on the lift
+   (71-act3's A3_allyRing). Wave picker 21+ and the Garden trial never run the lift (they call A3_enterAct directly). */
+var GL = {on:null, built:false, geo:[], mats:[], lift:null, posts:null, rim:null, cl:null, cp:[], haze:null, tex:null, el:null};
+var GL_T = {dur:6.4, lock:0.8, drop:0.9, swap:2.6, dock:3.6, hush0:3.85, hush1:5.65, rise0:3.85, rise1:4.95, eyes:4.45, stir:4.8, txt:4.5, sink0:5.3, sink1:6.15, cheer:5.85, Y0:3.5};
+var GL_C = {slate:0x434c64, haze:0xa8987a, cloudS:0x4a546c, cloudW:0xa89a7c, cloudG:0xb4c2a0, stone:0x737a62, worn:0x878a70, col:0x6f765e, brass:0xb08a4a, brass2:0x8a6a3a};
+var _glV = new THREE.Vector3(), _glV2 = new THREE.Vector3(), _glF = new THREE.Vector3(), _glQ = new THREE.Quaternion(), _glM = new THREE.Matrix4(), _glS = new THREE.Vector3(), _glC = new THREE.Color(), _glC2 = new THREE.Color();
+var GL_K = [0,1,2,3,4,5].map(function(){ return {x:0, y:0, z:0, el:0, az:0, d:40, zm:1}; });
+function GL_sm(x){ x = x<0?0:x>1?1:x; return x*x*(3-2*x); }
+function GL_seg(t, a, b){ return GL_sm((t-a)/(b-a)); }
+function GL_cl(x){ return x<0?0:x>1?1:x; }
+function GL_port(){ return (camera.right - camera.left) < (camera.top - camera.bottom); }
+/* composition of the Hesk beat per aspect: look point (tx, ly, tz), elevation, zoom; where Hesk stands (hx, hz) and how tall his head rises (head) */
+function GL_comp(){ var c = GL_comp0(); if(GL.compO) for(var k in GL.compO) c[k] = GL.compO[k]; return c; }
+function GL_comp0(){ return GL_port() ? {tx:-3, tz:-3, ly:22, el:0.62, zm:0.6, hx:-24.5, hz:-24.5, head:15, top:-1} : {tx:-3, tz:-3, ly:22, el:0.6, zm:0.35, hx:-22, hz:-28, head:15, top:-1}; }
+
+/* ---------- build: lift (4 draws), cloud cards (1 instanced draw), haze card (1 draw, pre-swap only) ---------- */
+function GL_geo(parts){ var P = [], N = [], C = [], m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color(), nm = new THREE.Matrix3();
+  for(var k=0;k<parts.length;k++){ var p = parts[k], g0 = p[0], g = g0.index ? g0.toNonIndexed() : g0; e.set(p[7]||0, p[8]||0, p[9]||0); q.setFromEuler(e); m.compose(v.set(p[1], p[2], p[3]), q, s.set(p[4], p[5], p[6])); nm.getNormalMatrix(m); c.setHex(p[10]);
+    var pa = g.attributes.position.array, na = g.attributes.normal.array; for(var i=0;i<pa.length;i+=3){ v.set(pa[i], pa[i+1], pa[i+2]).applyMatrix4(m); P.push(v.x, v.y, v.z); v.set(na[i], na[i+1], na[i+2]).applyMatrix3(nm).normalize(); N.push(v.x, v.y, v.z); C.push(c.r, c.g, c.b); }
+    if(g!==g0) g.dispose(); g0.dispose(); }
+  var o = new THREE.BufferGeometry(); o.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); o.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); o.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); o.computeBoundingSphere(); GL.geo.push(o); return o; }
+function GL_mat(m){ GL.mats.push(m); return m; }
+function GL_build(){ if(GL.built) return; GL.built = true; var C = GL_C, i, a;
+  var body = GL_mat(new THREE.MeshPhongMaterial({vertexColors:true, flatShading:true, shininess:8, specular:0x161812}));
+  var parts = [[new THREE.CylinderGeometry(3.3, 3.3, 0.5, 40), 0, -0.25, 0, 1, 1, 1, 0, 0, 0, C.stone], [new THREE.CylinderGeometry(2.05, 2.05, 0.02, 32), 0, 0.01, 0, 1, 1, 1, 0, 0, 0, C.worn],
+    [new THREE.CylinderGeometry(0.34, 0.34, 0.03, 10), 0, 0.012, 0, 1, 1, 1, 0, 0, 0, C.brass], [new THREE.CylinderGeometry(3.1, 2.6, 44, 28, 1, true), 0, -22.5, 0, 1, 1, 1, 0, 0, 0, C.col]];
+  [-1.3, -6.5, -14].forEach(function(y){ parts.push([new THREE.CylinderGeometry(3.12 + y*0.0115, 3.12 + y*0.0115, 0.36, 28, 1, true), 0, y, 0, 1, 1, 1, 0, 0, 0, C.brass2]); });
+  for(i=0;i<4;i++){ a = i*Math.PI/2; var px = Math.cos(a)*1.25, pz = Math.sin(a)*1.25; parts.push([new THREE.BoxGeometry(1.4, 0.02, 0.16), px, 0.024, pz, 1, 1, 1, 0, -a, 0, 0x6a8248]); }
+  var top = new THREE.Mesh(GL_geo(parts), body); top.receiveShadow = true; top.castShadow = false;
+  var rimM = GL_mat(new THREE.MeshPhongMaterial({color:C.brass, emissive:0x000000, flatShading:true, shininess:30, specular:0x3a2e1a}));
+  var rim = GL.rim = new THREE.Mesh(new THREE.TorusGeometry(3.24, 0.12, 5, 64), rimM); GL.geo.push(rim.geometry); rim.rotation.x = Math.PI/2; rim.position.y = 0.03;
+  var pp = []; for(i=0;i<4;i++){ a = i*Math.PI/2 + Math.PI/4; var x = Math.cos(a)*2.95, z = Math.sin(a)*2.95;
+    pp.push([new THREE.CylinderGeometry(0.07, 0.1, 1.3, 6), x, 0.65, z, 1, 1, 1, 0, 0, 0, C.brass2]); pp.push([new THREE.ConeGeometry(0.2, 0.18, 4), x, 1.55, z, 1, 1, 1, 0, Math.PI/4, 0, C.brass2]);
+    pp.push([new THREE.BoxGeometry(0.26, 0.04, 0.26), x, 1.3, z, 1, 1, 1, 0, 0, 0, C.brass]); }
+  var lp = []; for(i=0;i<4;i++){ a = i*Math.PI/2 + Math.PI/4; lp.push([new THREE.BoxGeometry(0.17, 0.2, 0.17), Math.cos(a)*2.95, 1.42, Math.sin(a)*2.95, 1, 1, 1, 0, 0, 0, 0xffc870]); }
+  var posts = GL.posts = new THREE.Group(); posts.add(new THREE.Mesh(GL_geo(pp), body)); var lm = GL_mat(new THREE.MeshBasicMaterial({vertexColors:true})); posts.add(new THREE.Mesh(GL_geo(lp), lm));
+  var g = GL.lift = new THREE.Group(); g.name = 'gardenLift'; g.add(top); g.add(rim); g.add(posts);
+  /* cloud cards: soft round billboards tinted slate -> sand -> sage (normal blending, never opaque, never white) */
+  var cv = document.createElement('canvas'); cv.width = cv.height = 64; var x2 = cv.getContext('2d'), gr = x2.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.45, 'rgba(255,255,255,.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64); GL.tex = new THREE.CanvasTexture(cv);
+  var cm = GL_mat(new THREE.MeshBasicMaterial({map:GL.tex, color:C.cloudS, transparent:true, opacity:0, depthWrite:false, fog:false}));
+  var pg = new THREE.PlaneGeometry(1, 1); GL.geo.push(pg); GL.cl = new THREE.InstancedMesh(pg, cm, 30); GL.cl.frustumCulled = false; GL.cl.renderOrder = 5;
+  var s = 97; function R(){ s = (s*16807) % 2147483647; return s/2147483647; } GL.cp = []; for(i=0;i<30;i++) GL.cp.push({u:(R()-0.5)*46, v:(R()-0.5)*36, y:R()*26, s:9 + R()*12, sp:0.8 + R()*0.5});
+  /* haze card: hides the Spire's painted sky behind the clouds before the swap (the Garden's sky is a plain colour, eased directly) */
+  var hg = new THREE.PlaneGeometry(1, 1); GL.geo.push(hg); GL.haze = new THREE.Mesh(hg, GL_mat(new THREE.MeshBasicMaterial({color:C.slate, transparent:true, opacity:0, depthWrite:false, fog:false})));
+  GL.haze.frustumCulled = false; GL.haze.renderOrder = -5; }
+function GL_dispose(){ if(!GL.built) return; [GL.lift, GL.cl, GL.haze].forEach(function(o){ if(o && o.parent) o.parent.remove(o); });
+  GL.geo.forEach(function(g){ g.dispose(); }); GL.mats.forEach(function(m){ m.dispose(); }); if(GL.tex) GL.tex.dispose(); GL.geo = []; GL.mats = []; GL.tex = null; GL.lift = GL.posts = GL.rim = GL.cl = GL.haze = null; GL.built = false; }
+
+/* ---------- DOM: the Hesk lower third (inside #hud, so the UI scale applies) ---------- */
+function GL_dom(){ if(GL.el && GL.el.parentNode) return GL.el; if(!$('glCss')){ var st = document.createElement('style'); st.id = 'glCss'; st.textContent = [
+  '#glLt{position:absolute;left:calc(var(--sal,0px) + max(5vw,24px));bottom:calc(var(--sab,0px) + max(7vh,48px));max-width:min(36vw,520px);text-align:left;pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .6s,transform .9s}',
+  '#glLt.on{opacity:1;transform:none}',
+  '#glLt h2{margin:0;font-family:Cinzel,Georgia,serif;font-weight:700;font-size:clamp(18px,3.6vh,32px);letter-spacing:.14em;text-transform:uppercase;color:#e6ecd2;text-shadow:0 2px 14px #000,0 0 24px rgba(120,190,90,.3)}',
+  '#glLt p{margin:clamp(4px,1vh,8px) 0 0;font:600 clamp(10px,1.7vh,13px) Rubik,system-ui,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#cdb98c;text-shadow:0 2px 8px #000}',
+  'body.glTease #hud>*:not(#glLt):not(#a3Sk){opacity:0!important;transition:opacity .35s}',
+  '@media (max-aspect-ratio:9/10){#glLt{left:0;right:0;max-width:none;text-align:center;padding:0 16px;bottom:calc(var(--sab,0px) + max(8vh,60px))}#glLt h2{letter-spacing:.08em;font-size:min(5.6vw,22px)}#glLt p{font-size:11px}}'].join('\n'); document.head.appendChild(st); }
+  var d = document.createElement('div'); d.id = 'glLt'; d.setAttribute('aria-live', 'polite'); d.innerHTML = '<h2>Hesk, the Thornwall Colossus</h2><p>Awaits at round 30</p>'; ($('hud') || document.body).appendChild(d); GL.el = d; return d; }
+
+/* ---------- Hesk: built at the start (parked far below the far plane so its shaders compile), released at the end ---------- */
+function GL_heskBuild(S){ if(typeof CHARS==='undefined' || !CHARS.hesk) return; var D = CHARS.hesk, key = 'hesk|' + (D.variant ? D.variant({}, 'storm') : '');
+  S.hkKey = key; S.hkOwn = !RIG_CACHE[key]; var R = S.R = buildChar('hesk', 'storm', {}), C = S.comp;
+  R.mats[0].fog = false; if(R.mats[1]) R.mats[1].fog = false; if(R.mesh) R.mesh.castShadow = false;
+  var e = S.he = {type:'gl', el:'storm', state:'move', st:0, mv:0, dist:0, face:0, act:null, hurtT:0, spawnT:0, alive:9, hkPose:'idle', hkScale:1, hkEyes:0, hkArc:0, hkSnap:true};
+  R.root.position.set(0, 0, 0); R.root.rotation.set(0, 0, 0); scene.add(R.root); R.def.anim(R, e, 0, 0); R.updateBones(); R.root.updateMatrixWorld(true);
+  R.limbs.head.g.getWorldPosition(_glV); var h1 = Math.max(0.5, _glV.y); e.hkScale = C.head/h1; S.hkTall = C.head*1.4 + 3;
+  e.hkPose = 'wake'; R.def.anim(R, e, 0, 0); R.updateBones(); e.hkSnap = false;
+  R.root.position.set(C.hx, -420, C.hz); R.root.rotation.y = Math.atan2(-C.hx, -C.hz); R.mats[0].color.setRGB(0.2, 0.22, 0.17); }
+function GL_heskFree(S){ var R = S && S.R; if(!R) return; S.R = null; R.release(); if(S.hkOwn && RIG_CACHE[S.hkKey]){ var c = RIG_CACHE[S.hkKey]; if(c.geo) c.geo.dispose(); delete RIG_CACHE[S.hkKey]; } }
+function GL_heskStep(S, t, rdt){ var R = S.R, e = S.he; if(!R) return; var C = S.comp;
+  if(t < GL_T.rise0 - 0.05 || t > GL_T.sink1 + 0.05){ R.root.position.y = -420; return; }
+  var up = 1 - Math.pow(1 - GL_cl((t - GL_T.rise0)/(GL_T.rise1 - GL_T.rise0)), 3), dn = GL_seg(t, GL_T.sink0, GL_T.sink1), k = up*(1 - dn);
+  R.root.position.set(C.hx, -S.hkTall + (S.hkTall + C.top)*k, C.hz); R.root.rotation.z = 0.025*Math.sin(t*1.6); R.root.rotation.x = 0.02*Math.sin(t*1.1 + 1);
+  e.hkPose = t < 4.6 ? 'wake' : t < GL_T.sink0 ? 'storm' : 'wake'; e.hkArc = 0.4*GL_seg(t, GL_T.stir, GL_T.stir + 0.3)*(1 - GL_seg(t, GL_T.sink0 - 0.1, GL_T.sink0 + 0.2)); e.hkEyes = 1;
+  R.def.anim(R, e, t, rdt);
+  /* eyes: a stutter (0.3 -> shut -> open), held, closed as he sinks (set after anim: the rig smooths eyes too slowly for a stutter) */
+  var ek = t < GL_T.eyes ? 0 : t < GL_T.eyes + 0.1 ? 0.3 : t < GL_T.eyes + 0.18 ? 0.04 : GL_seg(t, GL_T.eyes + 0.18, GL_T.eyes + 0.42)*(1 - GL_seg(t, GL_T.sink0 - 0.05, GL_T.sink0 + 0.3));
+  R.limbs.eyes.g.scale.set(1, Math.max(0.001, ek), 1); R.u.uGlow.value.multiplyScalar(0.35 + 0.95*ek); R.u.uRim.value.setRGB(0.2 + 0.12*ek, 0.27 + 0.1*ek, 0.16 + 0.2*ek); R.updateBones(); }
+
+/* ---------- camera: start (captured play view) -> rise -> the Garden from above -> over the far wall (Hesk) -> the Garden play camera ---------- */
+function GL_kSet(K, x, y, z, el, az, d, zm){ K.x = x; K.y = y; K.z = z; K.el = el; K.az = az; K.d = d; K.zm = zm; return K; }
+function GL_kMix(o, K, w){ if(w <= 0) return; o.x += (K.x - o.x)*w; o.y += (K.y - o.y)*w; o.z += (K.z - o.z)*w; o.el += (K.el - o.el)*w; o.az += (K.az - o.az)*w; o.d += (K.d - o.d)*w; o.zm = o.zm*Math.pow(K.zm/o.zm, w); }
+function GL_cam(S, t){ var port = GL_port(), land = innerWidth > innerHeight, C = S.comp, isoEl = Math.atan2(ISO.y, Math.hypot(ISO.x, ISO.z)), isoAz = Math.atan2(ISO.z, ISO.x), cf = land ? 0.4 : 0.6;
+  var K0 = GL_kSet(GL_K[0], S.f0.x, 0, S.f0.z, S.el0, S.az0, S.dist0, S.z0), o = GL_K[5];
+  o.x = K0.x; o.y = 0; o.z = K0.z; o.el = K0.el; o.az = K0.az; o.d = K0.d; o.zm = K0.zm;
+  GL_kMix(o, GL_kSet(GL_K[1], S.lx*0.7, 0, S.lz*0.7, isoEl + 0.42, isoAz, 42, S.z0*(port ? 1 : 0.9)), GL_seg(t, 0.15, 1.6));
+  GL_kMix(o, GL_kSet(GL_K[2], 0, 0, 0.3, 1.08, isoAz, 46, port ? 0.62 : 0.5), GL_seg(t, 2.05, 3.25));
+  GL_kMix(o, GL_kSet(GL_K[3], C.tx, C.ly, C.tz, C.el, isoAz, 46, C.zm), GL_seg(t, 3.75, 4.65));
+  var wE = GL_seg(t, GL_T.sink0, GL_T.sink1 + 0.05), ex = P ? P.x*cf : 0, ez = P ? P.z*cf : 0, zE = land && typeof GDN_CAM!=='undefined' ? GDN_CAM[0] : 1;
+  GL_kMix(o, GL_kSet(GL_K[4], ex, 0, ez, isoEl, isoAz, ISO.length(), zE), wE);
+  var ce = Math.cos(o.el); _glF.set(o.x, o.y, o.z); camera.position.set(o.x + Math.cos(o.az)*ce*o.d, o.y + Math.sin(o.el)*o.d, o.z + Math.sin(o.az)*ce*o.d); camera.up.set(0, 1, 0); camera.lookAt(_glF);
+  var s0 = GL_seg(t, 0, 0.8); if(s0 < 1){ _glQ.copy(camera.quaternion); camera.quaternion.copy(S.q0).slerp(_glQ, s0); }
+  if(land && typeof GDN_UP!=='undefined' && wE > 0) camera.position.addScaledVector(GDN_UP, GDN_CAM[1]*wE);   /* the Garden hook's landscape framing, eased in */
+  if(G.shake > 0){ camera.position.x += rnd(-1, 1)*G.shake*0.5; camera.position.z += rnd(-1, 1)*G.shake*0.5; camera.position.y += rnd(-1, 1)*G.shake*0.3; }
+  if(camera.zoom !== o.zm){ camera.zoom = o.zm; camera.updateProjectionMatrix(); } camera.updateMatrixWorld();
+  camFocus.set(o.x, 0, o.z); var O = S.camO; O.x = o.x; O.z = o.z; O.zoom = o.zm; O.iso.copy(camera.position).sub(camFocus); G.camO = O; }
+
+/* ---------- world pieces ---------- */
+function GL_spire(y){ GL.dropY = y; if(typeof SP!=='undefined' && SP && SP.root) SP.root.position.y = y; for(var i=0;i<pillars.length;i++) if(pillars[i].g) pillars[i].g.position.y = y; }
+/* the attuned-pillar rings and gems (70-pillars, placed in updateRigs after the render hooks) fall with their pillars */
+var GL_ur0 = updateRigs;
+updateRigs = function(){ var r = GL_ur0.apply(this, arguments); if(GL.on && !GL.on.swapped && GL.dropY){ for(var i=0;i<pillars.length;i++){ var v = pillars[i].pcV; if(v && v.g) v.g.position.y = GL.dropY; } } return r; };
+/* the Garden settles around the floor: GDN.root comes down from +Y while the floor-level meshes (floor, lawn, water, tufts) hold y so the hero rides the floor */
+function GL_gardenList(){ var L = []; if(typeof GDN==='undefined' || !GDN.root) return L; var ch = GDN.root.children;
+  for(var i=0;i<ch.length;i++){ var m = ch[i], mt = m.material; if(!m.isMesh) continue; var lam = mt && mt.isMeshLambertMaterial;
+    if(m===GDN.water || (lam && mt.vertexColors) || (lam && m.geometry && m.geometry.type==='PlaneGeometry')) L.push({m:m, y:m.position.y}); }
+  return L; }
+function GL_garden(S, y){ if(typeof GDN==='undefined' || !GDN.root) return; if(!S.gl) S.gl = GL_gardenList(); GDN.root.position.y = y;
+  for(var i=0;i<S.gl.length;i++){ var g = S.gl[i]; g.m.position.y = g.y - y; if(!g.m.matrixAutoUpdate) g.m.updateMatrix(); } }
+function GL_env(S, t){ var f = scene.fog, bg = scene.background && scene.background.isColor ? scene.background : null;
+  if(!S.swapped){ var k1 = GL_seg(t, 0.9, 1.9), k2 = GL_seg(t, 1.9, GL_T.swap), kn = GL_seg(t, 1.0, 2.45);
+    f.color.setHex(S.fc0).lerp(_glC.setHex(GL_C.slate), k1).lerp(_glC.setHex(GL_C.haze), k2); f.near = S.fn0 + (30 - S.fn0)*kn; f.far = S.ff0 + (70 - S.ff0)*kn;
+    GL.haze.material.color.copy(f.color); GL.haze.material.opacity = GL_seg(t, 1.1, 2.3); }
+  else { var E = S.env, k = GL_seg(t, GL_T.swap, GL_T.swap + 0.95);
+    f.color.setHex(GL_C.haze).lerp(_glC.setHex(E.fc), k); f.near = 30 + (E.fn - 30)*k; f.far = 70 + (E.ff - 70)*k; if(bg) bg.setHex(GL_C.haze).lerp(_glC.setHex(E.bg), k);
+    if(E.H) E.H.intensity = E.hi*(0.6 + 0.4*k); sun.intensity = E.si*(0.6 + 0.4*k); GL.haze.material.opacity = 0; } }
+function GL_clouds(S, t){ var cm = GL.cl.material, op = 0.62*GL_seg(t, 0.95, 1.8)*(1 - GL_seg(t, 2.85, 3.5));
+  if(op <= 0.003){ GL.cl.visible = false; return; } GL.cl.visible = true; cm.opacity = op;
+  cm.color.setHex(GL_C.cloudS).lerp(_glC.setHex(GL_C.cloudW), GL_seg(t, 1.8, GL_T.swap)).lerp(_glC2.setHex(GL_C.cloudG), GL_seg(t, GL_T.swap, 3.3));
+  var fx = camFocus.x, fz = camFocus.z; for(var i=0;i<GL.cp.length;i++){ var c = GL.cp[i], y = c.y*0.7 + 2 + (GL_T.swap - t)*13*c.sp;   /* the thickest cloud crosses the lift at the swap, then sinks under the arriving floor */
+    _glV.set(fx - 0.7071*c.v + 0.7071*c.u, y, fz - 0.7071*c.v - 0.7071*c.u); _glS.set(c.s*1.5, c.s, 1); _glM.compose(_glV, camera.quaternion, _glS); GL.cl.setMatrixAt(i, _glM); }
+  GL.cl.instanceMatrix.needsUpdate = true; }
+function GL_hazeCard(){ var h = GL.haze; h.visible = h.material.opacity > 0.002; if(!h.visible) return;
+  camera.getWorldDirection(_glV); h.position.copy(camera.position).addScaledVector(_glV, 150); h.quaternion.copy(camera.quaternion);
+  var w = (camera.right - camera.left)/camera.zoom*1.3, hh = (camera.top - camera.bottom)/camera.zoom*1.3; h.scale.set(w, hh, 1); }
+function GL_liftStep(S, t){ var L = GL.lift, rim = GL.rim.material;
+  if(!S.swapped){ var r = GL_cl((t - 0.42)/0.38), b = r < 1 ? 1 + 2.2*Math.pow(r - 1, 3) + 1.2*Math.pow(r - 1, 2) : 1; L.position.set(S.lx, -0.5 + 0.52*b, S.lz); L.scale.setScalar(1); GL.posts.position.y = 0;
+    var g = GL_seg(t, 0.15, 0.6)*(0.75 + 0.25*Math.sin(t*9)); rim.emissive.setRGB(0.42*g, 0.26*g, 0.07*g); }
+  else { var dk = GL_seg(t, GL_T.dock - 0.25, GL_T.dock + 0.1); L.position.set(0, 0.02 - 0.09*dk, 0); L.scale.set(0.68, 1, 0.68); GL.posts.position.y = -1.9*GL_seg(t, GL_T.dock - 0.6, GL_T.dock - 0.05);
+    var g2 = 1 - GL_seg(t, GL_T.dock, GL_T.dock + 0.5); rim.emissive.setRGB(0.42*g2, 0.26*g2, 0.07*g2); L.visible = t < GL_T.dock + 0.3; } }
+function GL_motes(S, t, dt){ if(!P || Math.random() > dt*34) return; var a = Math.random()*TAU, r = rnd(1.5, 9), pre = !S.swapped;
+  var c = pre ? (Math.random() < 0.6 ? 0x8fa6d8 : 0xa98ad8) : [0xd8c470, 0x8fd86a, 0xe48aa2][(Math.random()*3)|0];
+  glowP.emit(camFocus.x + Math.cos(a)*r, rnd(5, 9), camFocus.z + Math.sin(a)*r, rnd(-0.4, 0.4), -rnd(6, 10), rnd(-0.4, 0.4), rnd(0.7, 1.1), rnd(0.5, 0.9), c, 0, 0.1); }
+
+/* ---------- flow ---------- */
+function GL_begin(){ var D = A3.desc; if(!D || GL.on) return; try{ GL_build(); }catch(err){ if(DEV) console.warn('gardenlift build', err); GL_dispose(); return; }
+  var S = {t:0, lock:false, swapped:false, dock:false, hush:false, cheer:false, gr:false, txt:false, gl:null, R:null, comp:GL_comp(), lx:P ? P.x : 0, lz:P ? P.z : 0};
+  S.f0 = camFocus.clone(); var d0 = camera.position.clone().sub(camFocus); S.dist0 = Math.max(1, d0.length()); S.el0 = Math.atan2(d0.y, Math.hypot(d0.x, d0.z)); S.az0 = Math.atan2(d0.z, d0.x); S.q0 = camera.quaternion.clone(); S.z0 = camera.zoom || 1;
+  S.camO = {x:S.f0.x, z:S.f0.z, zoom:S.z0, iso:d0}; G.camO = S.camO;
+  var f = scene.fog; S.fc0 = f.color.getHex(); S.fn0 = f.near; S.ff0 = f.far;
+  GL.lift.visible = true; GL.lift.position.set(S.lx, -0.5, S.lz); scene.add(GL.lift); scene.add(GL.cl); scene.add(GL.haze); GL.haze.visible = false; GL.cl.visible = false;
+  try{ GL_heskBuild(S); }catch(err){ if(DEV) console.warn('gardenlift hesk', err); GL_heskFree(S); }
+  GL_dom().classList.remove('on'); document.body.classList.add('glLift'); GL.on = S;
+  if(A3E.dark) A3E.dark.visible = false; A3.amb = 0; A3.ambT = 0; }
+function GL_doSwap(){ var S = GL.on; GL_spire(0); A3_swap(); A3.amb = 0; A3.ambT = 0; if(A3E.dark) A3E.dark.visible = false; S.swapped = true;
+  var H = null; for(var i=0;i<scene.children.length;i++) if(scene.children[i].isHemisphereLight){ H = scene.children[i]; break; }
+  S.env = {bg:scene.background && scene.background.isColor ? scene.background.getHex() : GL_C.haze, fc:scene.fog.color.getHex(), fn:scene.fog.near, ff:scene.fog.far, H:H, hi:H ? H.intensity : 0, si:sun.intensity};
+  S.gl = null; GL_garden(S, GL_T.Y0); GL_env(S, S.t); }
+function GL_step(dt){ var D = A3.desc, S = GL.on; if(!D) return; D.t += dt; var t = S.t = D.t; if(P){ P.vx = P.vz = 0; }
+  A3.amb = 0; A3.ambT = 0; if(A3E.dark) A3E.dark.visible = false;
+  if(D.lt===0 && t >= 0.3){ D.lt = 1; A3_lt('Rising to the Thornwall Garden', 'Curses break · boons stay'+(G.testRun ? ' · practice run, no Glory' : '')); }
+  if(!S.lock && t >= GL_T.lock){ S.lock = true; SFX.slam(); G.shake = Math.max(G.shake, 0.2); if(lim('glLock', 1)){ tone(150, 0.25, 'square', 0.03, 90); noise(0.3, 0.06, 900, 'bandpass'); }
+    for(var k=0;k<14;k++){ var a = k/14*TAU; burst(S.lx + Math.cos(a)*3.3, 0.15, S.lz + Math.sin(a)*3.3, 2, 0xb8a888, 3, 0.5, 0.9); }
+    for(var c=0;c<corpses.length;c++){ var ce = corpses[c].e; if(ce) burst(ce.x, 1.2, ce.z, 22, ELC[ce.el] || 0x8a7ab0, 5, 0.7, 1.2); } if(typeof clearCorpses==='function') clearCorpses(); }
+  if(!S.swapped){ var dk = GL_cl((t - GL_T.drop)/(GL_T.swap - GL_T.drop)); GL_spire(-Math.pow(dk, 2.2)*60); if(t > GL_T.drop && t < GL_T.drop + 0.5) G.shake = Math.max(G.shake, 0.06); }
+  if(!S.swapped && t >= GL_T.swap) GL_doSwap();
+  if(S.swapped){ var gk = GL_cl((t - GL_T.swap)/(GL_T.dock - GL_T.swap)); GL_garden(S, GL_T.Y0*Math.pow(1 - gk, 3)); }
+  if(D.lt===1 && t >= 3.2){ D.lt = 2; A3_lt(''); }
+  if(!S.dock && t >= GL_T.dock){ S.dock = true; SFX.slam(); G.shake = Math.max(G.shake, 0.28); crowdCheer = 1; if(typeof GARDEN!=='undefined' && GARDEN.cheer) GARDEN.cheer(0.8);
+    for(var j=0;j<18;j++){ var b = j/18*TAU; burst(Math.cos(b)*2.3, 0.1, Math.sin(b)*2.3, 2, 0xb8b090, 3.5, 0.55, 1.0); } }
+  if(t >= GL_T.hush0 && t < GL_T.hush1){ crowdCheer = 0; if(typeof GDN!=='undefined') GDN.ch *= 0.86; if(!S.hush){ S.hush = true; noise(1.1, 0.035, 1600, 'lowpass', 0, null, 260); document.body.classList.add('glTease'); } }
+  if(!S.gr && t >= GL_T.rise0 + 0.2){ S.gr = true; tone(34, 2.4, 'sawtooth', 0.05, 27); noise(1.6, 0.05, 320, 'bandpass', 0.1, null, 110); }
+  if(!S.eye && t >= GL_T.eyes){ S.eye = true; tone(96, 1.0, 'triangle', 0.035, 72); }
+  if(!S.txt && t >= GL_T.txt){ S.txt = true; if(GL.el) GL.el.classList.add('on'); }
+  if(S.txt && GL.el && t >= GL_T.sink0 + 0.35) GL.el.classList.remove('on');
+  if(!S.cheer && t >= GL_T.cheer){ S.cheer = true; document.body.classList.remove('glTease'); crowdCheer = 1; if(typeof GARDEN!=='undefined' && GARDEN.cheer) GARDEN.cheer(1); SFX.cheer(); A3_lt(A3_ACTNAME, A3_ACTSUB); }
+  GL_motes(S, t, dt);
+  if(t >= GL_T.dur) A3_finishDescent(); }
+/* render: camera, clouds, haze, palette, lift, Hesk (driven by the step's clock, so a paused game holds the frame) */
+function GL_render(tt, adt){ var S = GL.on; if(!S || !A3.desc) return; var t = A3.desc.t, rdt = Math.max(0, Math.min(0.1, t - (S.rt==null ? t : S.rt))); S.rt = t;
+  try{ GL_cam(S, t); GL_env(S, t); GL_clouds(S, t); GL_hazeCard(); GL_liftStep(S, t); GL_heskStep(S, t, rdt); }catch(err){ if(DEV) console.warn('gardenlift render', err); } }
+RENDER_HOOKS.push(GL_render);
+/* tear down (finish, skip, or abort from cleanup); idempotent */
+function GL_end(abort){ var S = GL.on; if(!S) return; GL.on = null;
+  GL_spire(0); if(S.gl) GL_garden(S, 0); else if(typeof GDN!=='undefined' && GDN.root) GDN.root.position.y = 0;
+  if(S.swapped && S.env){ var E = S.env, bg = scene.background && scene.background.isColor ? scene.background : null; if(!abort && typeof GDN!=='undefined' && GDN.on){ scene.fog.color.setHex(E.fc); scene.fog.near = E.fn; scene.fog.far = E.ff; if(bg) bg.setHex(E.bg); if(E.H) E.H.intensity = E.hi; sun.intensity = E.si; } }
+  else if(typeof SPIRE!=='undefined' && SPIRE && SPIRE.active && typeof SP_applyEnv==='function') SP_applyEnv(); else { scene.fog.color.setHex(S.fc0); scene.fog.near = S.fn0; scene.fog.far = S.ff0; }
+  GL_heskFree(S); GL_dispose();
+  if(G.camO===S.camO) G.camO = null;
+  if(GL.el) GL.el.classList.remove('on'); document.body.classList.remove('glLift'); document.body.classList.remove('glTease'); }
+
+/* ---------- wrappers (each calls the original, except the descent step while the lift runs; see the header) ---------- */
+var GL_start0 = A3_startDescent;
+A3_startDescent = function(){ var had = !!A3.desc, r = GL_start0.apply(this, arguments); if(!had && A3.desc) GL_begin(); return r; };
+var GL_stepDescent0 = A3_stepDescent;
+A3_stepDescent = function(dt){ if(GL.on && A3.desc) return GL_step(dt); return GL_stepDescent0.apply(this, arguments); };
+var GL_skip0 = A3_skipDescent;
+A3_skipDescent = function(){ var D = A3.desc; if(D && GL.on && D.t >= A3_ASC_SKIP){ GL_end(false); var r = GL_skip0.apply(this, arguments); A3.amb = 0; A3.ambT = 0; if(A3E.dark) A3E.dark.visible = false; crowdCheer = 1; return r; }
+  return GL_skip0.apply(this, arguments); };
+var GL_finish0 = A3_finishDescent;
+A3_finishDescent = function(){ GL_end(false); var r = GL_finish0.apply(this, arguments); A3.amb = 0; A3.ambT = 0; if(A3E.dark) A3E.dark.visible = false; return r; };
+var GL_cleanup0 = A3_cleanup;
+A3_cleanup = function(){ GL_end(true); return GL_cleanup0.apply(this, arguments); };
+/* the wave-20 Ommareth glimpse (55-teaser) is absorbed here when the Garden choice follows: the lift carries the act's teaser instead */
+if(typeof DT_should==='function'){ var GL_dtShould0 = DT_should;
+  DT_should = function(){ if(typeof A3!=='undefined' && (A3.desc || A3.pendingBank) && !(A3.force && A3.force.noDescend)) return false; return GL_dtShould0.apply(this, arguments); }; }
+
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.glift = { GL:GL, T:GL_T, comp:function(o){ GL.compO = o||null; if(GL.on) GL.on.comp = GL_comp(); return GL_comp(); },
+  state:function(){ var S = GL.on, D = A3.desc; return {on:!!S, t:D ? +D.t.toFixed(2) : null, swapped:S ? S.swapped : null, dock:S ? S.dock : null, hesk:!!(S && S.R), act:G.act, wave:G.wave, state:G.state, camO:!!G.camO, zoom:+camera.zoom.toFixed(3),
+    lift:!!(GL.lift && GL.lift.parent), cache:typeof RIG_CACHE!=='undefined' ? !!RIG_CACHE['hesk|v1'] : null, dark:!!(A3E.dark && A3E.dark.visible)}; } }; }
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
