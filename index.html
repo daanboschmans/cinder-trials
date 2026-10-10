@@ -4667,6 +4667,8 @@ function actPose(e){ var a = e.act; if(!a) return null; var t = a.t;
     case 'verdict': return a.step===0 ? 'verdict' : 'slam';
     case 'phase': return t < 0.9 ? 'roar' : 'slam';
     case 'enter': return a.step<=1 ? 'fall' : a.step===2 ? 'land' : 'rest';
+    case 'charge': return a.step===2 ? 'slam' : 'tell';                       /* v2 (81-stormwright2.js): the anvil charge strides with the hammer raised */
+    case 'leap': return a.step===0 ? 'tell' : a.step===1 ? 'fall' : 'land';    /* v2: Skyfall */
   }
   return null; }
 
@@ -10075,7 +10077,7 @@ SPIRE.rodAngle = function(i){ var r = SPIRE.rods[i]; return r ? Math.atan2(-r.z,
 /* el (optional, 'flame'|'frost'|'storm'): tints the charge, line, grounding ring and strike of that rod (the Stormwright's coloured Storm Rods) */
 SPIRE.setRod = function(i, state, k, el){ var r = SP.rod[i]; if(!r) return; k = k == null ? 0 : clamp(k, 0, 1); r.el = (el && typeof ELC!=='undefined' && ELC[el]!=null) ? el : null;
   if(state !== r.st){ r.st = state; r.t = 0; r.k = k; if(state === 'strike' && SP.active) SP_strikeFx(i); } else r.k = (state === 'grounding') ? k : Math.max(r.k, k); };
-function SP_strikeFx(i){ var R0 = SPIRE.rods[i]; shake(0.32); burst(R0.x, 5.4, R0.z, 18, 0x9fb4ff, 7, 0.4, 1.2); ringBurst(R0.x, R0.z, 1.6, 18, 0x9fb4ff, 0.3);
+function SP_strikeFx(i){ var R0 = SPIRE.rods[i], sc = (SP.rod[i] && SP.rod[i].el && typeof ELC!=='undefined') ? ELC[SP.rod[i].el] : 0x9fb4ff; shake(0.32); burst(R0.x, 5.4, R0.z, 18, sc, 7, 0.4, 1.2); ringBurst(R0.x, R0.z, 1.6, 18, sc, 0.3);
   if(lim('spstrike', 0.25)){ SFX.zap(); noise(1.4, 0.3, 380, 'lowpass', 0.04, null, 50); tone(62, 1.0, 'sine', 0.24, 30, 0.02); } SP.flI = -1; SP.flK = 1.2; }
 function SP_rodUpd(t, adt){ var tipOn = false, lineOn = false, boltOn = false, ringOn = false, i, j;
   var tc = SP.rodTip.geometry.attributes.color, ta = tc.array, W = SP.rtW, LQ = SP.lq, GQ = SP.gq, BQ = SP.bq;
@@ -10083,13 +10085,13 @@ function SP_rodUpd(t, adt){ var tipOn = false, lineOn = false, boltOn = false, r
     if(st === 'charge') k = r.k = Math.max(r.k, Math.min(1, r.t/2)); else if(st === 'strike') k = r.k = Math.max(r.k, Math.min(1, r.t/0.45));
     var tr = 0, tg = 0, tb = 0, lv = 0, dv = 0, ev = 0, rl = 0, rd = 0, rr2 = 0.62, rg2 = 0.74, rb2 = 1.0, pulse = 0.5 + 0.5*Math.sin(t*5 + i);
     if(st === 'charge'){ var fl = 0.8 + 0.2*Math.sin(t*40 + i*3); tr = (0.3 + k*0.9)*fl; tg = (0.38 + k*0.85)*fl; tb = (0.55 + k*0.6)*fl; lv = 0.05 + 0.2*k*k; ev = 0.25 + 0.75*k; dv = 0.35 + 0.65*k;
-      if(adt > 0 && Math.random() < adt*(6 + 30*k)){ var R0 = SPIRE.rods[i], hy = 1 + Math.random()*4.4; glowP.emit(R0.x + (Math.random()-0.5)*0.4, hy, R0.z + (Math.random()-0.5)*0.4, (Math.random()-0.5)*3, (Math.random()-0.5)*2, (Math.random()-0.5)*3, 0.18, 0.55, 0xdfe8ff, 0, 2); } }
+      if(adt > 0 && Math.random() < adt*(6 + 30*k)){ var R0 = SPIRE.rods[i], hy = 1 + Math.random()*4.4; glowP.emit(R0.x + (Math.random()-0.5)*0.4, hy, R0.z + (Math.random()-0.5)*0.4, (Math.random()-0.5)*3, (Math.random()-0.5)*2, (Math.random()-0.5)*3, 0.18, 0.55, (r.el && typeof ELC!=='undefined') ? ELC[r.el] : 0xdfe8ff, 0, 2); } }
     else if(st === 'strike'){ var fd = 1 - k; tr = tg = tb = 1.4*fd; lv = 0.35*fd; ev = 0.6*fd; dv = 0; boltOn = boltOn || fd > 0.01; }
     else if(st === 'objective'){ tr = 0.25 + 0.3*pulse; tg = 0.32 + 0.33*pulse; tb = 0.5 + 0.35*pulse; rd = 0.18 + 0.12*pulse; }
     else if(st === 'grounding'){ tr = 0.4 + 0.4*k; tg = 0.5 + 0.4*k; tb = 0.7 + 0.3*k; rl = k; rd = 0.2;
       if(adt > 0 && Math.random() < adt*14){ var R1 = SPIRE.rods[i], ga = Math.random()*TAU; glowP.emit(R1.x + Math.cos(ga)*2.18, 0.15, R1.z + Math.sin(ga)*2.18, -Math.cos(ga)*1.5, 1.5, -Math.sin(ga)*1.5, 0.35, 0.6, 0xcfdcff, 0, 1); } }
     else if(st === 'grounded'){ rd = 0.32; rr2 = 0.9; rg2 = 0.62; rb2 = 0.32; }
-    var lr = 0.75, lg = 0.84, lb = 1.0; if(r.el && (st === 'charge' || st === 'strike' || st === 'grounding')){ _sC.setHex(ELC[r.el]); lr = 0.35 + 0.65*_sC.r; lg = 0.35 + 0.65*_sC.g; lb = 0.35 + 0.65*_sC.b; tr *= lr*1.2; tg *= lg*1.2; tb *= lb*1.2; rr2 = lr; rg2 = lg; rb2 = lb; }
+    var lr = 0.75, lg = 0.84, lb = 1.0; if(r.el && (st === 'charge' || st === 'strike' || st === 'grounding')){ _sC.setHex(ELC[r.el]); lr = _sC.r; lg = _sC.g; lb = _sC.b;   /* saturated element colour, no white lift (no-white rule) */ var tm = Math.min(1, Math.max(tr, tg, tb)); tr = tm*lr; tg = tm*lg; tb = tm*lb;   /* tip keeps the rod's hue (never clips to white) */ rr2 = lr; rg2 = lg; rb2 = lb; }
     var rg0 = SP.rtRange[i]; for(j=rg0[0]; j<rg0[1]; j++){ var w = W[j*3]; ta[j*3] = w*tr; ta[j*3+1] = w*tg; ta[j*3+2] = w*tb; } if(tr + tg + tb > 0.01) tipOn = true;
     var q0 = i*14; SPQ_c(LQ, q0, 0.83*lr*lv, 0.86*lg*lv, lb*lv); SPQ_c(LQ, q0+1, 0.93*lr*ev, 0.95*lg*ev, lb*ev); SPQ_c(LQ, q0+2, 0.93*lr*ev, 0.95*lg*ev, lb*ev);
     for(j=0; j<11; j++){ var m = dv*(0.35 + 0.65*Math.pow(0.5 + 0.5*Math.sin(t*(6 + k*10) - j*0.9), 3)); SPQ_c(LQ, q0+3+j, lr*m, lg*m, lb*m); }
@@ -10106,9 +10108,9 @@ function SP_boltUpd(i, v, t, lr, lg, lb){ if(lr == null){ lr = 0.75; lg = 0.84; 
     var vx = R0.x, vy = 30, vz = R0.z; for(j=0; j<10; j++){ var y1 = 30 - (j+1)/10*24.5, jx = j === 9 ? 0 : (Math.random()-0.5)*1.4, jz = j === 9 ? 0 : (Math.random()-0.5)*1.4;
       SPQ_v(Q, o+56+j, vx, vy, vz, R0.x + jx, y1, R0.z + jz, 0.13, 0, -0.13); SPQ_v(Q, o+66+j, vx, vy, vz, R0.x + jx, y1, R0.z + jz, 0.55, 0, -0.55); vx = R0.x + jx; vy = y1; vz = R0.z + jz; }
     Q.pa.needsUpdate = true; }
-  var cr = Math.min(1, lr*1.27), cg = Math.min(1, lg*1.15), cb = Math.min(1, lb);   /* core near-white for the default rod, its colour for a tinted one */
-  for(j=0; j<28; j++){ SPQ_c(Q, o+j, cr*v, cg*v, cb*v); SPQ_c(Q, o+28+j, 0.4*lr*v, 0.48*lg*v, 0.62*lb*v); }
-  for(j=0; j<10; j++){ SPQ_c(Q, o+56+j, cr*v, cg*v, cb*v); SPQ_c(Q, o+66+j, 0.4*lr*v, 0.48*lg*v, 0.62*lb*v); } Q.ca.needsUpdate = true; }
+  var cr = lr, cg = lg, cb = lb;   /* core in the rod's colour (no near-white core); the glow below is a darker under-line */   /* core near-white for the default rod, its colour for a tinted one */
+  for(j=0; j<28; j++){ SPQ_c(Q, o+j, cr*v, cg*v, cb*v); SPQ_c(Q, o+28+j, 0.45*lr*v, 0.45*lg*v, 0.45*lb*v); }
+  for(j=0; j<10; j++){ SPQ_c(Q, o+56+j, cr*v, cg*v, cb*v); SPQ_c(Q, o+66+j, 0.45*lr*v, 0.45*lg*v, 0.45*lb*v); } Q.ca.needsUpdate = true; }
 
 /* ---------- gusts: streaks, banners, conduit glow, gallery sway, whistle ---------- */
 SPIRE.setGust = function(dx, dz, phase, k){ var l = Math.hypot(dx||0, dz||0); if(l > 1e-4){ SP.g.dx = dx/l; SP.g.dz = dz/l; } k = k == null ? 0 : k;
@@ -16279,7 +16281,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:46',h:'27d1c5b'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:51',h:'1be9752'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -20007,6 +20009,311 @@ if(typeof CX_bosses==='function'){ var HK_cxb0 = CX_bosses; CX_bosses = function
     x.body = function(){ var lad = function(lab, arr){ return CX_h(lab)+'<div class="cxLad">'+arr.map(function(m){ return '<div class="cxLr"><b>'+CX_esc(m[0])+'</b><span>'+CX_esc(m[1])+'</span></div>'; }).join('')+'</div>'; };
       var h = b0.apply(this, arguments), tip = B.tips ? CX_tip(B.tips) : '', i = tip ? h.lastIndexOf(tip) : -1; var mid = lad('Attacks', B.moves) + lad('Phases', B.phases); return i >= 0 ? h.slice(0, i) + mid + tip : h + mid; }; });
   return out; }; }
+/* ---------- 81-stormwright2.js — Stormwright rework (wave 20): "Conduct the Storm". Spec: design/ARENA-SW.md, "v2 rework". Prefix SW2_. ----------
+   Overrides pieces of 56-stormwright.js (each wrapper calls the original where it still applies):
+   - removed: the x0.55 Storm Mantle, the 2.5%/s cap, Temper and the Temper Quench, Twin Hammerfall, Storm Crown;
+   - punish windows: STAGGERED (he kneels, x2) from Anvil Bait (P1), a grounded rod (P2/P3) or a redirected Verdict (P3);
+   - CHARGED: an unanswered rod bolt or Verdict runs into him (heals 3%, takes x0.5 until the next stagger);
+   - new moves: the Anvil Charge (a lane; put the anvil in it) and Skyfall (he leaps onto you; the rim behind him cracks);
+   - party by position: protect (Gale), split (one rod per body), stack (the Eye) and spread (one numbered sequence per body);
+   - soft enrage "Storm Unbound" from 3:00, a stack every 15 s: absorbed hits leak STRAIN through the ward (15% per stack, max 75%), his blows +12% and gaps x0.9 per stack.
+   Shape grammar (local; same visual language as the shared BG_* helpers): lane, numbered circles, gold dashed rings, gold chevrons. */
+var SW2_HPK = 1.75;                      /* x the old round scaling (2600 x 3.77 at round 20): no mantle, no cap */
+var SW2_PK = [1, 1.6, 2.1];              /* party boss HP (replaces PARTY.bossHp for him) */
+var SW2_STAG = {bait:4, ground:3.5, redirect:5, temper:3.5};
+var SW2_HEAL = 0.03, SW2_CHG = [1, 0.5, 0.35, 0.25], SW2_UNB = [180, 195, 210], SW2_UNB_STEP = 15, SW2_LEAK = 0.15, SW2_LEAK_MAX = 0.75;
+var SW2_GAP0 = SW_GAP.slice(), SW2_CH_SPD = 11, SW2_CH_W = 2.4;
+var SW2 = {t:0, chg:false, chgN:0, xq:null, job:null, stk:0, anvCh:0, a1:false, n:{bait:0, ground:0, redirect:0, feed:0}, log:null, lanes:[], digs:[], seqHit:null};
+
+/* ---------- attack pools (P1 The Forge, P2 The Conductor, P3 Eye of the Storm) ---------- */
+SW_POOL[1] = [['hammer',1.6,0], ['seq',1.4,6], ['anvil',1.6,11], ['gale',0.9,12], ['leap',1.0,9]];
+SW_POOL[2] = [['hammer',2,0], ['seq',1.2,7], ['heave',1,12]];
+SW_POOL[3] = [['hammer',1.6,0], ['seq',1.5,6], ['leap',0.8,11]];
+SW_SET.leap = 1;
+
+/* ---------- HP: no mantle, so a bigger bar; party x1.6 / x2.1 ---------- */
+SW_hpMax = function(){ var n = G.wave||20, vet = 1 + 0.08*(n-1) + (n>10 ? 0.05*(n-10)*(n-10)/4 : 0), sz = (typeof PTY!=='undefined' && PTY.on) ? PTY_size() : 1;
+  return Math.round(SW_HP*vet*SW2_HPK*(G.mods ? G.mods.ehp : 1)*(SW2_PK[Math.min(3, Math.max(1, sz))-1])); };
+/* Temper is gone (absorbs, reactions and grounding no longer fill a meter); the cap never binds */
+SW_temper = function(){};
+SW_Q.cap = 1e9; SW_Q.mul = 2.0; SW_Q.mantle = 1;
+
+/* ---------- hints (new ids, so players who saw the old ones still get these) ---------- */
+SW_HINT_TXT.sw2_bait = function(){ return 'His <b style="color:#ffd27a">anvil</b> is down. When he raises the hammer and a lane points at you, keep the anvil <b>in the lane</b>: he strides into it and is <b>STAGGERED</b> (double damage).'; };
+SW_HINT_TXT.sw2_rods = function(){ return 'A <b>Storm Rod</b> charges a lane through the platform. Stand in its <b style="color:#ffd27a">gold ring</b> to <b>ground</b> it into him: he is STAGGERED. Unanswered, the bolt runs into him and he is <b style="color:#c27cff">CHARGED</b>.'; };
+SW_HINT_TXT.sw2_charge = function(){ return '<b style="color:#c27cff">CHARGED</b>: an unanswered storm ran into him. He healed and takes <b>half damage</b> until you stagger him again (ground a rod, bait the anvil, turn the Verdict).'; };
+SW_HINT_TXT.sw2_verdict = function(){ return '<b style="color:#ffd27a">Verdict</b>: match its colour or shelter in <b>the Eye</b> to live through it, but he drinks the storm. Hold <b>any rod</b> inside its gold ring to turn the bolt on <b>him</b>.'; };
+SW_HINT_TXT.sw2_unbound = function(){ return '<b style="color:#c27cff">STORM UNBOUND</b>: the fight ran long. His absorbed hits now <b>strain through your ward</b>. '+(G.touch ? 'Dash' : '<b class="kc">'+kl('Space')+'</b> dash')+' or shelter to avoid it, and finish him.'; };
+SW_HINT_TXT.sw2_leap = function(){ return '<b>Skyfall</b>: he leaps onto the circle. Match its colour or step out; his landing cracks the rim behind him.'; };
+SW_HINT_TXT.sw2_spread = function(){ return '<b style="color:#ffd27a">Spread</b>: each hero gets their own numbered sequence. Circles that overlap hit twice: keep apart.'; };
+SW_HINT_TXT.sw_seq = function(){ return '<b style="color:#c06bff">Crown Sequence</b>: numbered circles land on you <b>in order</b>, 1 → 2 → 3. Switch ward in rhythm, or walk out of them.'; };
+var SW2_HMAP = {sw_rods:'sw2_rods', sw_eye:'sw2_verdict', sw_redirect:'sw2_verdict', sw_bait:'sw2_bait', sw_temper:null, sw_chain:null};
+var SW2_hint0 = SW_hint;
+SW_hint = function(id){ if(SW2_HMAP.hasOwnProperty(id)) id = SW2_HMAP[id]; if(!id) return; return SW2_hint0(id); };
+
+/* ---------- no-white: every lightning line takes an element colour (default storm), hammer ring rims darken instead of whitening, the Eye is marker gold ---------- */
+var SW2_zap0 = zapLine;
+zapLine = function(pts, el){ var L = null; for(var i=0;i<lines.length;i++) if(lines[i].t<=0){ L = lines[i]; break; } if(!L) L = lines[0];
+  var r = SW2_zap0.apply(this, arguments); L.m.color.setHex(ELC[el || SW2.zapEl] || ELC.storm); return r; };
+SW_WC.setHex(0x000000);
+/* ---------- shape grammar meshes (lane, gold dashed ring, gold chevrons, floor digits) ---------- */
+var SW2_M = null, SW2_GOLD = 0xffc94d;
+function SW2_dashGeo(n, r0, r1){ var pos = [], seg = 4; for(var i=0;i<n;i++){ var a0 = i/n*TAU, a1 = a0 + TAU/n*0.55;
+    for(var s=0;s<seg;s++){ var u0 = a0 + (a1-a0)*s/seg, u1 = a0 + (a1-a0)*(s+1)/seg, c0 = Math.cos(u0), s0 = Math.sin(u0), c1 = Math.cos(u1), s1 = Math.sin(u1);
+      pos.push(c0*r0,0,s0*r0, c0*r1,0,s0*r1, c1*r1,0,s1*r1,  c0*r0,0,s0*r0, c1*r1,0,s1*r1, c1*r0,0,s1*r0); } }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g; }
+function SW2_chevGeo(inward){ var pos = [], n = 4; for(var i=0;i<n;i++){ var a = i/n*TAU + Math.PI/4, ca = Math.cos(a), sa = Math.sin(a), tx = -sa, tz = ca, d = inward ? -1 : 1;
+    /* a chevron centred at radius 1: tip toward (inward ? centre : out) */
+    var bx = ca*1.0, bz = sa*1.0, tipx = bx + ca*0.32*d, tipz = bz + sa*0.32*d, w = 0.3;
+    var l1x = bx + tx*w, l1z = bz + tz*w, l2x = bx - tx*w, l2z = bz - tz*w, ix = bx + ca*0.14*d, iz = bz + sa*0.14*d;
+    pos.push(l1x,0,l1z, tipx,0,tipz, ix,0,iz,  l2x,0,l2z, ix,0,iz, tipx,0,tipz); }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g; }
+function SW2_mesh(){ if(SW2_M) return SW2_M; var M = SW2_M = {ring:[], chIn:[], chOut:[], lane:[], dig:[], tex:{}};
+  var dg = SW2_dashGeo(18, 0.9, 1.0), ci = SW2_chevGeo(true), co = SW2_chevGeo(false), i;
+  for(i=0;i<6;i++){ var m = new THREE.Mesh(dg, addMat(SW2_GOLD, 0.85)); m.material.side = THREE.DoubleSide; M.ring.push(m); }
+  for(i=0;i<4;i++){ var a = new THREE.Mesh(ci, addMat(SW2_GOLD, 0.95)), b2 = new THREE.Mesh(co, addMat(SW2_GOLD, 0.95)); a.material.side = b2.material.side = THREE.DoubleSide; M.chIn.push(a); M.chOut.push(b2); }
+  var pg = new THREE.PlaneGeometry(1, 1); pg.rotateX(-Math.PI/2); pg.translate(0, 0, 0.5);
+  var nm = function(op){ return new THREE.MeshBasicMaterial({color:ELC.storm, transparent:true, opacity:op, depthWrite:false, side:THREE.DoubleSide}); };   /* normal blending: never adds up to white */
+  for(i=0;i<4;i++){ var g = new THREE.Group(), f = new THREE.Mesh(pg, nm(0.3)), d1 = new THREE.Mesh(pg, nm(0.9)), d2 = new THREE.Mesh(pg, nm(0.9)), e1 = new THREE.Mesh(pg, nm(0.95)), e2 = new THREE.Mesh(pg, nm(0.95));
+    e1.position.y = e2.position.y = 0.01; g.add(f); g.add(d1); g.add(d2); g.add(e1); g.add(e2); g.userData = {f:f, d1:d1, d2:d2, e1:e1, e2:e2}; M.lane.push(g); }
+  for(i=0;i<9;i++){ var sp = new THREE.Sprite(new THREE.SpriteMaterial({transparent:true, depthWrite:false, depthTest:false})); sp.scale.set(1.25, 1.25, 1); M.dig.push(sp); }
+  M.ring.concat(M.chIn, M.chOut, M.lane, M.dig).forEach(function(m){ m.visible = false; m.frustumCulled = false; m.renderOrder = 4; scene.add(m); });
+  return M; }
+function SW2_digTex(n, el){ var M = SW2_mesh(), k = n+el; if(M.tex[k]) return M.tex[k]; var c = document.createElement('canvas'); c.width = c.height = 64; var x = c.getContext('2d');
+  x.font = '900 46px Cinzel, Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 7; x.strokeStyle = 'rgba(8,6,14,.92)'; x.strokeText(String(n), 32, 35); x.fillStyle = ELCSS[el] || '#c27cff'; x.fillText(String(n), 32, 35);
+  var t = new THREE.CanvasTexture(c); M.tex[k] = t; return t; }
+/* a lane: fills outward from (x,z) along ang over dur; edges show the full width at once */
+function SW2_lane(x, z, ang, len, w, dur, el){ var M = SW2_mesh(), L = null; for(var i=0;i<M.lane.length;i++){ if(!M.lane[i].visible){ L = M.lane[i]; break; } } if(!L) L = M.lane[0];
+  var u = L.userData, c = ELC[el]||ELC.storm; u.f.material.color.setHex(c); u.e1.material.color.setHex(c); u.e2.material.color.setHex(c); u.d1.material.color.setHex(c).multiplyScalar(0.45); u.d2.material.color.setHex(c).multiplyScalar(0.45);
+  L.position.set(x, 0.07, z); L.rotation.set(0, ang, 0); u.e1.scale.set(0.12, 1, len); u.e2.scale.set(0.12, 1, len); u.e1.position.x = -w/2; u.e2.position.x = w/2; u.d1.scale.set(0.3, 1, len); u.d2.scale.set(0.3, 1, len); u.d1.position.x = -w/2; u.d2.position.x = w/2; u.f.scale.set(w, 1, 0.01); L.visible = true;
+  var o = {g:L, t:0, dur:dur, len:len, w:w, x:x, z:z, ang:ang, el:el}; SW2.lanes.push(o); return o; }
+function SW2_digit(x, z, n, el, dur){ var M = SW2_mesh(), d = null; for(var i=0;i<M.dig.length;i++){ if(!M.dig[i].visible){ d = M.dig[i]; break; } } if(!d) return;
+  d.material.map = SW2_digTex(n, el); d.material.needsUpdate = true; d.position.set(x, 0.9, z); d.visible = true; SW2.digs.push({s:d, t:0, dur:dur}); }
+function SW2_stepFx(dt){ var i;
+  for(i=SW2.lanes.length-1;i>=0;i--){ var L = SW2.lanes[i]; L.t += dt; var k = Math.min(1, L.t/L.dur), u = L.g.userData; u.f.scale.set(L.w, 1, Math.max(0.01, L.len*k)); u.f.material.opacity = 0.2 + 0.25*k;
+    var p = 0.7 + 0.3*Math.abs(Math.sin(L.t*9)); u.e1.material.opacity = u.e2.material.opacity = p; if(L.t >= L.dur){ L.g.visible = false; SW2.lanes.splice(i, 1); } }
+  for(i=SW2.digs.length-1;i>=0;i--){ var D = SW2.digs[i]; D.t += dt; D.s.material.opacity = Math.min(1, 3*(D.dur - D.t)); if(D.t >= D.dur){ D.s.visible = false; SW2.digs.splice(i, 1); } } }
+function SW2_clearFx(){ SW2.lanes.forEach(function(L){ L.g.visible = false; }); SW2.lanes.length = 0; SW2.digs.forEach(function(D){ D.s.visible = false; }); SW2.digs.length = 0; if(SW2_M){ SW2_M.ring.concat(SW2_M.chIn, SW2_M.chOut).forEach(function(m){ m.visible = false; }); } }
+/* the markers that follow game state: gold dashed rings (anvil bait, rod ground spots, redirect rods) and chevrons (stack into the Eye, spread on bodies) */
+function SW2_markers(t){ if(SW_M && !SW_M.sw2c){ SW_M.sw2c = 1; SW_M.eyeMat.color.setHex(0xffc94d); SW_M.eyeInMat.color.setHex(0xffc94d); SW_M.warnMat.color.setHex(ELC.storm); } var M = SW2_mesh(), ri = 0, ii = 0, oi = 0, b = SW_live(), on = b && !SW.ent && !SW.dying && G.state==='play';
+  function ring(x, z, r, op){ if(ri >= M.ring.length) return; var m = M.ring[ri++]; m.visible = true; m.position.set(x, 0.11, z); m.scale.set(r, 1, r); m.rotation.y = t*0.5; m.material.opacity = op; }
+  if(on){ if(SW.anvil) ring(SW.anvil.x, SW.anvil.z, 1.5, 0.55 + 0.3*Math.sin(t*5));
+    var RL = SW_rods(); for(var i=0;i<RL.length;i++){ var Q = SW_rodPos(RL[i].i); if(Q && !SW_perched(RL[i].i)) ring(Q.x, Q.z, SW_GR_R, 0.7 + 0.25*Math.sin(t*7)); }
+    if(SW.rodNext >= 0 && !SW_rodAt(SW.rodNext)){ var ann = [SW.rodNext].concat(SW2.xq || []); for(var ai2=0;ai2<ann.length;ai2++){ var Qn = SW_rodPos(ann[ai2]); if(Qn) ring(Qn.x, Qn.z, SW_GR_R, 0.35 + 0.2*Math.sin(t*4)); } }   /* the announced rod (3 s ahead), dimmer */
+    if(SW.vd){ for(var j=0;j<3;j++){ if(SW_rodAt(j)) continue; var Q2 = SW_rodPos(j); if(Q2 && !SW_perched(j)) ring(Q2.x, Q2.z, SW_GR_R, 0.6 + 0.3*Math.sin(t*7)); }
+      if(SW.eye && ii < M.chIn.length){ var c = M.chIn[ii++]; c.visible = true; var pul = 1 + 0.12*Math.sin(t*6); c.position.set(SW.eye.x, 0.12, SW.eye.z); c.scale.set((SW_EYE_R+0.9)*pul, 1, (SW_EYE_R+0.9)*pul); c.rotation.y = 0; } }
+    if(b.act && b.act.id==='seq' && b.phase===3 && PTY_size() > 1){ var H = PTY_heroes(); for(var h=0;h<H.length && oi<M.chOut.length;h++){ var o = M.chOut[oi++]; o.visible = true; o.position.set(H[h].x, 0.12, H[h].z); o.scale.set(1.5, 1, 1.5); o.rotation.y = t*0.8; } } }
+  for(; ri<M.ring.length; ri++) M.ring[ri].visible = false; for(; ii<M.chIn.length; ii++) M.chIn[ii].visible = false; for(; oi<M.chOut.length; oi++) M.chOut[oi].visible = false; }
+
+/* ---------- punish window: STAGGERED (replaces the Temper Quench). Already kneeling: the window extends a little ---------- */
+var SW2_LBL = {bait:'ANVIL BAIT!', ground:'GROUNDED!', redirect:'REDIRECTED!', temper:''};
+SW_quench = function(b, why){ if(!b || b.dead) return; why = why || 'temper'; var D = SW2_STAG[why] || 3.5, was = SW2.chg; SW2.chg = false; SW2.chgN = 0; SW2.n[why] = (SW2.n[why]||0) + 1;
+  if(why==='bait') SW.baitN++; if(why==='redirect') SW.redirN++; SW2_log('stagger', why);
+  if(b.act && b.act.id==='quench'){ SW_Q.dur = Math.max(SW_Q.dur, Math.min(b.act.t + D, SW_Q.dur + 1.5)); dmgText(b.x, 6.4, b.z, (SW2_LBL[why]||'')+' +STAGGER', '#9ad0ff', 22); return; }
+  SW_Q.dur = D; SW_cancelAct(b); SW.qT = D; SW.qN++; SW_begin(b, 'quench');
+  A2_call('crowd', 'roar'); crowdCheer = Math.max(crowdCheer, 0.8); SFX.slam(); shake(0.45); G.hitstop = Math.max(G.hitstop, 0.06);
+  burst(b.x, 3.5, b.z, 40, 0x9ad0ff, 9, 0.6, 1.5); ringBurst(b.x, b.z, 3.4, 28, 0x9ad0ff); for(var i=0;i<14;i++) glowP.emit(b.x+rnd(-1.4,1.4), rnd(3,6), b.z+rnd(-1.2,1.2), rnd(-0.4,0.4), rnd(0.4,1.4), rnd(-0.4,0.4), 1.1, 0.9, 0x9ad0ff, 0, 0.6);
+  dmgText(b.x, 6.4, b.z, (SW2_LBL[why] ? SW2_LBL[why]+' ' : '')+'STAGGERED ×2', '#9ad0ff', 26); if(was) dmgText(b.x, 5.4, b.z, 'CHARGE BROKEN', '#c27cff', 18);
+  if(typeof A2_fav==='function') A2_fav(why==='redirect' ? 12 : 8, 'Staggered'); };
+/* CHARGED: an unanswered storm runs into him (heals 3%, never above the current phase line; x0.5 until the next stagger) */
+function SW2_feed(x, z, el, why){ var b = SW_live(); if(!b) return; var cap = b.phase===1 ? 1 : b.phase===2 ? 0.65 : 0.30;
+  zapLine([{x:x, z:z}, {x:(x+b.x)/2 + rnd(-1,1), z:(z+b.z)/2 + rnd(-1,1)}, {x:b.x, z:b.z}], el); burst(b.x, 3.4, b.z, 26, ELC.storm, 8, 0.5, 1.4); SFX.zap();
+  if(b.hp < b.maxHp*cap){ var h = Math.min(b.maxHp*SW2_HEAL, b.maxHp*cap - b.hp); b.hp += h; SW.hp0 = b.hp; dmgText(b.x, 5.2, b.z, '+'+Math.round(h), '#c27cff', 18); }
+  SW2.chgN = SW2.chg ? SW2.chgN + 1 : 1; dmgText(b.x, 6.2, b.z, SW2.chgN > 1 ? 'OVERCHARGED' : 'CHARGED', '#c27cff', 24); SW2.chg = true; SW2.n.feed++; SW2_log('feed', why); after(0.6, function(){ if(SW2.chg && SW_live()) SW_hint('sw2_charge'); }); }
+function SW2_log(k, v){ if(SW2.log) SW2.log.push([+(G.t||0).toFixed(2), k, v==null ? '' : v]); if(SW.log) SW_log(k, v); }
+
+/* ---------- Storm Rods: a lane and a gold ground ring; grounded = STAGGERED; unanswered = CHARGED ---------- */
+SW_rodGap = function(b){ return b.phase===3 ? 12 : 10; };
+/* party split: the extra rods (pair 1, trio 2) are chosen when the main rod is announced, so allies can walk to theirs (SW2_rodPlan) */
+SW_rodGo = function(i, dur, el){ if(SW.rod && SW2.xq && SW2.xq.length){ var j = SW2.xq.shift(); if(j!==SW.rod.i && !SW_rodAt(j)) i = j; } var Q = SW_rodPos(i), rr = Math.hypot(Q.x, Q.z)||1; SW.rodN++; var R = {i:i, t:0, dur:dur, el:el, prog:0, hits:0, n:SW.rodN, at:G.t + dur}; SW_res(dur, el);
+  SW2_lane(Q.x, Q.z, Math.atan2(-Q.x/rr, -Q.z/rr), rr + ARENA_R, 1.6, dur, el); A2_call('setRod', i, 'charge', 0, el); return R; };
+SW_groundRod = function(b, R){ var Q = SW_rodPos(R.i); SW_unres(R.el, R.at); SW_rodEnd(R); A2_call('setRod', R.i, 'grounded', 1, R.el); after(1.0, function(){ if(!SW_rodAt(R.i)) A2_call('setRod', R.i, 'idle', 0); });
+  zapLine([{x:Q.x, z:Q.z}, {x:(Q.x+b.x)/2 + rnd(-1,1), z:(Q.z+b.z)/2 + rnd(-1,1)}, {x:b.x, z:b.z}], R.el); SFX.zap(); shake(0.3); burst(b.x, 3, b.z, 26, ELC[R.el], 8, 0.5, 1.4);
+  ringBurst(Q.x, Q.z, SW_GR_R, 24, 0xffc94d); dmgText(Q.x, 3.6, Q.z, 'GROUNDED', '#ffd27a', 20); A2_call('crowd', 'cheer'); if(typeof A2_fav==='function') A2_fav(6, 'Grounded');
+  SW_log('ground', R.prog >= 1.2 ? 'stand' : 'shots'); if(!b.dead) SW_quench(b, 'ground'); };
+var SW2_rodStrike0 = SW_rodStrike;
+SW_rodStrike = function(R){ var Q = SW_rodPos(R.i), r; SW2.zapEl = R.el; try{ r = SW2_rodStrike0.apply(this, arguments); } finally { SW2.zapEl = null; } if(Q) SW2_feed(Q.x*0.3, Q.z*0.3, R.el, 'rod'); return r; };
+
+/* ---------- the Verdict: absorbing or the Eye keeps you alive (the Eye shelters every body inside), but he drinks it ---------- */
+SW_verdict = function(b, el){ var E = SW.eye; el = el || 'storm'; SW_flash(0.5); SFX.zap(); SFX.slam(); SFX.roar(); shake(0.7); G.hitstop = Math.max(G.hitstop, 0.08); A2_call('crowd', 'roar');
+  for(var i=0;i<7;i++){ var a = Math.random()*TAU, r = rnd(3, 0.95*SW_inR()), x = Math.cos(a)*r, z = Math.sin(a)*r; zapLine([{x:x, z:z}, {x:x+rnd(-2,2), z:z+rnd(-2,2)}, {x:x+rnd(-3,3), z:z+rnd(-3,3)}], el); burst(x, 0.5, z, 12, ELC[el], 6, 0.4, 1.2); }
+  var ctl = P; PTY_forHeroes(function(){ if(!P || P.dead) return; if(E && Math.hypot(P.x-E.x, P.z-E.z) <= SW_EYE_R + 0.2){ dmgText(P.x, 2.4, P.z, 'SHELTERED', '#ffd27a', 20); if(P===ctl) A2_fav(10, 'The Eye'); return; }
+    SW_hit(SW_d('verdict'), el, P.x+0.01, P.z-1); });
+  SW2_feed(b.x, b.z + 0.5, el, 'verdict'); };
+
+/* ---------- Crown Sequence: numbered circles; P3 party = one sequence per body (spread), overlapping circles stack ---------- */
+SW_strike = function(b, col){ var idx = (b.act && b.act.s!=null) ? b.act.s : 0, spread = b.phase===3 && PTY_size() > 1, src = spread ? PTY_heroes().slice() : [PTY_aim(b) || P], spots = [], grp = {done:[]};
+  if(spread && idx===0) SW_hint('sw2_spread');
+  for(var i=0;i<src.length;i++){ var o = {x:src[i].x, z:src[i].z}; SW_clampIn(o, 0.4); spots.push(o); }
+  spots.forEach(function(o){ var tl = addTele(o.x, o.z, 1.6, 0.6, col, function(t){ if(!SW.on) return; burst(t.x, 0.6, t.z, 24, ELC[col], 8, 0.5, 1.4); ringBurst(t.x, t.z, 1.6, 16, ELC[col]); SFX.zap(); shake(0.15);
+      for(var h=0;h<6;h++) glowP.emit(t.x+rnd(-0.3,0.3), 0.5+h*1.4, t.z+rnd(-0.3,0.3), 0, -6, 0, 0.25, 1.6, ELC[col], 0, 1);
+      PTY_forHeroes(function(){ if(!P || P.dead || grp.done.indexOf(P)>=0 || Math.hypot(P.x-t.x, P.z-t.z) >= 2.0) return; var k = 0; for(var s=0;s<spots.length;s++) if(Math.hypot(P.x-spots[s].x, P.z-spots[s].z) < 2.0) k++;
+        grp.done.push(P); if(k>1) dmgText(P.x, 2.8, P.z, 'STACKED ×'+k, '#ffd27a', 18); SW_hit(SW_d('seq')*k, col, t.x, t.z); }); });
+    tl.hostile = 1; SW2_digit(o.x, o.z, idx+1, col, 0.75); }); };
+
+/* ---------- the director: new acts (Anvil Charge, Skyfall), the first anvil, P2 rod walking, the enrage clock ---------- */
+var SW2_plan0 = SW_plan;
+SW_plan = function(b, id, d, L){ if(id==='leap'){ var c = SW_bestCol(1.25, SW_tipPrefs(SW.lastRing), L); return {tip:c.el, d:c.d}; }
+  if(id==='charge'){ var c2 = SW_bestCol(1.1 + Math.max(0, d-1)/SW2_CH_SPD, SW_tipPrefs(SW.lastRing), L); return {tip:c2.el, d:Math.min(0.5, c2.d)}; }
+  return SW2_plan0.apply(this, arguments); };
+var SW2_runAct0 = SW_runAct;
+SW_runAct = function(b, dt, d, ux, uz){ var a = b.act;
+  if(a.id==='charge') return SW2_charge(b, a, dt);
+  if(a.id==='leap') return SW2_leap(b, a, dt);
+  var r = SW2_runAct0.apply(this, arguments);
+  if(a.id==='gale' && a.tip && SW_M && !a.sw2t){ a.sw2t = true; SW_M.coneMat.color.setHex(ELC[a.tip]); }   /* the wedge in the tip colour (never pale white) */
+  if(a.id==='anvil' && a.step===1 && !a.sw2h){ a.sw2h = true; SW2.anvCh = 0; after(1.4, function(){ if(SW.anvil) SW_hint('sw2_bait'); }); }
+  return r; };
+/* Anvil Charge (P1 signature): a lane from him to the Favourite; he strides it with the hammer up. Anvil in the lane = he hits it: STAGGERED. */
+function SW2_charge(b, a, dt){ var pl = a.plan || {}; a.t += dt; var first = a.t<=dt+1e-9, mv = SW_MV;
+  if(a.step===0){ if(first){ var fv = PTY_aim(b) || P, ang = Math.atan2(fv.x-b.x, fv.z-b.z), dist = Math.hypot(fv.x-b.x, fv.z-b.z); a.tip = pl.tip || pick(EL); a.ang = ang; a.W = 1.1 + (pl.d||0);
+      var len = clamp(dist + 2, 4, 14), ex = b.x + Math.sin(ang)*len, ez = b.z + Math.cos(ang)*len, er = Math.hypot(ex, ez), lim = SW_rmax(b) + 0.3; if(er > lim){ /* shorten to the leash */ for(var k=0;k<20 && er>lim;k++){ len -= 0.5; ex = b.x + Math.sin(ang)*len; ez = b.z + Math.cos(ang)*len; er = Math.hypot(ex, ez); } }
+      a.len = Math.max(3, len); a.go = 0; a.hitL = []; b.face = ang; b.leap = SW_LOCK; b.wind = 1; b.swRods = SW_RL[a.tip]; SFX.tele(); tone(90, a.W, 'sawtooth', 0.05, 260);
+      SW2_lane(b.x, b.z, ang, a.len + 1.2, SW2_CH_W, a.W, a.tip); var px = P.x-b.x, pz = P.z-b.z, along = px*Math.sin(ang) + pz*Math.cos(ang), side = Math.abs(px*Math.cos(ang) - pz*Math.sin(ang));
+      if(along > 0 && along < a.len + 1.5 && side < SW2_CH_W/2 + 0.6) SW_res(a.W + Math.max(0, along-1.6)/SW2_CH_SPD, a.tip);
+      if(b.M.rig) rigBurst(b.M.rig, 'crown', 8, ELC[a.tip], 4, 0.4, 1.0, 0, 1.6, 0); }
+    b.face = a.ang; if(a.t >= a.W){ a.step = 1; a.t = 0; b.wind = 0; b.el = a.tip; setModelEl(b.M, a.tip); SFX.roar(); a.arr = a.T; } return false; }
+  if(a.step===1){ var sx = Math.sin(a.ang), sz = Math.cos(a.ang); mv[0] = sx*SW2_CH_SPD; mv[1] = sz*SW2_CH_SPD; a.go += SW2_CH_SPD*dt; b.face = a.ang;
+    if(Math.random()<0.7) glowP.emit(b.x+rnd(-1,1), 0.4, b.z+rnd(-1,1), -sx*3, rnd(0.5,2), -sz*3, 0.35, 1.2, ELC[a.tip], 0, 1);
+    if(SW.anvil && Math.hypot(SW.anvil.x - b.x, SW.anvil.z - b.z) < SW_R + 1.55){ var A = SW.anvil; SW_anvilEnd(false); ringBurst(A.x, A.z, 3.2, 30, 0xffd27a); burst(A.x, 1.4, A.z, 40, 0xffd27a, 10, 0.6, 1.6); SFX.zap(); A2_call('crowd', 'cheer');
+      mv[0] = mv[1] = 0; SW_unres(a.tip, G.t); SW_quench(b, 'bait'); return false; }
+    PTY_forHeroes(function(){ if(!P || P.dead || a.hitL.indexOf(P)>=0) return; if(Math.hypot(P.x-b.x, P.z-b.z) < SW_R + 0.55){ a.hitL.push(P); SW_hit(SW_d('hammer'), a.tip, b.x, b.z); } });
+    if(a.go >= a.len || Math.hypot(b.x, b.z) > SW_rmax(b) + 0.2){ mv[0] = mv[1] = 0; a.step = 2; a.t = 0; var fx = b.x + sx*SW_SLAM, fz = b.z + sz*SW_SLAM; SFX.slam(); shake(0.45); burst(fx, 0.4, fz, 30, ELC[a.tip], 9, 0.5, 1.5); rocks(fx, 0.3, fz, 14, 0x4a4a52, 7); ringBurst(fx, fz, 2.4, 24, ELC[a.tip]);
+      PTY_forHeroes(function(){ if(!P || P.dead || a.hitL.indexOf(P)>=0) return; if(Math.hypot(P.x-fx, P.z-fz) < 2.4){ a.hitL.push(P); SW_hit(SW_d('hammer'), a.tip, fx, fz); } }); a.arr = a.T; }
+    return false; }
+  mv[0] = mv[1] = 0; return a.t >= 0.7; }
+/* Skyfall: he leaps onto the Favourite (circle in the tip colour); a landing near the rim cracks the sector behind him */
+function SW2_leap(b, a, dt){ var pl = a.plan || {}; a.t += dt; var first = a.t<=dt+1e-9;
+  if(first){ var fv = PTY_aim(b) || P, tg = {x:fv.x, z:fv.z}, lim = SW_rmax(b), r = Math.hypot(tg.x, tg.z); if(r > lim){ tg.x *= lim/r; tg.z *= lim/r; }
+    a.tip = pl.tip || pick(EL); a.W = 1.25 + (pl.d||0); a.sx = b.x; a.sz = b.z; a.tx = tg.x; a.tz = tg.z; b.leap = SW_LOCK; b.wind = 1; b.swRods = SW_RL[a.tip]; b.face = Math.atan2(tg.x-b.x, tg.z-b.z);
+    addTele(tg.x, tg.z, 2.6, a.W, a.tip, null).hostile = 1; if(Math.hypot(P.x-tg.x, P.z-tg.z) < 3.0) SW_res(a.W, a.tip); SFX.tele(); tone(70, a.W, 'sawtooth', 0.05, 200); SW_hint('sw2_leap'); }
+  if(a.step===0 && a.t >= 0.35){ a.step = 1; SFX.roar(); }
+  if(a.step===1){ var k = Math.min(1, (a.t-0.35)/(a.W-0.35)); b.x = b.px = lerp(a.sx, a.tx, k); b.z = b.pz = lerp(a.sz, a.tz, k); b.y = 5.5*Math.sin(k*Math.PI);
+    if(Math.random()<0.6) glowP.emit(b.x+rnd(-1,1), b.y+rnd(0,4), b.z+rnd(-1,1), 0, -2, 0, 0.3, 1.2, ELC[a.tip], 0, 1);
+    if(k >= 1){ a.step = 2; a.t2 = a.t; b.y = 0; b.wind = 0; b.el = a.tip; setModelEl(b.M, a.tip); a.arr = a.T; var x = a.tx, z = a.tz;
+      SFX.slam(); shake(0.5); G.hitstop = Math.max(G.hitstop, 0.05); burst(x, 0.5, z, 40, ELC[a.tip], 10, 0.6, 1.6); rocks(x, 0.3, z, 18, 0x4a4a52, 8); ringBurst(x, z, 2.6, 28, ELC[a.tip]);
+      PTY_forHeroes(function(){ if(P && !P.dead && Math.hypot(P.x-x, P.z-z) < 2.6+0.4) SW_hit(SW_d('hammer'), a.tip, x, z); });
+      for(var q=0;q<pillars.length;q++){ var pp = pillars[q]; if(!pp.dead && Math.hypot(pp.x-x, pp.z-z) < 3.0) damagePillar(pp, 40); }
+      if(Math.hypot(x, z) > 5.5 && typeof A2!=='undefined' && A2.sec && typeof A2_secOf==='function'){ var si = A2_secOf(x, z), rodS = false; for(var ri=0;ri<3;ri++) if(A2.rods[ri] && A2.rods[ri].sec===si) rodS = true;
+        if(!rodS && A2.sec[si] && A2.sec[si].st==='solid'){ A2_setSec(si, 'crack'); A2_call('crowd', 'gasp'); dmgText(x*1.5, 1.6, z*1.5, 'THE RIM CRACKS', '#d9c8a8', 16); } } } }
+  if(a.step===2 && a.t >= a.t2 + 0.6) return true; return false; }
+
+/* the anvil is the bait now: shots and his own rings no longer shatter it (it still bursts in its colour after 8 s) */
+var SW2_anvilLand0 = SW_anvilLand;
+SW_anvilLand = function(x, z, el){ var r = SW2_anvilLand0.apply(this, arguments); if(SW.anvil && SW.anvil.p){ SW.anvil.p.hp = SW.anvil.p.maxHp = 1e6; } return r; };
+var SW2_update0 = SW_update;
+SW_update = function(b, dt, d, ux, uz){ SW.tem = 0;
+  if(!SW.ent && !SW.dying && !b.dead){ SW2_clock(b, dt);
+    /* P1 opens with the anvil; an anvil on the floor makes his next attack the Anvil Charge (twice per anvil at most) */
+    if(!b.act && b.phase===1 && b.actT <= dt && !(SW.qT>0)){ var L = CMB_threats(null), pl;
+      if(!SW2.a1){ pl = SW_plan(b, 'anvil', d, L); if(pl.d <= 0.6){ SW2.a1 = true; SW.cd.anvil = G.t + 11; SW_begin(b, 'anvil', pl); return SW_MV; } }
+      else if(SW.anvil && SW.anvil.t > 0.8 && SW.anvil.t < 6.5 && SW2.anvCh < 2){ pl = SW_plan(b, 'charge', d, L); SW2.anvCh++; SW_begin(b, 'charge', pl); return SW_MV; } } }
+  var mv = SW2_update0.apply(this, arguments);
+  /* P2: he strides to the announced (or live) rod and conducts it */
+  if(!b.act && b.phase===2 && !SW.ent && !SW.dying){ var ri = SW.rodNext >= 0 ? SW.rodNext : (SW.rod ? SW.rod.i : -1);
+    if(ri >= 0){ var Q = SW_rodPos(ri); if(Q){ var qr = Math.hypot(Q.x, Q.z)||1, k = Math.min(SW_rmax(b), qr - 3.0)/qr, tx = Q.x*k, tz = Q.z*k, dx = tx-b.x, dz = tz-b.z, dl = Math.hypot(dx, dz);
+      if(dl > 0.4){ mv[0] = dx/dl*SW_SPD*1.5; mv[1] = dz/dl*SW_SPD*1.5; } else { mv[0] = mv[1] = 0; } } } }
+  return mv; };
+/* fight clock: Storm Unbound (soft enrage) and the CHARGED damage factor */
+function SW2_clock(b, dt){ if(SW2.t0==null) SW2.t0 = G.t; SW2.t = G.t - SW2.t0; var sz = Math.min(3, Math.max(1, PTY_size())), T0 = SW2_UNB[sz-1], st = SW2.t >= T0 ? 1 + Math.floor((SW2.t - T0)/SW2_UNB_STEP) : 0;
+  if(st !== SW2.stk){ SW2.stk = st; for(var i=0;i<SW_GAP.length;i++) SW_GAP[i] = SW2_GAP0[i]*Math.pow(0.9, st);
+    if(st > 0){ SW_flash(0.3); shake(0.3); SFX.roar(); A2_call('crowd', 'roar'); bossSay(st===1 ? 'STORM UNBOUND' : 'STORM UNBOUND ×'+st, st===1 ? 'His blows now strain through your ward.' : 'Strain '+Math.round(Math.min(SW2_LEAK_MAX, SW2_LEAK*st)*100)+'%, his blows +'+(st*12)+'%.', 2.2); if(st===1) after(2.4, function(){ if(SW_live()) SW_hint('sw2_unbound'); }); SW2_log('unbound', st); } }
+  SW_Q.mantle = SW2.chg ? SW2_CHG[Math.min(3, SW2.chgN)] : 1;
+  if(SW2.chg && Math.random() < dt*16){ var a = Math.random()*TAU; glowP.emit(b.x+Math.cos(a)*1.6, rnd(1, 6), b.z+Math.sin(a)*1.6, -Math.cos(a)*0.8, rnd(0.5, 1.6), -Math.sin(a)*0.8, 0.5, 1.0, ELC.storm, 0, 1); } }
+
+/* Storm Unbound also hardens his blows: +10% damage per stack (so a stalled fight always ends) */
+SW_d = function(k){ return (SW_DMG[k] + 0.4*((G.wave||20)-1))*(1 + 0.12*SW2.stk); };
+/* Storm Unbound: an absorbed hit of his leaks STRAIN through the ward (dash / the Eye avoid it) */
+var SW2_hitPlayer0 = hitPlayer;
+hitPlayer = function(dmg, el, src, o){ var r = SW2_hitPlayer0.apply(this, arguments);
+  if(r==='absorb' && SW2.stk > 0 && SW.on && SW.b && !SW.b.dead && src && P && !P.dead && (src===SW.b || src.swHit || src.src===SW.b)){ var n = Math.round(dmg*Math.min(SW2_LEAK_MAX, SW2_LEAK*SW2.stk)*(G.mods ? G.mods.edmg : 1));
+    if(n >= 1){ P.hp -= n; P.flawless = false; dmgText(P.x, 2.3, P.z, '-'+n+' STRAIN', '#c27cff', 16); if(P.hp <= 0){ P.hp = 0; playerDie('slain'); } } }
+  return r; };
+
+function SW2_rodPlan(){ var n = SW.rodNext, k = PTY_per([0,1,2]); SW2.xq = []; SW2.job = []; if(n < 0 || typeof PTY==='undefined' || !PTY.on || k < 1) return;
+  var others = [0,1,2].filter(function(i){ return i!==n && !SW_rodAt(i); }), ais = HEROES.filter(function(h){ return h!==PTY.ctl && !h.st.dead; });
+  while(others.length && SW2.xq.length < k){ var best = null, bi = -1, bd = 1e9; ais.forEach(function(h){ if(SW2.job.some(function(J){ return J.h===h; })) return; others.forEach(function(r){ var Q = SW_rodPos(r), d = Math.hypot(h.st.x-Q.x, h.st.z-Q.z); if(d < bd){ bd = d; best = h; bi = r; } }); });
+    if(bi < 0) bi = others[0]; SW2.xq.push(bi); if(best) SW2.job.push({h:best, r:bi}); others.splice(others.indexOf(bi), 1); } }
+/* ---------- step hook: party rod plan; allies redirect the Verdict too; markers; fx ---------- */
+STEP_HOOKS.push(function SW2_step(dt){ if(!SW.on){ if(SW2.lanes.length || SW2.digs.length) SW2_clearFx(); return; } SW2_stepFx(dt);
+  if(SW.rodNext >= 0 && SW2.xq==null) SW2_rodPlan(); else if(SW.rodNext < 0 && !SW.rod && !SW.rodX.length && SW2.xq) SW2.xq = SW2.job = null;
+  var b = SW_live(), V = SW.vd; if(!b || !V || V.redir >= 0 || typeof PTY==='undefined' || !PTY.on) return;
+  for(var j=0;j<3;j++){ if(SW_rodAt(j) || SW_perched(j)) continue; var Q = SW_rodPos(j); if(!Q || (P && !P.dead && Math.hypot(P.x-Q.x, P.z-Q.z) < SW_GR_R)) continue;
+    var H = PTY_heroes(), near = false; for(var i=0;i<H.length;i++){ if(H[i]!==P && !H[i].dead && Math.hypot(H[i].x-Q.x, H[i].z-Q.z) < SW_GR_R) near = true; }
+    if(!near) continue; V.prog[j] += dt*1.5; A2_call('setRod', j, 'grounding', Math.min(1, V.prog[j]/0.8));   /* +1.5 dt against 56's 0.5 dt decay = 1 dt net */
+    if(V.prog[j] >= 0.8){ V.redir = j; A2_call('setRod', j, 'grounded', 1); ringBurst(Q.x, Q.z, SW_GR_R, 24, 0xffc94d); dmgText(Q.x, 3.6, Q.z, 'GROUNDED', '#ffd27a', 18); SFX.pick(); break; } } });
+RENDER_HOOKS.push(function SW2_render(t){ if(SW.on || SW2_M) SW2_markers(t); });
+
+/* ---------- HUD: the bar under his HP shows the state (STAGGERED / CHARGED / what to do), plus Storm Unbound ---------- */
+(function(){ var st = document.createElement('style'); st.textContent = '#swTem.ch{box-shadow:inset 0 0 0 1px #c27cff,0 0 10px rgba(194,124,255,.7)}#swTem.ch i{background:linear-gradient(90deg,#4a2a7a,#c27cff);animation:swTemP .4s infinite alternate}#swTem.ch b{color:#f0e2ff}'; document.head.appendChild(st); })();
+var SW2_TIP = [null, 'BAIT THE ANVIL', 'GROUND THE RODS', 'TURN THE VERDICT'];
+SW_temHud = function(){ var el = SW_el; if(!el) return; var b = SW.b, on = SW.on && b && !b.dead && !SW.ent && !SW.dying && G.state==='play';
+  if(el.tem.hidden === on) el.tem.hidden = !on; if(!on) return;
+  var q = SW.qT > 0, w = q ? SW.qT/SW_Q.dur*100 : SW2.chg ? 100 : 0, k = q ? 'q' : SW2.chg ? 'ch' : '';
+  if(Math.abs(w - el.temW) > 0.4){ el.temW = w; el.temI.style.width = w.toFixed(1)+'%'; } if(k!==el.temK){ el.temK = k; el.tem.className = k; }
+  var txt = q ? 'STAGGERED ×2  '+SW.qT.toFixed(1)+' s' : SW2.chg ? (SW2.chgN > 1 ? 'OVERCHARGED ×'+SW2_CHG[Math.min(3, SW2.chgN)] : 'CHARGED ×½')+' · STAGGER HIM' : (SW2_TIP[b.phase] || ''); if(SW2.stk > 0) txt += '  ·  UNBOUND '+Math.round(Math.min(SW2_LEAK_MAX, SW2_LEAK*SW2.stk)*100)+'%';
+  if(el.temB.textContent!==txt) el.temB.textContent = txt; };
+
+/* ---------- reset with the fight ---------- */
+var SW2_reset0 = SW_resetFight;
+SW_resetFight = function(){ var r = SW2_reset0.apply(this, arguments); SW2.t = 0; SW2.t0 = null; SW2.chg = false; SW2.stk = 0; SW2.anvCh = 0; SW2.a1 = false; SW2.xq = SW2.job = null; SW2.n = {bait:0, ground:0, redirect:0, feed:0};
+  for(var i=0;i<SW_GAP.length;i++) SW_GAP[i] = SW2_GAP0[i]; SW_Q.mantle = 1; SW_Q.dur = 4; SW2_clearFx(); return r; };
+var SW2_clearFight0 = SW_clearFight;
+SW_clearFight = function(){ var r = SW2_clearFight0.apply(this, arguments); SW2_clearFx(); SW2.chg = false; SW_Q.mantle = 1; return r; };
+
+/* ---------- party AI: protect (Gale), stack / redirect (Verdict), spread (P3 sequence). The rod split job is 60-party's PTY_rodFor. ---------- */
+function SW2_aiIdx(h){ var n = 0; for(var i=0;i<HEROES.length;i++){ if(HEROES[i]===h) return n; if(HEROES[i]!==PTY.ctl && !HEROES[i].st.dead) n++; } return n; }
+function SW2_goal(h){ var b = SW_live(); if(!b || SW.ent || SW.dying || !G.waveActive || h.st.dead) return null; var me = h.st, C = PTY.ctl.st, goal = null, st = null, ai = SW2_aiIdx(h), a = b.act;
+  if(SW.vd && SW.vd.redir < 0){ var onRod = false, best = null, bd = 99, j, Q;
+    for(j=0;j<3;j++){ Q = SW_rodPos(j); if(Q && !C.dead && Math.hypot(C.x-Q.x, C.z-Q.z) < SW_GR_R) onRod = true; }
+    if(ai===0 && !onRod){ for(j=0;j<3;j++){ if(SW_rodAt(j) || SW_perched(j)) continue; Q = SW_rodPos(j); if(!Q) continue; var dq = Math.hypot(me.x-Q.x, me.z-Q.z); if(dq < bd){ bd = dq; best = Q; } }
+      if(best && bd < 9){ var qr = Math.hypot(best.x, best.z)||1; goal = {x:best.x - best.x/qr*0.9, z:best.z - best.z/qr*0.9, r:0.5}; st = 'Redirect'; } }
+    if(!goal && SW.eye){ var ea = (ai+1)*2.1; goal = {x:SW.eye.x + Math.cos(ea)*0.9, z:SW.eye.z + Math.sin(ea)*0.9, r:0.4}; st = 'Stack'; } }
+  else if(SW2.job && SW2.job.length && b.phase>=2 && me.hp > me.maxHp*0.25){ var J = null; for(var jj=0;jj<SW2.job.length;jj++) if(SW2.job[jj].h===h) J = SW2.job[jj];
+    if(J && !SW_perched(J.r) && (SW_rodAt(J.r) || SW.rodNext >= 0)){ var Qj = SW_rodPos(J.r), qrj = Math.hypot(Qj.x, Qj.z)||1; goal = {x:Qj.x - Qj.x/qrj*0.9, z:Qj.z - Qj.z/qrj*0.9, r:0.6}; st = 'Ground'; } }
+  if(goal){}
+  else if(a && a.id==='seq' && b.phase===3 && PTY_size() > 1){ var H = PTY_heroes(), nx = 0, nz = 0, cl = false; for(var i=0;i<H.length;i++){ var o = H[i]; if(o===me || o.dead) continue; var dx = me.x-o.x, dz = me.z-o.z, dd = Math.hypot(dx, dz); if(dd < 3.8){ cl = true; nx += dx/(dd||1); nz += dz/(dd||1); } }
+    if(cl){ var nl = Math.hypot(nx, nz)||1; goal = {x:me.x + nx/nl*2, z:me.z + nz/nl*2, r:0.2}; st = 'Spread'; } }
+  else if(a && a.id==='gale' && a.step===0 && a.ang!=null && ai===0){ goal = {x:b.x + Math.sin(a.ang)*3.4, z:b.z + Math.cos(a.ang)*3.4, r:0.5}; st = 'Protect'; }
+  if(goal) goal.st = st; return goal; }
+/* steer toward a goal (false when the step would enter a hole) */
+function SW2_steer(me, goal, mv){ var mx = goal.x-me.x, mz = goal.z-me.z, l = Math.hypot(mx, mz);
+  if(G.act===2 && typeof A2_unsafe==='function' && l > 0.3 && A2_unsafe(me.x+mx/l*1.3, me.z+mz/l*1.3)) return false;
+  if(l > goal.r){ var k = l < 1.2 ? Math.max(0.35, l/1.2) : 1; mv.x = mx/l*k; mv.z = mz/l*k; } else { mv.x = 0; mv.z = 0; } return true; }
+function SW2_ally(h, out){ var g = SW2_goal(h); if(g && SW2_steer(h.st, g, out.mv)) out.state = g.st; }
+/* the AI acts on a decision after a reaction delay; once it has a Stormwright job, steer onto the spot every frame (no overshoot) */
+var SW2_JOBS = {Ground:1, Redirect:1, Stack:1, Spread:1, Protect:1};
+if(typeof PTY_ai==='function'){ var SW2_ai0 = PTY_ai;
+  PTY_ai = function(h, dt){ var r = SW2_ai0.apply(this, arguments); try{ var A = h.ai; if(SW.on && A && SW2_JOBS[A.state] && !h.st.dead){ var g = SW2_goal(h);
+      if(!g && A.state==='Ground' && typeof PTY_rodFor==='function'){ var Q = PTY_rodFor(h, SW); if(Q){ var qr = Math.hypot(Q.x, Q.z)||1; g = {x:Q.x - Q.x/qr*0.9, z:Q.z - Q.z/qr*0.9, r:0.6}; } }
+      if(g) SW2_steer(h.st, g, A.mv); } }catch(err){ if(DEV) console.warn('sw2 ai', err); } return r; }; }
+if(typeof PTY_think==='function'){ var SW2_think0 = PTY_think;
+  PTY_think = function(h){ var out = SW2_think0.apply(this, arguments); try{ if(SW.on) SW2_ally(h, out); }catch(err){ if(DEV) console.warn('sw2 ally', err); } return out; }; }
+
+/* ---------- Codex: moves, phases and tips for v2 ---------- */
+if(typeof CX_BOSS!=='undefined' && CX_BOSS.stormwright){ var SW2_CX = CX_BOSS.stormwright;
+  SW2_CX.moves = [
+    ['Anvil Charge','His anvil lands in the colour of his lit crown tip. Then a lane points at you and he strides down it with the hammer up. Keep the anvil in the lane and he smashes into it: STAGGERED, double damage.'],
+    ['Hammerfall','A ring tide in the lit tip\'s colour rolls out from him. Match it, or dash through it. In the last phase the crown may spin and chime: the colour changes.'],
+    ['Crown Sequence','Numbered circles land on you in order: 1, 2, 3 (later 4). Switch ward in rhythm, or walk out of them. With allies in the last phase each hero gets a sequence: keep apart, overlaps hit twice.'],
+    ['Skyfall','He leaps onto a circle in his tip colour. Landing near the rim cracks the edge behind him.'],
+    ['Gale Breath','A wedge of wind in his tip colour pushes you toward the edge and carries bolts. An ally can stand in its mouth to shield you.'],
+    ['Storm Rods','From the second phase he walks to a rim rod and charges it: a lane runs through the platform. Stand in the rod\'s gold ring to ground the bolt into him (STAGGERED). Left alone, the bolt runs into him: CHARGED. With allies, one rod per hero.'],
+    ['Verdict of Thunder','In the last phase the whole platform is struck every 14 s in the colour its haze shows. Match it or shelter in the Eye to live, but he drinks it (CHARGED). Hold a rod in its gold ring and the bolt strikes him instead: STAGGERED 5 s.'],
+    ['Charged','An unanswered rod or Verdict heals him a little and halves your damage until you stagger him again.'],
+    ['Storm Unbound','If the fight runs past three minutes, his absorbed blows start to strain through your ward. Dash, take the Eye, and finish it.']];
+  SW2_CX.phases = [['100–65%','The Forge: bait his charge into the anvil.'], ['65–30%','The Conductor: ground his rods (one per hero); Heave, two Kite Wardens, two edge sectors crack.'], ['Under 30%','Eye of the Storm: the outer ring cracks; turn the Verdict through a rod, spread for the sequences.']];
+  SW2_CX.tips = 'Your ward keeps you alive; your position decides whether he weakens. Every greedy answer (anvil in the lane, a grounded rod, a redirected Verdict) STAGGERS him for double damage. Every storm you leave alone CHARGES him. Every attack he has can be absorbed by the matching ward.'; }
+
+/* ---------- DEV ---------- */
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.sw2 = { SW2:SW2,
+  state:function(){ var b = SW.b; return {t:+SW2.t.toFixed(1), chg:SW2.chg, stk:SW2.stk, n:SW2.n, qT:+SW.qT.toFixed(2), phase:b ? b.phase : null, hp:b ? +(b.hp/b.maxHp).toFixed(3) : null, max:b ? b.maxHp : null, act:b && b.act ? b.act.id : null}; },
+  hpK:function(k){ if(k!=null) SW2_HPK = k; return SW2_HPK; }, unbound:function(s){ SW2.t = SW2_UNB[Math.min(3, PTY_size())-1] + (s||0); return SW2.t; },
+  log:function(on){ if(on===false){ var L = SW2.log; SW2.log = null; return L; } SW2.log = []; return true; },
+  snap:function(){ var b = SW.b, all = []; for(var i=0;i<3;i++){ var Q = SW_rodPos(i); if(Q) all.push({i:i, x:Q.x, z:Q.z, live:!!SW_rodAt(i) || SW.rodNext===i, per:!!SW_perched(i)}); }
+    return {main:SW.rod ? SW.rod.i : SW.rodNext, rods:all, anvil:SW.anvil ? {x:SW.anvil.x, z:SW.anvil.z} : null, vd:!!SW.vd, eye:SW.eye ? {x:SW.eye.x, z:SW.eye.z} : null, b:b && !b.dead ? {x:b.x, z:b.z, act:b.act ? b.act.id : null, step:b.act ? b.act.step : null, ph:b.phase} : null,
+      wardens:enemies.filter(function(e){ return e.swWarden && !e.dead; }).map(function(e){ return {x:e.x, z:e.z, on:!!e.swOn}; })}; },
+  act:function(id){ var b = SW.b; if(!b) return null; SW_cancelAct(b); SW_begin(b, id, SW_plan(b, id, Math.hypot(P.x-b.x, P.z-b.z), CMB_threats(null))); return id; } }; }
 /* ---------- 82-gardenlift.js · wave 20 -> 21: THE LIFT UP INTO THE THORNWALL GARDEN, with a glimpse of Hesk. Prefix GL_. ----------
    Owner request: "a transition like we have from wave 10 to 11, a lift going up with a teaser of the real final boss going to the garden".
    Replaces the old dark "descent" (71-act3.js §8: the dark quad rising around the hero's lantern) without editing 71-act3.js:
