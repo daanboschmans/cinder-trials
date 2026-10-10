@@ -5726,6 +5726,7 @@ function GR_click(ev){ var el = ev.target.closest && ev.target.closest('[data-a]
   else if(a[0] === 'sel'){ SFX.click(); if(a[1] === 'w'){ GR_setHero(a[2]); GRU.sel = {k:'w', cls:a[2]}; } else if(a[1] === 'mw') GRU.sel = {k:'mw', v:a[2]}; else GRU.sel = {k:a[1], id:a[2]}; }
   else if(a[0] === 'sock'){ if(a[1]){ if(GRU.sel && GRU.sel.k === 'r' && GRU.sel.id === a[1]){ RL_toggle(a[1]); return; } GRU.sel = {k:'r', id:a[1]}; SFX.click(); } else { SFX.click(); GRU.msg = 'Empty socket: pick an owned relic below and socket it.'; } }
   else if(a[0] === 'csk'){ if(typeof CSK_armEquip === 'function') CSK_armEquip(+a[1]); return; }
+  else if(a[0] === 'cskup'){ if(typeof CSK_armUp === 'function') CSK_armUp(); return; }
   else if(a[0] === 'none') return;
   else if(a[0] === 'wear'){ GR_wear(GRU.sel.id); return; }
   else if(a[0] === 'tog'){ RL_toggle(GRU.sel.id); return; }
@@ -9791,7 +9792,7 @@ function CX_basics(){ var out = [], cmbG = CMB.glow!=null ? CMB.glow : 0.25, cmb
       CX_p('Two different colours never land within '+(CMB.beat||0.5)+' s of each other, so every switch can be made in time.'); }});
   out.push({id:'cover', g:'pillar', cat:'Rule', name:'Pillars and cover', sub:'Shelter that wears down', known:true, body:function(){
     return CX_p('Pillars block enemy bolts and line of sight. Your own shots pass through them.')+
-      CX_tbl([['Suppressing fire', 'Blocked shooters fire at the cover after '+(CMB.supT||0.6)+' s'], ['Bolts vs pillars', '×'+(CMB.supMul||2.5)+' damage'], ['Smashers', 'Brutes, bombers and bosses'], ['Between rounds', 'Pillars regrow']])+CX_tip('Move around cover rather than living behind it.'); }});
+      CX_tbl([['Suppressing fire', 'Blocked shooters fire at the cover after '+(CMB.supT||0.6)+' s'], ['Bolts vs pillars', '×'+(CMB.supMul||2.5)+' damage'], ['Smashers', 'Brutes, bombers and bosses'], ['Between rounds', 'Pillars regrow'], ['Attuned', 'Each pillar glows flame, frost or storm. Absorb its colour beside it 3 times to charge it'], ['Shatter', 'Dash into a charged pillar: a blast of its colour that marks foes and eats bolts of that colour. The pillar falls until next round']])+CX_tip('Move around cover rather than living behind it. Spend a charged pillar when foes bunch up near it.'); }});
   out.push({id:'stake', g:'glory', cat:'Rule', name:'Glory and the stake', sub:'Take it, or risk it', known:true, body:function(){
     var ins = null; try{ var A = CX_arm(); ins = A.relics.filter(function(r){ return r.id==='insurance'; })[0]; }catch(e){}
     return CX_p('Each cleared round adds Glory to your stake. After a round you choose: take the stake and leave, or accept a curse and fight on for more Glory per round.')+
@@ -10571,7 +10572,7 @@ var HX_CARDS = [
 
  /* 5 ---------- pillars ---------- */
  { id:'cover', tag:'Cover', cap:'Fig. 5 · suppressing fire', title:'Cover that breaks',
-   text:function(){ return 'Pillars stop bolts, but foes <b>fire until they crumble</b>.'+(HX_cls()==='blade'?' Keep moving.':' Your shots pass through.'); },
+   text:function(){ return 'Pillars stop bolts, but foes <b>fire until they crumble</b>.'+(HX_cls()==='blade'?' Keep moving.':' Your shots pass through.')+' Absorb a pillar\'s colour <b>beside it</b> to charge it, then <b>dash into it</b> for a blast.'; },
    keys:function(){ return HX_krow('<svg viewBox="0 0 24 24"><path d="M8 21V6l4-3 4 3v15z" fill="#2b2333" stroke="#ff8a3d" stroke-width="1.4"/><path d="M8 10h8M8 16h8" stroke="#ff8a3d" stroke-width="1.4"/></svg>', 'Pillars regrow between rounds')+
      HX_krow('<svg viewBox="0 0 24 24"><path d="M4 18l6-12 3 6 4-4 3 10z" fill="#4a3f39" stroke="#a3968a" stroke-width="1.2"/></svg>', 'Brutes and bombers smash them'); },
    spr:function(){ return ['hero_atk','pillar','sl_frost','b_frost','shot']; },
@@ -10632,6 +10633,47 @@ var HX_CARDS = [
        '<svg class="vxi" x="-12" y="-12" width="24" height="24" viewBox="0 0 48 48" style="color:#ffd27a">'+ULT+'</svg></g>';
      if(!G.touch) o += HX_cap(gx, by+34, kl('KeyR'), [[4.4,4.7]], D);
      o += HX_lbl(gx+36, by-18, 'OVERLOAD', HX_C.gold, 8, 'start', '.16em');
+     return {D:D, svg:o}; } },
+
+ /* 6b ---------- chain reactions (54-reactions.js §12, design/CHAINS.md): Mark, switch, the cascade, the chain chip ---------- */
+ { id:'chains', tag:'Chain reactions', cap:'Fig. 7 · cascade', title:'Mark, switch, cascade',
+   text:function(){ return 'Your hits <b>Mark</b> foes in your ward colour. <b>Switch</b> and hit a Marked foe to set off a <b>reaction</b>. A foe that dies Marked passes its Mark on, so one reaction can roll through the pack. Every <b style="color:'+HX_C.gold+'">×5</b> on the chain fills Overload.'; },
+   keys:function(){ var pip = function(el){ var d = el==='flame' ? 'M12 3c3 5 6 8 6 12a6 6 0 0 1-12 0c0-4 3-7 6-12z' : el==='frost' ? 'M12 2l6 10-6 10-6-10z' : 'M12 3l8 15H4z'; return '<path d="'+d+'" fill="'+HX_C[el]+'" stroke="#0b0809" stroke-width="1.4"/>'; };
+     return HX_krow('<svg viewBox="0 0 24 24"><g transform="translate(-5,0) scale(.8)">'+pip('flame')+'</g><g transform="translate(9,4) scale(.8)">'+pip('storm')+'</g></svg>', 'Two colours on one foe: a reaction')+
+       HX_krow('<svg viewBox="0 0 24 24"><path d="M2 8h20v9H2z" fill="#1c1517" stroke="#6a5240"/><path d="M5 14h14" stroke="#ff7a2e" stroke-width="1.6"/><text x="12" y="12.5" text-anchor="middle" font-family="Cinzel,serif" font-weight="900" font-size="6.5" fill="#ffb35c">×5</text></svg>', 'Chains pay Overload; packs dying together Rupture'); },
+   spr:function(){ return ['hero_atk','imp_flame','imp_storm','shot']; },
+   art:function(){ var D = 8, H = [92,218], I1 = [292,176], I2 = [350,206], I3 = [250,222], I4 = [356,140], o = HX_floor(255, 192, 5.4);
+     var pip = function(el, x, y, on, s){ s = s||1; var d = el==='flame' ? 'M0 -9c3 5 6 8 6 11a6 6 0 0 1-12 0c0-3 3-6 6-11z' : 'M0 -8l7 13H-7z';
+       return '<g opacity="0">'+HX_vis(on, D)+'<path transform="translate('+x+','+y+') scale('+s+')" d="'+d+'" fill="'+HX_C[el]+'" stroke="#0b0809" stroke-width="1.6"/></g>'; };
+     var foe = function(k, p, die){ return '<g>'+HX_an('opacity', [[0,1],[die,1],[die+0.25,0],[7.4,0],[7.8,1]], D)+HX_use(k, p[0], p[1])+'</g>'; };
+     /* the pack: I1 and I4 wear flame Marks, I2 and I3 storm Marks */
+     o += foe('imp_flame', I4, 3.35)+foe('imp_flame', I1, 1.9)+foe('imp_storm', I2, 2.8)+foe('imp_storm', I3, 2.8);
+     [[I1,'flame',[[0,1.2],[7.8,8]]],[I4,'flame',[[0,3.35],[7.8,8]]],[I2,'storm',[[0,2.2],[7.8,8]]],[I3,'storm',[[0,2.2],[7.8,8]]]].forEach(function(m){ var p = m[0];
+       o += pip(m[1], p[0]-12, p[1]+10, m[2], 0.9)+pip(m[1], p[0]+12, p[1]+10, m[2], 0.9); });
+     o += HX_ring(H[0], H[1], [[0,'frost']], D)+HX_use('hero_atk', H[0], H[1]);
+     /* 1: a frost shot on the flame-Marked foe: Cinderglass */
+     o += HX_shot('shot', 'frost', 0.75, 1.2, H[0]+18, H[1]-50, I1[0]-6, I1[1]-30, D)+HX_pop(I1[0], I1[1]-30, 1.2, HX_C.frost, D, 22);
+     o += '<ellipse cx="'+I1[0]+'" cy="'+(I1[1]-26)+'" rx="26" ry="30" fill="#ffb35c" fill-opacity=".22" stroke="#6fd8ff" stroke-width="2" opacity="0">'+HX_vis([[1.22,1.9]], D)+'</ellipse>';
+     o += HX_txt(I1[0], I1[1]-72, 1.22, 1.0, 'CINDERGLASS', '#ffb35c', 13, D);
+     /* 2: it dies Marked; its flame Mark hops to the two storm-Marked foes beside it: Wildleap ×2 */
+     [I2, I3].forEach(function(p, j){ var t0 = 1.95 + j*0.04, t1 = t0 + 0.32, mx = (I1[0]+p[0])/2, my = Math.min(I1[1], p[1]) - 46;
+       o += '<path d="M'+I1[0]+' '+(I1[1]-24)+'Q'+mx+' '+my+' '+p[0]+' '+(p[1]-24)+'" fill="none" stroke="'+HX_C.flame+'" stroke-width="2" stroke-dasharray="3 4" opacity="0">'+HX_vis([[t0,t1+0.3]], D)+'</path>';
+       o += '<g opacity="0">'+HX_vis([[t0,t1]], D)+'<animateMotion dur="'+D+'s" repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;'+(t0/D).toFixed(4)+';'+(t1/D).toFixed(4)+';1" calcMode="linear" path="M'+I1[0]+' '+(I1[1]-24)+'Q'+mx+' '+my+' '+p[0]+' '+(p[1]-24)+'"/>'+
+         '<path d="M0 -8c3 5 6 7 6 10a6 6 0 0 1-12 0c0-3 3-5 6-10z" fill="'+HX_C.flame+'" stroke="#0b0809" stroke-width="1.5"/></g>';
+       o += HX_pop(p[0], p[1]-28, t1, HX_C.storm, D, 20); });
+     o += HX_txt((I2[0]+I3[0])/2, I3[1]-78, 2.3, 0.65, 'WILDLEAP ×2', '#ff8f4a', 13, D);
+     /* 3: three Marked foes fell together: an Ember Rupture finishes the last one */
+     var RC = [(I1[0]+I2[0]+I3[0])/3, (I1[1]+I2[1]+I3[1])/3];
+     o += '<ellipse cx="'+RC[0]+'" cy="'+RC[1]+'" fill="none" stroke="'+HX_C.flame+'" stroke-width="4" opacity="0">'+HX_an('opacity', [[2.94,0],[2.95,0.9],[3.6,0]], D)+HX_an('rx', [[2.95,10],[3.6,110]], D)+HX_an('ry', [[2.95,6],[3.6,64]], D)+'</ellipse>';
+     o += '<ellipse cx="'+RC[0]+'" cy="'+RC[1]+'" fill="none" stroke="#b4501f" stroke-width="2.5" opacity="0">'+HX_an('opacity', [[3.04,0],[3.05,0.8],[3.7,0]], D)+HX_an('rx', [[3.05,8],[3.7,80]], D)+HX_an('ry', [[3.05,5],[3.7,46]], D)+'</ellipse>';
+     o += HX_txt(RC[0], RC[1]-92, 2.98, 1.1, 'EMBER RUPTURE', '#ff8a3d', 14, D);
+     o += HX_vig();
+     /* the chain chip (HUD replica): counts the links, ×5 pays Overload */
+     var cx = 392, cy = 22, nums = [[1.2,'1'],[1.95,'2'],[2.27,'4'],[2.8,'6'],[2.95,'8'],[3.35,'9']], chip = '';
+     nums.forEach(function(nv, i){ var t1 = i+1 < nums.length ? nums[i+1][0] : 5.2; chip += '<text x="'+(cx+34)+'" y="'+(cy+5)+'" font-family="Cinzel,serif" font-weight="900" font-size="17" fill="#ffb35c" opacity="0">'+HX_vis([[nv[0], t1]], D)+nv[1]+'</text>'; });
+     o += '<g opacity="0">'+HX_an('opacity', [[1.15,0],[1.2,1],[5.0,1],[5.3,0]], D)+HX_plate(cx-48, cy-16, 106, 30, 5)+HX_lbl(cx-38, cy+4, 'CHAIN', HX_C.bone2, 9)+'<text x="'+(cx+20)+'" y="'+(cy+4)+'" font-family="Cinzel,serif" font-weight="700" font-size="11" fill="#b4501f">×</text>'+chip+
+       '<rect x="'+(cx-41)+'" y="'+(cy+10)+'" width="92" height="2" fill="#ff7a2e">'+HX_an('width', [[1.2,92],[1.95,60],[1.951,92],[2.8,70],[2.801,92],[3.35,80],[3.351,92],[5.0,0]], D)+'</rect></g>';
+     o += HX_txt(cx+4, cy+38, 2.8, 1.2, '+6 OVERLOAD', HX_C.gold, 12, D);
      return {D:D, svg:o}; } },
 
  /* 7 ---------- the stake ---------- */
@@ -10726,7 +10768,10 @@ if(DEV) window.__howto = { open:function(){ openHowto(null); return HX_CARDS.len
    bursts when the foe dies. Absorbs store primes; an absorb right after a switch arms a Tide-Turn.
    Hit attribution: one core edit in 30-game.js (projectile hits pass src:q to hurtEnemy). Everything else wraps globals and always calls the original:
    spawnEnemy spawnPProj playerAttack castSpell castUlt addTele after hurtEnemy killEnemy absorb setWard updateEnemies newRun clearWorld roundCleared
-   startWave dmgText, and CX_list / CX_CATS for the Codex. No per-frame allocation: fixed job ring, fixed FX slots, shared instanced meshes. */
+   startWave dmgText, and CX_list / CX_CATS for the Codex. No per-frame allocation: fixed job ring, fixed FX slots, shared instanced meshes.
+   CHAINS (§12, design/CHAINS.md): Marked deaths spread their Mark, a chain counter pays Overload / Favour, Ruptures, Fusions, class-skill seeds.
+   Hooks for other files (see §12 for the contract): RX_onChain(fn) -> off(), RX_seedChain(el, x, z, o) -> n, RX_chainLink(k, kind, x, z, el), RX_chainNow().
+   Also wraps CSK_slam and CSK_loose from 68-skills.js (hoisted declarations; both wrappers call the original). */
 
 /* =====================================================================================
    1. TUNING (one table; RX.on is the master switch, ?rxoff in the URL turns it off for A/B runs)
@@ -10750,7 +10795,7 @@ var RX = {
   maxRx:4, maxDeath:6, qN:32, qAge:0.35, vfxMax:12, quietN:25, quietK:0.6,
   nameGap:0.5, nameType:1.5, numMerge:0.2,
   // runtime (not tuning)
-  ctx:null, gen:0, tc:0, mute:0, castN:0, whId:0, swT:-9, gT:{glass:-9, leap:-9, knot:-9}, nameT:-9, nameTy:{}, rseen:{}, seen:{}, qn:0, seq:0, fxSeq:0, drop:0, vt:0, quiet:false, nFrz:0, bln:0,
+  ctx:null, gen:0, tc:0, mute:0, castN:0, whId:0, swT:-9, gT:{glass:-9, leap:-9, knot:-9}, nameT:-9, nameTy:{}, rseen:{}, seen:{}, qn:0, seq:0, fxSeq:0, drop:0, vt:0, quiet:false, nFrz:0, bln:0, dep:0, prTy:'', hN:0,
   stat:{rx:0, sat:0, death:0, tide:0}
 };
 var RX_EI = {flame:0, frost:1, storm:2}, RX_SAT = ['pyre','hoar','lode'];
@@ -10775,17 +10820,17 @@ function RX_h(e){ var T = ETYPES[e.type]; return ((T && T.h) || 2)*(e.type==='bo
 function RX_sc(e){ return e.type==='boss' ? BOSS_S : e.elite ? 1.3 : 1; }
 function RX_B(){ return RX.B*(RX.cls[P.cls]||1)*(1+RX.waveK*((G.wave||1)-1))*(1+RX.heat*(P.rxHeat||0)); }
 function RX_pmax(){ return (P.cls==='mage' ? RX.prime.mage : RX.prime.max) + (P.rxPalm||0); }
-function RX_initP(){ if(!P) return; P.rxPrime=0; P.rxAbs=0; P.rxTurn=false; P.rxTurnT=0; P.rxTideCd=0; P.rxHeat=0; P.rxPalm=0; P.rxLinger=0; P.rxLeap=0; P.rxTideBig=0; P.rxTrine=0; }
+function RX_initP(){ if(!P) return; P.rxPrime=0; P.rxAbs=0; P.rxTurn=false; P.rxTurnT=0; P.rxTideCd=0; P.rxHeat=0; P.rxPalm=0; P.rxLinger=0; P.rxLeap=0; P.rxTideBig=0; P.rxTrine=0; P.chSpread=0; P.chFuse=0; P.chCruc=0; }
 function RX_okP(){ if(P && P.rxPrime==null) RX_initP(); return !!P; }
 
 /* =====================================================================================
    2. JOB QUEUE (32 fixed jobs, FIFO by sequence, per-step budgets, stale jobs dropped)
    ===================================================================================== */
-var RX_Q = []; for(var rq=0; rq<RX.qN; rq++) RX_Q.push({on:false, seq:0, ty:'', gen:1, at:0, e:null, x:0, z:0, s:0, mul:1, el:'', v:[null,null,null,null,null,null,null,null], nv:0});
-var RX_DEATH = {pyreD:1, hoarD:1, lodeD:1, chainre:1}, RX_FREE = {glassB:1, leapHit:1, knotHit:1};
+var RX_Q = []; for(var rq=0; rq<RX.qN; rq++) RX_Q.push({on:false, seq:0, ty:'', gen:1, at:0, e:null, x:0, z:0, s:0, mul:1, el:'', v:[null,null,null,null,null,null,null,null], nv:0, dep:0});
+var RX_DEATH = {pyreD:1, hoarD:1, lodeD:1, chainre:1, spread:1, rupture:1}, RX_FREE = {glassB:1, leapHit:1, knotHit:1};
 function RX_enq(ty, e, s, gen, mul, el, delay){ var J = null; for(var i=0;i<RX.qN;i++) if(!RX_Q[i].on){ J = RX_Q[i]; break; }
   if(!J){ RX.drop++; return null; }
-  J.on = true; J.seq = ++RX.seq; J.ty = ty; J.gen = gen; J.at = G.t + (delay||0); J.e = e; J.x = e ? e.x : 0; J.z = e ? e.z : 0; J.s = s||0; J.mul = mul||1; J.el = el||''; J.nv = 0; RX.qn++; return J; }
+  J.on = true; J.seq = ++RX.seq; J.ty = ty; J.gen = gen; J.at = G.t + (delay||0); J.e = e; J.x = e ? e.x : 0; J.z = e ? e.z : 0; J.s = s||0; J.mul = mul||1; J.el = el||''; J.nv = 0; J.dep = RX.dep; RX.qn++; return J; }
 function RX_free(J){ J.on = false; J.e = null; for(var k=0;k<J.nv;k++) J.v[k] = null; J.nv = 0; RX.qn--; }
 function RX_drain(){ if(!RX.qn) return; var br = RX.maxRx, bd = RX.maxDeath;
   for(var guard=0; guard<RX.qN; guard++){ var best = null;
@@ -10795,7 +10840,7 @@ function RX_drain(){ if(!RX.qn) return; var br = RX.maxRx, bd = RX.maxDeath;
       if(!best || J.seq < best.seq) best = J; }
     if(!best) break;
     if(RX_DEATH[best.ty]) bd--; else if(!RX_FREE[best.ty]) br--;
-    try{ RX_run(best); } catch(err){ if(DEV) console.warn('rx', best.ty, err); } RX.gen = 0; RX_free(best); } }
+    try{ RX_run(best); } catch(err){ if(DEV) console.warn('rx', best.ty, err); } RX.gen = 0; RX.dep = 0; RX.prTy = ''; RX_free(best); } }
 function RX_clearQ(){ for(var i=0;i<RX.qN;i++) if(RX_Q[i].on) RX_free(RX_Q[i]); RX.qn = 0; }
 
 /* =====================================================================================
@@ -10825,7 +10870,7 @@ function RX_tide(t, el, mul){ var r = P.rxTideBig ? RX.tide.rBig : RX.tide.r, n 
     var ty = RX_pair(f.rxEl, el), s = f.rxN; f.rxN = 0; f.rxEl = ''; f.rxT = 0; f.rxRc = G.t + RX[ty].icd;
     RX_enq(ty, f, s, 1, mul, el, 0.04*Math.min(n, 6)); if(F.n < 8){ F.p[F.n*3] = f.x; F.p[F.n*3+1] = 1.0; F.p[F.n*3+2] = f.z; F.n++; } n++; }
   if(P.rxTideBig) P.rxPrime = Math.min(RX_pmax(), P.rxPrime + 2);
-  RX.stat.tide++; RX_name('tide', t, ELCSS[el]); RX_SFX.tide(); RX_seenId('tide'); shake(0.12); }
+  RX.stat.tide++; RX_chLink(1, 'tide', t.x, t.z, el); RX_name('tide', t, ELCSS[el]); RX_SFX.tide(); RX_seenId('tide'); shake(0.12); }
 function RX_arm(){ P.rxTurn = true; P.rxTurnT = G.t + RX.tide.arm; P.rxTideCd = G.t + (P.rxTideBig ? RX.tide.icdBig : RX.tide.icd);
   var F = RX_fxAdd(7, P.x, P.z, 0.32); F.c1 = ELC[P.ward]; F.c2 = ELRAMP[P.ward].lit; RX_SFX.arm(); }
 
@@ -10837,7 +10882,7 @@ function RX_dmg(e, amt, gen, css, nocap, merge){ if(!e || e.dead || e.spawnT>0 |
   if(!nocap){ if(G.t - e.rxHw >= RX.perFoeT){ e.rxHw = G.t; e.rxHn = 0; } if(e.rxHn >= RX.perFoe) return 0; e.rxHn++; }
   var d = amt*(gen>=2 ? RX.gen2 : 1); if(e.elite){ var mx = e.maxHp*RX.eliteCap/Math.max(0.01, P.dmgMul); if(d > mx) d = mx; }
   var hp0 = e.hp, pg = RX.gen, pt = RX.tc; RX.gen = gen; RX.mute = 1; RX.tc = nocap ? 0 : (RX_TINTC[css] || 0); try{ hurtEnemy(e, d, 0, 0, RX_O[gen>=2?2:1]); } finally { RX.mute = 0; RX.gen = pg; RX.tc = pt; }
-  var dealt = hp0 - e.hp; if(dealt <= 0) return 0;
+  var dealt = hp0 - e.hp; if(dealt <= 0) return 0; if(RX.prTy && !e.dead) RX_fu(e, RX.prTy);
   if(!e.rxAccT){ e.rxAccT = G.t + (merge || RX.numMerge); e.rxAccC = css; } e.rxAcc += dealt; if(e.dead) RX_flush(e); return dealt; }
 function RX_flush(e){ if(e.rxAcc > 0) dmgText(e.x, RX_h(e)+0.35, e.z, Math.round(e.rxAcc), e.rxAccC || '#ffb35c', 17); e.rxAcc = 0; e.rxAccT = 0; }
 function RX_area(x, z, r, amt, gen, css){ var n = 0; for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT>0) continue; if(Math.hypot(e.x-x, e.z-z) < r + e.r){ if(RX_dmg(e, amt, gen, css)) n++; } } return n; }
@@ -10856,40 +10901,41 @@ function RX_conduct(e, dealt){ var n = RX_near(e.x, e.z, RX.lode.r, RX.lode.n, e
 /* =====================================================================================
    5. RESOLVER (runs one job; gen 1 = reaction / saturation, gen 2 = on-death effect)
    ===================================================================================== */
-function RX_run(J){ var e = J.e, alive = !!(e && !e.dead), x = alive ? e.x : J.x, z = alive ? e.z : J.z, s = J.s, B = RX_B()*J.mul, ty = J.ty, i, F, n;
-  RX.gen = J.gen;
-  if(ty==='glass'){ RX_cnt(ty); if(alive){ e.rxGl = RX.glass.shell; if(!e.elite && !RX_boss(e) && !RX_unst()) e.rxFz = Math.max(e.rxFz, RX.glass.shell); }
+function RX_run(J){ var e = J.e, alive = !!(e && !e.dead), x = alive ? e.x : J.x, z = alive ? e.z : J.z, s = J.s, B = RX_B()*J.mul*(J.dep>0 ? Math.pow(RX_CH.fall, J.dep) : 1), ty = J.ty, i, F, n;
+  RX.gen = J.gen; RX.dep = J.dep; RX.prTy = (ty==='glass' || ty==='glassB' || ty==='leap' || ty==='leapHit' || ty==='knotHit') ? (ty==='glassB' ? 'glass' : ty==='leapHit' ? 'leap' : ty==='knotHit' ? 'knot' : ty) : '';
+  if(RX_CH_RUN[ty]){ RX_CH_RUN[ty](J, e, alive, x, z, B); return; }
+  if(ty==='glass'){ RX_cnt(ty, x, z, J.el); if(alive){ RX_fu(e, 'glass'); e.rxGl = RX.glass.shell; if(!e.elite && !RX_boss(e) && !RX_unst()) e.rxFz = Math.max(e.rxFz, RX.glass.shell); }
     var J2 = RX_enq('glassB', e, s, 1, J.mul, '', RX.glass.shell); if(J2){ J2.x = x; J2.z = z; } RX_name(ty, e); RX_SFX.shell(); }
   else if(ty==='glassB'){ RX_area(x, z, RX.glass.r, (RX.glass.a + RX.glass.b*s)*B, 1, RX_CSS.glass); F = RX_fxAdd(1, x, z, 0.55); F.y = alive ? RX_h(e)*0.45 : 0.9; RX_SFX.shatter(); shake(0.1); if(alive) e.rxGl = 0; }
-  else if(ty==='leap'){ RX_cnt(ty); if(alive) RX_dmg(e, (RX.leap.a + RX.leap.b*s)*B, 1, RX_CSS.leap);
+  else if(ty==='leap'){ RX_cnt(ty, x, z, J.el); if(alive) RX_dmg(e, (RX.leap.a + RX.leap.b*s)*B, 1, RX_CSS.leap);
     n = RX_near(x, z, RX.leap.r, RX.leap.n + (P.rxLeap||0), e, null); F = RX_fxAdd(2, x, z, 0.62); F.n = 0;
     var JL = RX_enq('leapHit', e, s, 1, J.mul, '', RX.leap.fly);
     for(i=0;i<n;i++){ var t = RX_NB[i]; RX_NB[i] = null; if(JL && JL.nv<8) JL.v[JL.nv++] = t; if(F.n<8){ F.p[F.n*3] = t.x; F.p[F.n*3+1] = t.z; F.n++; } }
     RX_name(ty, e); RX_SFX.leap(); }
   else if(ty==='leapHit'){ for(i=0;i<J.nv;i++){ var lt = J.v[i]; if(!lt || lt.dead) continue; RX_dmg(lt, RX.leap.side*B, 1, RX_CSS.leap); if(!lt.dead) RX_apply(lt, 'flame', 1, 1, 1, false); } }
-  else if(ty==='knot'){ RX_cnt(ty); var unst = RX_unst(), JK = RX_enq('knotHit', e, s, 1, J.mul, '', RX.knot.t); if(JK && alive) JK.v[JK.nv++] = e;
+  else if(ty==='knot'){ RX_cnt(ty, x, z, J.el); var unst = RX_unst(), JK = RX_enq('knotHit', e, s, 1, J.mul, '', RX.knot.t); if(JK && alive) JK.v[JK.nv++] = e;
     for(i=0;i<enemies.length;i++){ var f = enemies[i]; if(f===e || f.dead || f.spawnT>0 || f.invuln || f.type==='heart') continue; var dx = x-f.x, dz = z-f.z, d = Math.hypot(dx, dz); if(d > RX.knot.r + f.r) continue;
       if(JK && JK.nv<8) JK.v[JK.nv++] = f; f.rxKn = RX.knot.slow;
       if(!unst && !RX_boss(f)){ var mv = Math.min(RX.knot.pull, Math.max(0, d - (f.r + (alive ? e.r : 0.5)))) * (f.type==='brute' ? RX.knot.brute : 1); if(mv>0.01){ f.rxPlT = RX.knot.t; f.rxPvx = dx/d*mv/RX.knot.t; f.rxPvz = dz/d*mv/RX.knot.t; } f.slowT = Math.max(f.slowT||0, RX.knot.slow); } }
     if(alive && !unst && !RX_boss(e)) e.slowT = Math.max(e.slowT||0, RX.knot.slow); if(alive) e.rxKn = RX.knot.slow;
     F = RX_fxAdd(3, x, z, 0.55); RX_name(ty, e); RX_SFX.knot(); }
   else if(ty==='knotHit'){ for(i=0;i<J.nv;i++){ var kt = J.v[i]; if(kt && !kt.dead) RX_dmg(kt, (RX.knot.a + RX.knot.b*s)*B, 1, RX_CSS.knot); } RX_SFX.thump(); }
-  else if(ty==='pyre' || ty==='hoar' || ty==='lode'){ if(!alive) return; RX_cnt(ty); e.rxSat = ty; e.rxSatT = RX[ty].t; e.rxSm = J.mul; e.rxPt = RX.pyre.tick;
+  else if(ty==='pyre' || ty==='hoar' || ty==='lode'){ if(!alive) return; RX_cnt(ty, x, z, J.el); e.rxSat = ty; e.rxSatT = RX[ty].t; e.rxSm = J.mul; e.rxPt = RX.pyre.tick;
     if(ty==='hoar' && !RX_unst()) e.rxFz = Math.max(e.rxFz, e.elite ? RX.hoar.frzE : RX.hoar.frz);
     F = RX_fxAdd(5, x, z, 0.4); F.c1 = RX_ELC[RX_EI[J.el]||0]; F.el = J.el; RX_name(ty, e);
     if(ty==='pyre') RX_SFX.ignite(); else if(ty==='hoar') RX_SFX.freeze(); else RX_SFX.lode(); }
-  else if(ty==='pyreD'){ RX.stat.death++; RX_area(x, z, RX.pyre.r, RX.pyre.k*B, 2, RX_CSS.pyre); RX_fxAdd(4, x, z, 0.55); if(typeof VX_scorch==='function') VX_scorch(x, z, 1.3, 1.6); RX_SFX.pyreB(); shake(0.12); }
-  else if(ty==='hoarD'){ RX.stat.death++; var ns = RX.hoar.n + (P.rxLeap ? 2 : 0), a0 = (J.seq%8)*0.39; for(i=0;i<ns;i++) RX_shard(x, z, a0 + i*TAU/ns, J.mul, e); RX_SFX.shards(); }
-  else if(ty==='lodeD'){ RX.stat.death++; F = RX_fxAdd(6, x, z, 0.32); F.c1 = RXC.stV; F.c2 = RXC.stG; F.pair = 0; F.n = 1; F.p[0] = x; F.p[1] = 1.1; F.p[2] = z;
+  else if(ty==='pyreD'){ RX.stat.death++; RX_chLink(1, 'burst', x, z, 'flame'); RX_area(x, z, RX.pyre.r, RX.pyre.k*B, 2, RX_CSS.pyre); RX_fxAdd(4, x, z, 0.55); if(typeof VX_scorch==='function') VX_scorch(x, z, 1.3, 1.6); RX_SFX.pyreB(); shake(0.12); }
+  else if(ty==='hoarD'){ RX.stat.death++; RX_chLink(1, 'burst', x, z, 'frost'); var ns = RX.hoar.n + (P.rxLeap ? 2 : 0), a0 = (J.seq%8)*0.39; for(i=0;i<ns;i++) RX_shard(x, z, a0 + i*TAU/ns, J.mul, e); RX_SFX.shards(); }
+  else if(ty==='lodeD'){ RX.stat.death++; RX_chLink(1, 'burst', x, z, 'storm'); F = RX_fxAdd(6, x, z, 0.32); F.c1 = RXC.stV; F.c2 = RXC.stG; F.pair = 0; F.n = 1; F.p[0] = x; F.p[1] = 1.1; F.p[2] = z;
     var cx = x, cz = z, links = RX.lode.links + (P.rxLeap ? 1 : 0), nv = 0;
     for(i=0;i<links && nv<8;i++){ var best = null, bd = 1e9; for(var k=0;k<enemies.length;k++){ var o = enemies[k]; if(o===e || o.dead || o.spawnT>0 || o.invuln || o.type==='heart') continue; var vis = false; for(var q=0;q<nv;q++) if(J.v[q]===o){ vis = true; break; } if(vis) continue;
         var dd = Math.hypot(o.x-cx, o.z-cz); if(dd < bd && dd < RX.lode.r + o.r){ bd = dd; best = o; } }
       if(!best) break; J.v[nv++] = best; J.nv = nv; if(F.n<9){ F.p[F.n*3] = best.x; F.p[F.n*3+1] = 1.0; F.p[F.n*3+2] = best.z; F.n++; } cx = best.x; cz = best.z; RX_dmg(best, RX.lode.k*B, 2, RX_CSS.lode); }
     RX_SFX.zap(); }
   else if(ty==='chainre'){ RX.tc = RX.on ? RX_TINTC[RX_CSS.chainre] : 0; aoe(x, z, 2.0, 25, {nocrit:true, kb:2, noArea:true}); ringBurst(x, z, 2.0, RX.quiet ? 7 : 14, 0xff8a3d, 0.5); RX.tc = 0; }
-  else if(ty==='crown'){ RX_area(x, z, RX.trine.r, RX.trine.k*B, 1, RX_CSS.crown); RX_fxAdd(9, x, z, 0.6); RX_name('crown', e); RX_SFX.crown(); shake(0.15); }
+  else if(ty==='crown'){ RX_chLink(1, 'crown', x, z, ''); RX_area(x, z, RX.trine.r, RX.trine.k*B, 1, RX_CSS.crown); RX_fxAdd(9, x, z, 0.6); RX_name('crown', e); RX_SFX.crown(); shake(0.15); }
 }
-function RX_cnt(ty){ var sat = ty==='pyre' || ty==='hoar' || ty==='lode'; if(sat) RX.stat.sat++; else RX.stat.rx++; RX_seenId(ty);
+function RX_cnt(ty, x, z, el){ RX_chLink(1, ty, x, z, el||''); var sat = ty==='pyre' || ty==='hoar' || ty==='lode'; if(sat) RX.stat.sat++; else RX.stat.rx++; RX_seenId(ty);
   if(typeof CX_inc==='function') CX_inc(sat ? 'sat' : 'rx'); if(!sat) RX_hint(); }
 function RX_seenId(id){ if(RX.seen[id]) return; RX.seen[id] = 1; try{ if(typeof CX_s==='function'){ var c = CX_s(); if(!c.rx || typeof c.rx!=='object') c.rx = {}; CX_mark('rx', id); } }catch(err){} }
 function RX_hint(){ if(typeof HINTS==='undefined' || typeof hintOnce!=='function') return; if(!HINTS.rxpair) HINTS.rxpair = function(){ return '<b style="color:#ffb35c">Reaction!</b> Your hits <b>Mark</b> foes in your ward colour. Switch ward and hit a Marked foe to set one off.'; }; hintOnce('rxpair'); }
@@ -10910,7 +10956,7 @@ function RX_shardStep(dt){ for(var i=0;i<RX_SH.length;i++){ var S = RX_SH[i]; if
 var RX_se0 = spawnEnemy;
 spawnEnemy = function(type, el, at, opts){ var e = RX_se0.apply(this, arguments); if(!e) return e;
   e.rxEl=''; e.rxN=0; e.rxT=0; e.rxCd=-9; e.rxCast=0; e.rxRc=-9; e.rxSc=-9; e.rxSat=''; e.rxSatT=0; e.rxSm=1; e.rxPt=0; e.rxFz=0; e.rxGl=0; e.rxKn=0; e.rxPlT=0; e.rxPvx=0; e.rxPvz=0;
-  e.rxHw=-9; e.rxHn=0; e.rxAcc=0; e.rxAccT=0; e.rxAccC=''; e.rxC0=-9; e.rxC1=-9; e.rxC2=-9; e.rxTr=-9; e.rxLzT=-9; e.rxFlT=-9; e.rxTk=0; e.rxTc=0; e.rxSeed=Math.random()*TAU; if(e.M) e.M.rxRim0 = null;
+  e.rxHw=-9; e.rxHn=0; e.rxAcc=0; e.rxAccT=0; e.rxAccC=''; e.rxC0=-9; e.rxC1=-9; e.rxC2=-9; e.rxTr=-9; e.rxLzT=-9; e.rxFlT=-9; e.rxTk=0; e.rxTc=0; e.rxPr=''; e.rxPrT=-9; e.rxSeed=Math.random()*TAU; if(e.M) e.M.rxRim0 = null;
   var hm = RX.on && P ? (RX.hpMul[P.cls] || 1) : 1; if(hm!==1 && !RX_boss(e) && type!=='heart' && type!=='stalker'){ e.hp *= hm; e.maxHp *= hm; }
   return e; };
 // projectiles carry their mark element: the cast context, else their own colour (familiar, Mirror Shell, Backlash); gold shots outside a context carry none
@@ -10960,6 +11006,7 @@ killEnemy = function(e, quiet){ if(!e || e.dead || !P) return RX_kill0.apply(thi
   if(e.dead && !quiet && e.type!=='boss' && e.type!=='heart'){ var g = RX.gen;
     if(cr && !e.nc && g < 2) RX_enq('chainre', e, 0, 2, 1, '', 0.1);
     if(RX.on && e.rxSat && e.rxSatT>0 && g < 2) RX_enq(e.rxSat+'D', e, 0, 2, e.rxSm||1, '', 0.12);
+    if(RX.on && RX_CH.on) RX_chDeath(e, g);
     if(e.rxAcc>0) RX_flush(e); }
   return r; };
 var RX_sw0 = setWard;
@@ -10978,7 +11025,7 @@ updateEnemies = function(dt){ if(!RX.nFrz) return RX_ue0.apply(this, arguments);
 var RX_dt0 = dmgText;
 dmgText = function(){ if(RX.mute>0){ RX.mute--; return; } return RX_dt0.apply(this, arguments); };
 function RX_reset(all){ RX_clearQ(); for(var i=0;i<RX_FX.length;i++) RX_FX[i].on = false; for(var k=0;k<RX_SH.length;k++){ RX_SH[k].on = false; RX_SH[k].own = null; }
-  RX.gT.glass = RX.gT.leap = RX.gT.knot = -9; RX.nFrz = 0; RX.rseen = {}; RX.ctx = null; RX.gen = 0; RX.mute = 0;
+  RX.gT.glass = RX.gT.leap = RX.gT.knot = -9; RX.nFrz = 0; RX.dep = 0; RX.prTy = ''; RX_chReset(); RX.rseen = {}; RX.ctx = null; RX.gen = 0; RX.mute = 0;
   if(P){ if(P.rxPrime==null) RX_initP(); P.rxTurn = false; if(all) RX_initP(); }
   for(var e=0;e<enemies.length;e++){ var f = enemies[e]; if(f.rxTk>0 || (f.M && f.M.rxRim0)){ f.rxTk = 0; RX_rim(f, false); } f.rxN = 0; f.rxEl = ''; f.rxSat = ''; f.rxSatT = 0; f.rxFz = 0; f.rxGl = 0; f.rxKn = 0; f.rxPlT = 0; } }
 var RX_nr0 = newRun; newRun = function(cls){ var r = RX_nr0.apply(this, arguments); RX_reset(true); RX.swT = -9; return r; };
@@ -11003,7 +11050,7 @@ STEP_HOOKS.push(function RX_step(dt){ if(!P) return;
     // whirlwind marks once per foe per cast; arrow storm marks storm once per foe per storm
     if(P.whirl>0 && P.whirlTick >= 0.2199 && !impotent()){ var wr = 3.2*G.mods.area; for(i=0;i<enemies.length;i++){ e = enemies[i]; if(!e.dead && e.spawnT<=0 && Math.hypot(e.x-P.x, e.z-P.z) < wr+e.r) RX_markHit(e, P.ward, 'ult', RX.whId, 1); } }
     for(var s=0;s<storms.length;s++){ var sm = storms[s]; if(!sm.rxId) sm.rxId = ++RX.castN; if(sm.tick >= 0.1799 && !impotent()){ var sr = 3.6*G.mods.area; for(i=0;i<enemies.length;i++){ e = enemies[i]; if(!e.dead && e.spawnT<=0 && Math.hypot(e.x-sm.x, e.z-sm.z) < sr+e.r) RX_markHit(e, 'storm', 'ult', sm.rxId, 1); } } }
-    RX_shardStep(dt); }
+    RX_shardStep(dt); RX_chStep(dt); }
   RX_drain(); });
 
 /* =====================================================================================
@@ -11052,7 +11099,9 @@ function RX_bolt(ax,ay,az, bx,by,bz, cc, cg, w, k){ var px = ax, py = ay, pz = a
     RX_seg(px,py,pz, nx,ny,nz, 0.2*w, cg, k*0.5); RX_seg(px,py,pz, nx,ny,nz, 0.055*w, cc, k); px = nx; py = ny; pz = nz; } }
 function RX_qy(a){ return RX_q2.setFromAxisAngle(RX_UP, a); }
 function RX_ring(x, y, z, r, col, k, dark){ VX_put(RX_iRing, x, y, z, RX_qI, r, 1, r, col, k); if(dark && k>0.12) VX_put(RX_iRingD, x, y-0.01, z, RX_qI, r, 1, r, 0xffffff); }
-function RX_halo(x, y, z, r, col, k, cq){ VX_put(RX_iHalo, x, y, z, cq, r, r, 1, col, k); }
+// halos are the only soft additive glow: at most RX_HALO_MAX per frame, so a cascade of overlapping bursts never sums toward white
+var RX_HALO_MAX = 3;
+function RX_halo(x, y, z, r, col, k, cq){ if(RX.hN >= RX_HALO_MAX) return; RX.hN++; VX_put(RX_iHalo, x, y, z, cq, r, r, 1, col, k); }
 function RX_shardAt(x, y, z, pitch, yaw, roll, s, body, vein, k){ s *= 1.35; RX_eu.set(pitch, yaw, roll); RX_q.setFromEuler(RX_eu); VX_put(RX_iShard, x, y, z, RX_q, s, s, s, body); VX_put(RX_iShardV, x, y, z, RX_q, s, s, s, vein, k); }
 function RX_chunkAt(x, y, z, pitch, yaw, roll, s, k){ RX_eu.set(pitch, yaw, roll); RX_q.setFromEuler(RX_eu); s *= 1.5; VX_put(RX_iChunk, x, y, z, RX_q, s, s, s, 0xb06040); VX_put(RX_iChunkV, x, y, z, RX_q, s, s, s, RXC.flHot, k); }
 function RX_eo(k){ return 1-(1-k)*(1-k)*(1-k); }
@@ -11117,16 +11166,19 @@ function RX_drawFx(F, qk, cq){ var k = F.t/F.d, t = F.t, x = F.x, z = F.z, i, a,
     RX_ring(x, 0.08, z, 0.4 + (F.r-0.4)*RX_eo(k), F.c1, 0.55*(1-k)*qk, 1); RX_ring(x, 0.09, z, 0.3 + (F.r*0.7)*RX_eo(Math.max(0, k-0.1)), F.c1, 0.35*(1-k)*qk); if(k<0.3) RX_halo(x, 1.0, z, 1.3, F.c1, 0.5*(1-k/0.3)*qk, cq);
     for(i=0;i<F.n;i++) RX_bolt(x, 1.0, z, F.p[i*3], F.p[i*3+1], F.p[i*3+2], F.c1, F.c1, 0.9, (1-k)*qk); }
   else if(F.ty===9){ // Crown of Three: three colour rings
-    for(i=0;i<3;i++){ var kc = Math.max(0, k - i*0.08); RX_ring(x, 0.06 + i*0.01, z, 0.5 + 2.6*RX_eo(kc), RX_ELC[i], 0.5*(1-k)*qk); } if(k<0.3) RX_halo(x, 1.2, z, 1.6, RXC.amb, 0.5*(1-k/0.3)*qk, cq); } }
+    for(i=0;i<3;i++){ var kc = Math.max(0, k - i*0.08); RX_ring(x, 0.06 + i*0.01, z, 0.5 + 2.6*RX_eo(kc), RX_ELC[i], 0.5*(1-k)*qk); } if(k<0.3) RX_halo(x, 1.2, z, 1.6, RXC.amb, 0.5*(1-k/0.3)*qk, cq); }
+  else if(F.ty>=10) RX_chDraw(F, qk, cq, k); }
 
-RENDER_HOOKS.push(function RX_render(t, adt){ RX.vt += adt; for(var a=0;a<RX_ALL.length;a++) RX_ALL[a].count = 0;
-  if(P && RX.on && G.state!=='menu' && G.state!=='viewer'){ var qk = RX.quiet ? RX.quietK : 1, cq = camera.quaternion, i;
+RENDER_HOOKS.push(function RX_render(t, adt){ RX.vt += adt; RX.hN = 0; for(var a=0;a<RX_ALL.length;a++) RX_ALL[a].count = 0;
+  if(P && RX.on && G.state!=='menu' && G.state!=='viewer'){ var qk = RX.quiet ? RX.quietK : 1, cq = camera.quaternion, i, nLive = 0;
+    // density dimmer: past 4 live moments every additive layer fades (×4/n, floor 0.45), so a cascade's overlaps never sum toward white
+    for(i=0;i<RX_FX.length;i++) if(RX_FX[i].on) nLive++; var qf = nLive > 4 ? Math.max(0.45, 4/nLive) : 1;
     for(i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || !e.M) continue; if(e.rxTk>0){ e.rxTk -= adt; RX_rim(e, e.rxTk>0); } else if(e.M.rxRim0) RX_rim(e, false); if(e.spawnT>0) continue; if(e.rxN>0 || e.rxGl>0 || e.rxSatT>0 || e.rxKn>0) RX_drawFoe(e, qk, cq, adt); }
     // primes: small ward-coloured pips riding the ward ring; Tide-Turn armed: a pulsing ward ring
     if(PM && !P.dead && P.rxPrime>0){ var ci = RX_EI[P.ward], px = PM.root.position.x, pz = PM.root.position.z, np = P.rxPrime;
       for(i=0;i<np;i++){ var pa = RX.vt*(P.rxTurn ? 3 : 1.2) + i*TAU/np; RX_qy(RX.vt*2.5 + i); VX_put(RX_iPipH[ci], px + Math.cos(pa)*1.12, 0.2, pz - Math.sin(pa)*1.12, RX_q2, 0.15, 0.14, 0.15, 0xffffff); VX_put(RX_iPip[ci], px + Math.cos(pa)*1.12, 0.2, pz - Math.sin(pa)*1.12, RX_q2, [0.3,0.14,0.16][ci], [0.3,0.14,0.16][ci], [0.3,0.14,0.16][ci], 0xffffff); } }
     if(PM && !P.dead && P.rxTurn) RX_ring(PM.root.position.x, 0.09, PM.root.position.z, 1.3 + 0.08*Math.sin(RX.vt*10), ELC[P.ward], (0.3 + 0.2*Math.abs(Math.sin(RX.vt*6)))*qk);
-    for(var f=0; f<RX_FX.length; f++) if(RX_FX[f].on) RX_drawFx(RX_FX[f], qk, cq);
+    for(var f=0; f<RX_FX.length; f++) if(RX_FX[f].on) RX_drawFx(RX_FX[f], qk*qf, cq);
     for(var s=0;s<RX_SH.length;s++){ var S = RX_SH[s]; if(!S.on) continue; RX_shardAt(S.x, 0.3, S.z, 0.1, Math.atan2(S.vx, S.vz), S.t*14, 1.5, RXC.frB, RXC.frV, 1); VX_put(RX_iRhomb, S.x, 0.05, S.z, RX_qy(S.t*8), 0.35, 1, 0.25, RXC.frV, 0.4); } }
   for(var b=0;b<RX_ALL.length;b++){ var im = RX_ALL[b]; im.visible = im.count > 0; if(im.count){ im.instanceMatrix.needsUpdate = true; if(im.instanceColor) im.instanceColor.needsUpdate = true; } } });
 
@@ -11177,7 +11229,7 @@ function RX_codex(){ var c = (typeof CX_s==='function') ? CX_s() : {}; var seen 
       body:function(){ return CX_p(how)+CX_tbl(rows)+(tip ? CX_tip(tip) : ''); }}; };
   var rules = {id:'rx_rules', grp:'Rules', cat:'Rule', name:'Chains and limits', sub:'Why cascades stay readable', known:true, thumb:function(){ return RX_ico('#a3968a', '#ffb35c', 'rule'); }, body:function(){
       return CX_p('B = '+RX.B+' × your class ('+['mage '+RX.cls.mage, 'blade '+RX.cls.blade, 'archer '+RX.cls.archer].join(', ')+') × (1 + '+RX.waveK+' per round), then your damage bonus. Reactions never crit.')+
-        CX_tbl([['Depth', 'A death burst never sets off another'], ['Death bursts', '×'+RX.gen2+' damage'], ['Per foe', 'At most '+RX.perFoe+' reaction hits every '+RX.perFoeT+' s'], ['Elites', 'At most '+pct(RX.eliteCap)+' of max health per reaction hit'], ['Curses', 'Impotence and Shield stop Marks with the damage; Unstoppable stops stun, freeze and pull']]); }};
+        CX_tbl([['Depth', 'A saturation burst never sets off another. Spread chains run '+RX_CH.depth+' steps deep (Long Fuse '+(RX_CH.depth+1)+'), ×'+RX_CH.fall+' damage per step'], ['Death bursts', '×'+RX.gen2+' damage'], ['Per foe', 'At most '+RX.perFoe+' reaction hits every '+RX.perFoeT+' s'], ['Elites', 'At most '+pct(RX.eliteCap)+' of max health per reaction hit'], ['Curses', 'Impotence and Shield stop Marks with the damage; Unstoppable stops stun, freeze and pull']]); }};
   return [
     mk('marks', 'Marks and primes', 'Your hits Mark foes in your ward colour', 'Rules', 'rule', '#ffb35c', '#86d6ff', [['Mark', 'Your ward colour; Meteor is always flame, Frost Nova frost, Chain Lightning storm'], ['Stacks', '1 to '+RX.cap+', '+RX.dur+' s, refreshed by each new stack'], ['Per foe', 'Basic shots every '+RX.icd.basic+' s, blade arc every '+RX.icd.blade+' s (nearest '+RX.bladeN+' foes), each spell cast once'], ['No Marks', 'Wisps, Ember Trail, thorns, burns, Gravity Well ticks'], ['Prime', 'Each absorb stores one (max '+RX.prime.max+', mage '+RX.prime.mage+'). Your next Marking hit adds +1 stack, and a reaction it causes deals +'+pct(RX.prime.dmg)], ['Bosses', 'Hold '+RX.bossCap+' Marks and never saturate']],
       'Wear a colour to absorb it, and your hits Mark foes in that colour. Switch ward and hit a Marked foe to set off a <b>pair reaction</b>. Three Marks of one colour <b>saturate</b> a foe, and it bursts when it dies.', 'Every colour tide is a natural reaction window: Mark the old tide, switch, and strike.'),
@@ -11190,12 +11242,245 @@ function RX_codex(){ var c = (typeof CX_s==='function') ? CX_s() : {}; var seen 
     mk('pyre', 'Pyre', 'Three flame Marks', 'Saturations', 'sat', '#ff7a33', '#ffc46a', [['While alive', 'Burns for '+RX.pyre.dot+' × B every '+RX.pyre.tick+' s for '+RX.pyre.t+' s'], ['On death', 'Pyre-burst: '+RX.pyre.k+' × B within '+RX.pyre.r+' m'], ['Recharge', RX.pyre.icd+' s per foe']], 'Ember cracks glow across the body. If it dies while burning, it bursts.', 'Burst damage from a death is the chain: it never chains a second time.'),
     mk('hoar', 'Hoarlock', 'Three frost Marks', 'Saturations', 'sat', '#4fd8ff', '#9fe0ff', [['While alive', 'Frozen '+RX.hoar.frz+' s (elites '+RX.hoar.frzE+' s), takes +'+pct(RX.hoar.vuln)+' damage for '+RX.hoar.t+' s'], ['On death', 'Shard-scatter: '+RX.hoar.n+' shards skate outward, '+RX.hoar.k+' × B and 1 frost Mark each'], ['Recharge', RX.hoar.icd+' s per foe']], 'Ice locks the foe in place. Kill it frozen and it breaks into skating shards.', null),
     mk('lode', 'Lodestone', 'Three storm Marks', 'Saturations', 'sat', '#c27cff', '#e0b8ff', [['While alive', pct(RX.lode.frac)+' of your hits on it jump to the '+RX.lode.n+' nearest foes within '+RX.lode.r+' m, for '+RX.lode.t+' s'], ['On death', 'Discharge: a '+RX.lode.links+'-link arc chain, '+RX.lode.k+' × B each'], ['Recharge', RX.lode.icd+' s per foe']], 'A broken violet ring circles the foe\'s waist. It conducts your hits, and discharges when it dies.', null)
-  ]; }
+  ].concat(RX_chCodex(mk)); }
 if(typeof CX_CATS!=='undefined' && typeof CX_list==='function'){
   (function(){ var at = 0; for(var i=0;i<CX_CATS.length;i++) if(CX_CATS[i].id==='spells') at = i+1; CX_CATS.splice(at || CX_CATS.length-1, 0, {id:'reactions', n:'Reactions', full:'Marks and reactions', note:'The rules are always open. Set off a reaction in a run to record it.'}); })();
   var RX_cxList0 = CX_list;
   CX_list = function(cat){ if(cat==='reactions'){ try{ return RX.on ? RX_codex() : []; }catch(err){ if(DEV) console.warn('codex rx', err); return []; } } return RX_cxList0.apply(this, arguments); };
 }
+
+/* =====================================================================================
+   12. CHAINS: spread on kill, the chain counter + payout, Ruptures, Fusions, class-skill seeds (design/CHAINS.md)
+   Public hooks (shared IIFE scope; safe to call from any file that loads later, e.g. 70-pillars.js):
+     RX_onChain(fn) -> off()         fn(ev) on every chain event; ev = {type:'link'|'tier'|'end', n, add, kind, el, x, z}.
+                                     ev is ONE reused object: read it inside fn, never keep it. Errors in fn are caught.
+     RX_seedChain(el, x, z, o) -> n  Seed a chain of colour el ('flame'|'frost'|'storm') at x,z: every foe within o.r (3.5 m)
+                                     gets o.n (1) Marks as a player hit would (a foe Marked in another colour reacts at once,
+                                     3 stacks saturate), then 1 chain link if anything was Marked. o = {r, n, dmg (x B), kind, link:false}.
+                                     Costs no primes, ignores the per-foe hit ICD. Returns the number of foes Marked.
+     RX_chainLink(k, kind, x, z, el) Add k links to the live chain (opens a new one if it lapsed). Returns the chain length.
+     RX_chainNow() -> {n, best, live} The live chain (n), the run's best, and whether it is still open.
+   ?choff in the URL turns chains off (marks and reactions stay) for A/B runs. No per-frame allocation.
+   ===================================================================================== */
+var RX_CH = {
+  on: !/[?&]choff\b/.test(location.search),
+  win:1.25, winFuse:0.75,                       // a chain stays open this long after its last link (Long Fuse +0.75 s)
+  depth:3, fall:0.8,                            // spread steps (Long Fuse +1); reaction damage x fall^step
+  spread:{n:2, r:3.0, rUp:0.75, delay:0.1, fly:0.16},
+  rup:{need:4, needC:3, win:1.5, r:4.0, dmgR:3.2, k:1.2, icd:3.0, slow:1.2, arcs:3, arcK:0.5},
+  fuse:{win:1.5, winC:2.0, icd:1.0, cruc:0.4, slag:{k:2.2, r:3.0}, rime:{k:1.6, r:3.5, pull:1.5, frz:0.7}, wheel:{k:1.3, n:5, r:6}},
+  tier:5, over:6, overCap:24, fav:3, favCap:12, fxMax:4, uiMin:3,
+  seed:{r:3.5, n:1}, rimeEvery:1.5, slam:{n:2, pull:1.5, r:5}, drawN:1,
+  // runtime (not tuning)
+  n:0, t:-99, best:0, paid:0, overGot:0, favGot:0, x:0, z:0, el:'', rupT:-9, fuT:-9, uiTier:-9, ui:null, uiN:-1, ls:[], D:[],
+  ev:{type:'', n:0, add:0, kind:'', el:'', x:0, z:0},
+  stat:{max:0, n:0, over:0, links:0, spread:0, rup:0, fuse:0}
+};
+for(var rcd=0; rcd<12; rcd++) RX_CH.D.push({on:false, t:0, x:0, z:0, el:''});
+(function(){ var c = {rupF:'#ff8a3d', rupI:'#6fd8ff', rupS:'#c690ff', slag:'#ffa040', rime:'#7cc8e8', wheel:'#b58cff'}; for(var k in c){ RX_CSS[k] = c[k]; RX_TINTC[c[k]] = parseInt(c[k].slice(1), 16); } })();
+RX_NAME.rupF = 'EMBER RUPTURE'; RX_NAME.rupI = 'RIME RUPTURE'; RX_NAME.rupS = 'STORM RUPTURE'; RX_NAME.slag = 'SLAGBURST'; RX_NAME.rime = 'RIMEHEART'; RX_NAME.wheel = 'STORMWHEEL';
+var RX_FUSE = {glass:{leap:'slag', knot:'rime'}, leap:{glass:'slag', knot:'wheel'}, knot:{glass:'rime', leap:'wheel'}};
+var RX_CHP = {x:0, z:0, type:'', elite:null}, RX_CHB = [null,null,null,null,null,null,null,null], RX_SEEDO = {};
+var RX_RUPK = ['rupF', 'rupI', 'rupS'];
+
+/* ---------- the chain counter ---------- */
+function RX_chWin(){ return RX_CH.win + (P && P.chFuse ? RX_CH.winFuse : 0); }
+function RX_chDepth(){ return RX_CH.depth + (P && P.chFuse ? 1 : 0); }
+function RX_chEmit(type, add, kind, el, x, z){ var L = RX_CH.ls; if(!L.length) return; var ev = RX_CH.ev; ev.type = type; ev.n = RX_CH.n; ev.add = add; ev.kind = kind||''; ev.el = el||''; ev.x = x||0; ev.z = z||0;
+  for(var i=0;i<L.length;i++){ try{ L[i](ev); }catch(err){ if(DEV) console.warn('RX_onChain', err); } } }
+function RX_chLink(k, kind, x, z, el){ if(!RX.on || !RX_CH.on || !P || !(k>0)) return 0; var C = RX_CH;
+  if(G.t - C.t > RX_chWin()){ if(C.n>0) RX_chEnd(); C.n = 0; C.paid = 0; C.overGot = 0; C.favGot = 0; }
+  C.n += k; C.t = G.t; C.x = x||0; C.z = z||0; if(el) C.el = el; C.stat.links += k; if(C.n > C.best) C.best = C.n; if(C.n > C.stat.max) C.stat.max = C.n;
+  RX_chEmit('link', k, kind, el, x, z);
+  var tier = Math.floor(C.n / C.tier); if(tier > C.paid){ C.paid = tier; RX_chPay(tier); }
+  return C.n; }
+// payout per tier (x5, x10, ...): Overload to the hero you control, Favour in Act II; both capped per chain
+function RX_chPay(tier){ var C = RX_CH, H = P; try{ if(typeof PTY!=='undefined' && PTY.on && PTY.ctl && PTY.ctl.st) H = PTY.ctl.st; }catch(err){}
+  var m = 1 + (H && H.chFuse ? 0.5 : 0), o = Math.min(C.over*m, C.overCap*m - C.overGot);
+  if(o > 0 && H && !H.dead && H.over!=null){ var was = H.over; H.over = Math.min(100, H.over + o); C.overGot += o; C.stat.over += H.over - was; }
+  if(G.act===2 && typeof A2_fav==='function' && C.favGot < C.favCap){ var f = Math.min(C.fav, C.favCap - C.favGot); C.favGot += f; A2_fav(f, 'Chain ×'+(tier*C.tier)); }
+  C.uiTier = G.t; RX_SFX.tier(tier); RX_chEmit('tier', 0, 'tier', C.el, C.x, C.z); }
+function RX_chEnd(){ var C = RX_CH; if(C.n >= C.tier) C.stat.n++; RX_chEmit('end', 0, 'end', C.el, C.x, C.z); C.n = 0; C.paid = 0; C.overGot = 0; C.favGot = 0; }
+function RX_chReset(){ var C = RX_CH; C.n = 0; C.t = -99; C.paid = 0; C.overGot = 0; C.favGot = 0; C.rupT = -9; C.fuT = -9; C.uiTier = -9; for(var i=0;i<C.D.length;i++) C.D[i].on = false; if(C.ui) RX_chUi(true); }
+
+/* ---------- a foe died: cascade kill link, Rupture bookkeeping, Mark spread ---------- */
+function RX_chDeath(e, g){ var dep = g>0 ? RX.dep : 0, el = e.rxN>0 ? e.rxEl : (e.rxSat && e.rxSatT>0 ? (e.rxSat==='pyre' ? 'flame' : e.rxSat==='hoar' ? 'frost' : 'storm') : '');
+  if(g>0) RX_chLink(1, 'kill', e.x, e.z, el);
+  if(!el || RX_EI[el]==null) return;
+  RX_chRup(e.x, e.z, el, dep);
+  if(e.rxN>0 && dep+1 <= RX_chDepth()){ var J = RX_enq('spread', e, 1, 1, 1, el, RX_CH.spread.delay); if(J) J.dep = dep+1; } }
+// Rupture: N Marked foes of one colour dying within 1.5 s and 4 m of each other detonate at their centre
+function RX_chRup(x, z, el, dep){ var C = RX_CH, R = C.rup, D = C.D, slot = null, old = null, i, q;
+  for(i=0;i<D.length;i++){ q = D[i]; if(q.on && G.t - q.t > R.win) q.on = false; if(!q.on){ if(!slot) slot = q; } else if(!old || q.t < old.t) old = q; }
+  if(!slot) slot = old; slot.on = true; slot.t = G.t; slot.x = x; slot.z = z; slot.el = el;
+  if(G.t < C.rupT) return; var need = (P && P.chCruc) ? R.needC : R.need, cnt = 0, sx = 0, sz = 0;
+  for(i=0;i<D.length;i++){ q = D[i]; if(q.on && q.el===el && Math.hypot(q.x-x, q.z-z) <= R.r){ cnt++; sx += q.x; sz += q.z; } }
+  if(cnt < need) return;
+  for(i=0;i<D.length;i++){ q = D[i]; if(q.on && q.el===el && Math.hypot(q.x-x, q.z-z) <= R.r) q.on = false; }
+  C.rupT = G.t + R.icd; var J = RX_enq('rupture', null, cnt, 2, 1, el, 0.12); if(J){ J.x = sx/cnt; J.z = sz/cnt; J.dep = dep; } }
+// Fusion: one foe hit by two different pair reactions within the window -> the third, stronger effect
+function RX_fu(f, ty){ if(!RX_CH.on || !f || f.dead || !RX_FUSE[ty]) return; var w = P && P.chCruc ? RX_CH.fuse.winC : RX_CH.fuse.win;
+  if(f.rxPr && f.rxPr!==ty && G.t - f.rxPrT <= w && G.t >= RX_CH.fuT){ var id = RX_FUSE[f.rxPr][ty]; f.rxPr = ''; f.rxPrT = -9; RX_CH.fuT = G.t + RX_CH.fuse.icd; RX_enq('fuse', f, 2, 1, 1, id, 0.08); return; }
+  f.rxPr = ty; f.rxPrT = G.t; }
+function RX_chNear(x, z, r, k, ex){ var n = RX_near(x, z, r, k, ex, null); for(var i=0;i<n;i++){ RX_CHB[i] = RX_NB[i]; RX_NB[i] = null; } return n; }
+function RX_chName(id, x, z, css){ RX_CHP.x = x; RX_CHP.z = z; RX_name(id, RX_CHP, css); }
+
+/* ---------- chain jobs (run from RX_run; B already carries the depth falloff) ---------- */
+var RX_CH_RUN = {
+  spread:function(J, e, alive, x, z, B){ var C = RX_CH, el = J.el, ci = RX_EI[el], up = (P && P.chSpread) || 0, n = RX_chNear(x, z, C.spread.r + C.spread.rUp*up, C.spread.n + up, e), F = n ? RX_chFx(10, x, z, C.spread.fly + 0.3) : null;
+    if(F){ F.el = el; F.c1 = RX_ELC[ci]; }
+    for(var i=0;i<n;i++){ var t = RX_CHB[i]; RX_CHB[i] = null; if(!t || t.dead) continue; if(F && F.n<8){ F.p[F.n*3] = t.x; F.p[F.n*3+1] = t.z; F.n++; }
+      if(t.rxN>0 && t.rxEl!==el && RX_EI[t.rxEl]!=null && G.t >= t.rxRc){ var ty = RX_pair(t.rxEl, el), s = t.rxN; t.rxN = 0; t.rxEl = ''; t.rxT = 0; t.rxRc = G.t + RX[ty].icd; RX_enq(ty, t, s, 1, J.mul, el, C.spread.fly); }
+      else RX_apply(t, el, 1, 1, 1, false); }
+    C.stat.spread++; if(n) RX_SFX.spread(); },
+  rupture:function(J, e, alive, x, z, B){ var C = RX_CH, R = C.rup, el = J.el, ci = RX_EI[el], css = RX_CSS[RX_RUPK[ci]], i, n = 0;
+    RX_chLink(2, 'rupture', x, z, el); C.stat.rup++; RX_seenId('rupture');
+    RX_area(x, z, R.dmgR, R.k*B*(1 + 0.1*Math.max(0, J.s - R.need)), 2, css);
+    var F = RX_chFx(11, x, z, 0.62); if(F){ F.el = el; F.c1 = RX_ELC[ci]; F.r = R.dmgR; }
+    if(ci===0){ if(typeof VX_scorch==='function') VX_scorch(x, z, 1.6, 1.8); }
+    else if(ci===1){ if(!RX_unst()) for(i=0;i<enemies.length;i++){ var f = enemies[i]; if(f.dead || f.spawnT>0 || RX_boss(f)) continue; if(Math.hypot(f.x-x, f.z-z) < R.dmgR + 1.5 + f.r) f.slowT = Math.max(f.slowT||0, R.slow); } }
+    else { n = RX_chNear(x, z, R.dmgR + 3, R.arcs, null); for(i=0;i<n;i++){ var a = RX_CHB[i]; RX_CHB[i] = null; if(F && F.n<8){ F.p[F.n*3] = a.x; F.p[F.n*3+1] = 1.0; F.p[F.n*3+2] = a.z; F.n++; } RX_dmg(a, R.arcK*B, 2, css); } }
+    RX_chName(RX_RUPK[ci], x, z, css); RX_SFX.rupture(ci); shake(0.14); },
+  fuse:function(J, e, alive, x, z, B){ var C = RX_CH, U = C.fuse, id = J.el, m = 1 + (P && P.chCruc ? U.cruc : 0), i, n, F = RX_chFx(12, x, z, 0.6);
+    RX_chLink(2, 'fuse', x, z, ''); C.stat.fuse++; RX_seenId(id); if(F){ F.el = id; F.n = 0; }
+    if(id==='slag'){ RX_area(x, z, U.slag.r, U.slag.k*B*m, 1, RX_CSS.slag); n = RX_chNear(x, z, U.slag.r, 6, null); for(i=0;i<n;i++){ var t = RX_CHB[i]; RX_CHB[i] = null; if(!t.dead) RX_apply(t, 'flame', 1, 1, 1, false); } }
+    else if(id==='rime'){ var unst = RX_unst(); for(i=0;i<enemies.length;i++){ var f = enemies[i]; if(f.dead || f.spawnT>0 || f.invuln || f.type==='heart') continue; var dx = x-f.x, dz = z-f.z, d = Math.hypot(dx, dz); if(d > U.rime.r + f.r) continue;
+        if(!unst && !RX_boss(f)){ var mv = Math.min(U.rime.pull, Math.max(0, d - 0.9))*(f.type==='brute' ? RX.knot.brute : 1); if(mv>0.01 && d>0.01){ f.rxPlT = 0.25; f.rxPvx = dx/d*mv/0.25; f.rxPvz = dz/d*mv/0.25; } if(!f.elite) f.rxFz = Math.max(f.rxFz, U.rime.frz); } }
+      RX_area(x, z, U.rime.r, U.rime.k*B*m, 1, RX_CSS.rime); }
+    else { n = RX_chNear(x, z, U.wheel.r, U.wheel.n, null); for(i=0;i<n;i++){ var w = RX_CHB[i]; RX_CHB[i] = null; if(F && F.n<8){ F.p[F.n*3] = w.x; F.p[F.n*3+1] = 1.0; F.p[F.n*3+2] = w.z; F.n++; } RX_dmg(w, U.wheel.k*B*m, 1, RX_CSS.wheel); if(!w.dead) RX_apply(w, 'storm', 1, 1, 1, false); } }
+    RX_chName(id, x, z, RX_CSS[id]); RX_SFX.fuse(id); shake(0.14); }
+};
+
+/* ---------- public hooks ---------- */
+function RX_onChain(fn){ if(typeof fn!=='function') return function(){}; RX_CH.ls.push(fn); return function(){ var i = RX_CH.ls.indexOf(fn); if(i>=0) RX_CH.ls.splice(i, 1); }; }
+function RX_seedChain(el, x, z, o){ if(!RX.on || !RX_CH.on || !RX_okP() || RX_EI[el]==null || !(isFinite(x) && isFinite(z))) return 0; o = o || RX_SEEDO;
+  var r = o.r || RX_CH.seed.r, st = Math.max(1, Math.min(RX.cap, o.n || RX_CH.seed.n)), n = 0, ci = RX_EI[el];
+  for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT>0 || e.invuln || e.type==='heart') continue; if(Math.hypot(e.x-x, e.z-z) > r + e.r) continue;
+    if(o.dmg > 0) RX_dmg(e, o.dmg*RX_B(), 1, RX_CSS[RX_RUPK[ci]]); if(!e.dead){ RX_apply(e, el, st, 0, 1, true); n++; } }
+  var F = RX_chFx(11, x, z, 0.45); if(F){ F.el = el; F.c1 = RX_ELC[ci]; F.r = r; F.pair = 1; }
+  if(n && o.link!==false) RX_chLink(1, o.kind || 'seed', x, z, el); return n; }
+function RX_chainLink(k, kind, x, z, el){ return RX_chLink(k, kind, x, z, el); }
+function RX_chainNow(){ return {n:RX_CH.n, best:RX_CH.best, live:RX_CH.n>0 && G.t - RX_CH.t <= RX_chWin()}; }
+
+/* ---------- class skills seed chains (68-skills untouched: its zones are read, two hoisted functions wrapped) ---------- */
+// Crowdbreaker: the slam Marks 2 stacks in your ward colour, then draws the pack back in around the landing point
+if(typeof CSK_slam==='function'){ var RX_slam0 = CSK_slam;
+  CSK_slam = function(st, L){ if(!RX.on || !RX_CH.on || !st) return RX_slam0.apply(this, arguments);
+    var r = RX_with({kind:'spell', el:st.ward, id:++RX.castN, n:RX_CH.slam.n}, RX_slam0, this, arguments), S = RX_CH.slam;
+    if(!RX_unst()) for(var i=0;i<enemies.length;i++){ var f = enemies[i]; if(f.dead || f.spawnT>0 || f.invuln || f.type==='heart' || RX_boss(f)) continue; var dx = st.x-f.x, dz = st.z-f.z, d = Math.hypot(dx, dz); if(d > S.r + f.r || d < 0.01) continue;
+      var mv = Math.min(S.pull, Math.max(0, d - 1.4))*(f.type==='brute' ? RX.knot.brute : 1); if(mv > 0.01){ f.rxPlT = 0.3; f.rxPvx = dx/d*mv/0.3; f.rxPvz = dz/d*mv/0.3; } }
+    return r; }; }
+// Longdraw: the piercing shot Marks every foe on its line
+if(typeof CSK_loose==='function'){ var RX_loose0 = CSK_loose;
+  CSK_loose = function(st, D){ if(!RX.on || !RX_CH.on || !st) return RX_loose0.apply(this, arguments); return RX_with({kind:'spell', el:st.ward, id:++RX.castN, n:RX_CH.drawN}, RX_loose0, this, arguments); }; }
+// Rimefall: each rain zone pulses 1 frost Mark on every foe inside it every 1.5 s (0.3 s after it lands; a full zone reaches Hoarlock at the end)
+function RX_chRime(){ if(typeof CSK==='undefined' || !CSK || !CSK.zones) return; var Z, i, k;
+  for(i=0;i<CSK.zones.length;i++){ Z = CSK.zones[i]; if(!Z || !Z.on){ if(Z) Z.rxNext = 0; continue; } if(!Z.rxNext){ Z.rxNext = G.t + 0.3; continue; } if(G.t < Z.rxNext) continue; Z.rxNext = G.t + RX_CH.rimeEvery;
+    if(typeof impotent==='function' && impotent()) continue; var id = ++RX.castN;
+    for(k=0;k<enemies.length;k++){ var e = enemies[k]; if(e.dead || e.spawnT>0) continue; if(Math.hypot(e.x-Z.x, e.z-Z.z) < Z.R + e.r) RX_markHit(e, 'frost', 'spell', id, 1); } } }
+
+function RX_chStep(dt){ var C = RX_CH; if(!C.on) return; if(C.n>0 && G.t - C.t > RX_chWin()) RX_chEnd(); RX_chRime(); }
+
+/* ---------- visuals: chain FX share the 12 reaction slots, at most 4 live at once (extra ones skip the visual, never the gameplay) ---------- */
+function RX_chFx(ty, x, z, d){ var live = 0; for(var i=0;i<RX_FX.length;i++) if(RX_FX[i].on && RX_FX[i].ty>=10) live++; if(live >= RX_CH.fxMax) return null; return RX_fxAdd(ty, x, z, d); }
+var RX_CHE = [[RXC.fl, RXC.flHot], [RXC.fr, RXC.frV], [RXC.st, RXC.stV]];
+function RX_chDraw(F, qk, cq, k){ var t = F.t, x = F.x, z = F.z, i, a, n, ci = RX_EI[F.el];
+  if(F.ty===10){ // spread: a Mark pip of the element hops along a low arc to each target, a thin element trail behind it, a small ring where it lands
+    var fly = RX_CH.spread.fly;
+    for(var j=0;j<F.n;j++){ var u = (t - j*0.03)/fly; if(u<=0) continue; var tx = F.p[j*3], tz = F.p[j*3+1];
+      if(u<1){ var u0 = Math.max(0, u-0.5), lx = x + (tx-x)*u0, lz = z + (tz-z)*u0, ly = 0.6 + 1.1*Math.sin(Math.PI*u0);
+        for(var q=1;q<=4;q++){ var f = u0 + (u-u0)*q/4, nx = x + (tx-x)*f, nz = z + (tz-z)*f, ny = 0.6 + 1.1*Math.sin(Math.PI*f); RX_seg(lx,ly,lz, nx,ny,nz, 0.07, F.c1, 0.5*qk*q/4); lx = nx; ly = ny; lz = nz; }
+        RX_qy(t*9 + j); VX_put(RX_iPipH[ci], lx, ly, lz, RX_q2, 0.4, 0.37, 0.4, 0xffffff); VX_put(RX_iPip[ci], lx, ly, lz, RX_q2, 0.33, 0.33, 0.33, 0xffffff, 1); }
+      else { var ku = Math.min(1, (u-1)*3); RX_ring(tx, 0.06, tz, 0.3 + 0.7*RX_eo(ku), F.c1, 0.5*(1-ku)*qk); } } }
+  else if(F.ty===11){ // Rupture (and the smaller seed pulse, F.pair): dark under-ring, two element rings, element debris (flame chunks / frost shards / storm arcs)
+    var R = F.r, sm = F.pair ? 0.6 : 1, c2 = RX_CHE[ci][1];
+    RX_ring(x, 0.06, z, 0.4 + (R-0.4)*RX_eo(k), F.c1, 0.55*(1-k)*qk*sm, 1); if(k>0.1) RX_ring(x, 0.07, z, 0.3 + R*0.7*RX_eo(k-0.1), c2, 0.4*(1-k)*qk*sm);
+    if(F.pair) return;
+    if(k<0.25) RX_halo(x, 0.7, z, 1.4, F.c1, 0.45*(1-k/0.25)*qk, cq);
+    n = RX.quiet ? 4 : 8;
+    for(i=0;i<n;i++){ a = F.seed + i*TAU/n; var v = 4.2 + (i%3)*0.9, d = v*t*(1-0.35*k);
+      if(ci===0){ var cy = Math.max(0.15, 0.5 + 4.6*t - 13*t*t); RX_chunkAt(x + Math.cos(a)*d, cy, z - Math.sin(a)*d, t*10 + i, a, t*6, 0.95*(1-0.5*k), (1-k)*qk); }
+      else if(ci===1) RX_shardAt(x + Math.cos(a)*d, 0.25, z - Math.sin(a)*d, 0.1, a + Math.PI/2, t*10, 1.3*(1-0.4*k), RXC.frB, RXC.frV, (1-k)*qk);
+      else if(i%2===0) RX_bolt(x + Math.cos(a)*0.4, 0.9, z - Math.sin(a)*0.4, x + Math.cos(a)*(0.8 + 2.2*RX_eo(k)), 0.7, z - Math.sin(a)*(0.8 + 2.2*RX_eo(k)), RXC.stV, RXC.stG, 0.9, (1-k)*qk); }
+    for(i=0;i<F.n;i++) RX_bolt(x, 1.0, z, F.p[i*3], F.p[i*3+1], F.p[i*3+2], RXC.stV, RXC.stG, 1.0, (1-k)*qk); }
+  else if(F.ty===12){ // Fusions: two-colour rings plus the fused motif
+    if(F.el==='slag'){ RX_ring(x, 0.06, z, 0.4 + 2.6*RX_eo(k), RXC.amb, 0.55*(1-k)*qk, 1); if(k>0.08) RX_ring(x, 0.07, z, 0.3 + 2.0*RX_eo(k-0.08), RXC.cyan, 0.45*(1-k)*qk);
+      if(k<0.25) RX_halo(x, 0.9, z, 1.6, RXC.amb, 0.5*(1-k/0.25)*qk, cq); n = RX.quiet ? 3 : 6;
+      for(i=0;i<n;i++){ a = F.seed + i*TAU/n; var sd = (4 + (i%2))*t*(1-0.3*k), sy = Math.max(0.15, 0.8 + 4*t - 12*t*t);
+        if(i%2) RX_shardAt(x + Math.cos(a)*sd, sy, z - Math.sin(a)*sd, t*9, a + Math.PI/2, t*7, 1.2*(1-0.4*k), RXC.cyanB, RXC.cyan, (1-k)*qk); else RX_chunkAt(x + Math.cos(a)*sd, sy, z - Math.sin(a)*sd, t*10, a, t*6, 1.0*(1-0.4*k), (1-k)*qk); } }
+    else if(F.el==='rime'){ var S = 3.6*(1 - 0.8*RX_eo(Math.min(1, k*1.6))); VX_put(RX_iRhomb, x, 0.06, z, RX_qy(F.seed + t*2), S, 1, S*0.7, RXC.frV, 0.55*(1-k*0.6)*qk); VX_put(RX_iRhomb, x, 0.07, z, RX_qy(F.seed + 0.8 - t*2), S*0.7, 1, S*0.5, RXC.ind, 0.45*(1-k*0.6)*qk);
+      n = RX.quiet ? 4 : 7; for(i=0;i<n;i++){ a = F.seed + i*TAU/n; var rr = 0.4 + 3.0*(1 - Math.min(1, k*1.8)); RX_shardAt(x + Math.cos(a)*rr, 0.3, z - Math.sin(a)*rr, 0.15, a + Math.PI*0.9, a*3, 1.3, RXC.frB, RXC.frV, (1-k)*qk); }
+      if(k>0.5) RX_ring(x, 0.07, z, 0.3 + 1.6*RX_eo((k-0.5)*2), RXC.teal, 0.5*(1-k)*2*qk); }
+    else { VX_put(RX_iSpiral, x, 0.07, z, RX_qy(-t*10 + F.seed), 2.4*(1 + 0.3*k), 1, 2.4*(1 + 0.3*k), 0xffffff, (1-k)*qk); RX_ring(x, 0.08, z, 0.4 + 2.2*RX_eo(k), RXC.st, 0.5*(1-k)*qk);
+      var br = (1-k)*(0.75 + 0.25*Math.random())*qk, px = x, pz = z; for(i=0;i<F.n;i++){ RX_bolt(px, 1.0, pz, F.p[i*3], F.p[i*3+1], F.p[i*3+2], RXC.stV, RXC.stG, 1.0, br); px = F.p[i*3]; pz = F.p[i*3+2]; } } } }
+
+/* ---------- HUD: a small iron chip beside the vitals plate ("CHAIN ×7"), an ember fuse bar that burns down while the chain is open ---------- */
+(function(){ var st = document.createElement('style'); st.id = 'rxChCss'; st.textContent = [
+'#rxCh{position:absolute;left:calc(100% + 8px);top:3px;display:flex;align-items:baseline;gap:4px;padding:5px 9px 7px 8px;pointer-events:none;opacity:0;transform:translateX(-6px);transition:opacity .18s,transform .18s;white-space:nowrap;isolation:isolate;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));z-index:2}',
+'#rxCh:before{content:"";position:absolute;inset:0;z-index:-1;clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px);background:linear-gradient(170deg,#6a5240,#2e2226 30%,#1c1517 70%,#4a3a30)}',
+'#rxCh:after{content:"";position:absolute;inset:1px;z-index:-1;clip-path:polygon(4.5px 0,calc(100% - 4.5px) 0,100% 4.5px,100% calc(100% - 4.5px),calc(100% - 4.5px) 100%,4.5px 100%,0 calc(100% - 4.5px),0 4.5px);background:linear-gradient(180deg,rgba(34,27,29,.95),rgba(17,13,15,.94))}',
+'#rxCh.on{opacity:1;transform:none}',
+'#rxCh .l{font:600 9px/1 Rubik,sans-serif;letter-spacing:.22em;color:#a3968a}',
+'#rxCh .x{font:700 11px/1 Cinzel,Georgia,serif;color:#b4501f}',
+'#rxCh b{font:900 17px/1 Cinzel,Georgia,serif;color:#ffb35c;min-width:1.2em;font-variant-numeric:tabular-nums;text-shadow:0 0 6px rgba(255,122,46,.45)}',
+'#rxCh .f{position:absolute;left:7px;right:7px;bottom:3px;height:2px;background:#2a2022;overflow:hidden}',
+'#rxCh .f i{position:absolute;inset:0;background:linear-gradient(90deg,#b4501f,#ff7a2e);transform-origin:0 50%}',
+'#rxCh.t2 b{color:#ffc46a}#rxCh.t3 b{color:#ffd27a;text-shadow:0 0 8px rgba(255,150,60,.6)}',
+'#rxCh.tp{animation:rxChP .42s ease-out}',
+'@keyframes rxChP{0%{transform:scale(1)}30%{transform:scale(1.18)}100%{transform:scale(1)}}',
+'#rxCh.nr{left:auto;right:0;top:calc(100% + 6px);padding:4px 8px 6px}#rxCh.nr b{font-size:15px}'
+].join('\n'); document.head.appendChild(st); })();
+// wide screens: beside the vitals plate; narrow (portrait phones): under the stake box, top right, clear of the round title
+function RX_chHost(nr){ return (nr && document.getElementById('hudTR')) || document.getElementById('hbV') || document.getElementById('hudTL'); }
+function RX_chHome(U){ var nr = innerWidth <= 640, host = RX_chHost(nr); if(!host) return; if(getComputedStyle(host).position==='static') host.style.position = 'relative';
+  if(U.root.parentNode !== host) host.appendChild(U.root); U.root.classList.toggle('nr', nr && host.id==='hudTR'); U.nr = nr; U.host = host; }
+function RX_chUiMake(){ if(!RX_chHost(false)) return null;
+  var d = document.createElement('div'); d.id = 'rxCh'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = '<span class="l">CHAIN</span><span class="x">×</span><b>0</b><span class="f"><i></i></span>';
+  RX_CH.ui = {root:d, num:d.querySelector('b'), bar:d.querySelector('.f i'), host:null, nr:null, tier:0, tp:-9}; RX_chHome(RX_CH.ui); return RX_CH.ui; }
+function RX_chUi(hide){ var C = RX_CH, U = C.ui; if(!U || !U.root.isConnected){ if(hide) return; U = RX_chUiMake(); if(!U) return; }
+  var win = RX_chWin(), age = G.t - C.t, live = !hide && RX.on && C.on && G.state==='play' && C.n >= C.uiMin && age <= win, show = live ? C.n : 0;
+  if(show !== C.uiN){ C.uiN = show; if(show){ if(U.nr !== (innerWidth <= 640) || !U.root.isConnected) RX_chHome(U); U.num.textContent = show; U.root.classList.add('on'); var tr = show >= 20 ? 3 : show >= 10 ? 2 : 1; if(tr !== U.tier){ U.root.classList.remove('t2', 't3'); if(tr>1) U.root.classList.add('t'+tr); U.tier = tr; } } else U.root.classList.remove('on'); }
+  if(live){ U.bar.style.transform = 'scaleX('+Math.max(0, 1 - age/win).toFixed(3)+')'; if(C.uiTier > U.tp){ U.tp = C.uiTier; U.root.classList.remove('tp'); void U.root.offsetWidth; U.root.classList.add('tp'); } } }
+RENDER_HOOKS.push(function RX_chRender(){ if(RX_CH.ui || RX_CH.n >= RX_CH.uiMin) RX_chUi(false); });
+
+/* ---------- audio ---------- */
+RX_SFX.spread = function(){ if(!lim('rxCs',0.1)) return; tone(620,0.07,'triangle',0.012,880); };
+RX_SFX.rupture = function(ci){ if(!lim('rxRu',0.12)) return; tone(64,0.34,'sine',0.12,34); noise(0.3,0.08,ci===1?4200:ci===2?2600:1100,ci===1?'highpass':'bandpass',0,null,ci===0?260:1400); if(ci===2) tone(1200,0.1,'square',0.015,300,0.03); else if(ci===1) tone(1500,0.2,'triangle',0.02,2400,0.03); };
+RX_SFX.fuse = function(id){ if(!lim('rxFu',0.12)) return; var b = id==='slag' ? 330 : id==='rime' ? 392 : 294; tone(b,0.3,'triangle',0.03,0); tone(b*1.5,0.3,'triangle',0.024,0,0.05); tone(b*2,0.34,'sine',0.018,0,0.1); tone(60,0.3,'sine',0.1,36); };
+RX_SFX.tier = function(tier){ if(!lim('rxTi',0.15)) return; var f = 523*(1 + 0.125*Math.min(tier-1, 4)); tone(f,0.14,'triangle',0.028,0); tone(f*1.25,0.18,'triangle',0.022,0,0.06); };
+
+/* ---------- offering cards (Crowd Gifts): they join BOONS like the reaction boons ---------- */
+BOONS.push(
+  {id:'chkindle', r:0, name:'Kindling Chain', icon:'🔗', desc:'When a Marked foe dies, its Mark spreads to 1 more foe and 0.75 m farther', ok:function(){ return RX.on && RX_CH.on && (P.chSpread||0) < 2; }, ap:function(){ RX_okP(); P.chSpread = (P.chSpread||0) + 1; }},
+  {id:'chfuse', r:1, name:'Long Fuse', icon:'🧨', desc:'Chains stay open 0.75 s longer and spread one step deeper. Chain payouts give +50% Overload', ok:function(){ return RX.on && RX_CH.on && !P.chFuse; }, ap:function(){ RX_okP(); P.chFuse = 1; }},
+  {id:'chcruc', r:2, name:'Crucible', icon:'⚗️', desc:'Ruptures need 3 Marked deaths instead of 4. Fusions hit 40% harder and their window is 2 s', ok:function(){ return RX.on && RX_CH.on && !P.chCruc; }, ap:function(){ RX_okP(); P.chCruc = 1; }}
+);
+
+/* ---------- Codex: Chains (rule, always open), Rupture and the three Fusions (open on first trigger) ---------- */
+function RX_chCodex(mk){ var C = RX_CH, R = C.rup, U = C.fuse, out = [], pct = function(v){ return Math.round(v*100)+'%'; };
+  var fix = function(e, cat, hint){ e.cat = cat; e.hint = hint; return e; };
+  var ch = mk('chains', 'Chains', 'One kill sets off the next', 'Chains', 'rule', '#ff9a5a', '#ffd27a', [
+      ['Spread', 'A Marked foe that dies passes 1 Mark to the '+C.spread.n+' nearest foes within '+C.spread.r+' m. If one wears another colour, that pair reaction goes off'],
+      ['Depth', C.depth+' steps (Long Fuse '+(C.depth+1)+'), each step ×'+C.fall+' reaction damage'],
+      ['Chain', 'Every reaction, burst and cascade kill adds a link. The chain stays open '+C.win+' s after its last link'],
+      ['Payout', 'Every ×'+C.tier+': +'+C.over+' Overload (at most '+C.overCap+' per chain). Act II: +'+C.fav+' Favour (at most '+C.favCap+')'],
+      ['Class skills', 'Rimefall pulses a frost Mark every '+C.rimeEvery+' s, Crowdbreaker Marks 2 stacks and draws the pack in, Longdraw Marks its whole line']],
+    'Kills carry their Marks to the foes beside them. Mark a pack in one colour, switch, and one reaction can roll through the whole crowd. The chain chip at the top of the screen counts the links.', 'Pack them first: Crowdbreaker, Squall Knot and Iron Vow all gather foes.'); ch.known = true; out.push(fix(ch, 'Rule', ''));
+  out.push(fix(mk('rupture', 'Rupture', 'A Marked pack dies together', 'Chains', 'sat', '#ff8a3d', '#c690ff', [
+      ['Trigger', R.need+' foes Marked in one colour die within '+R.win+' s and '+R.r+' m of each other (Crucible: '+R.needC+')'],
+      ['Blast', R.k+' × B within '+R.dmgR+' m, +10% per extra foe. Recharges in '+R.icd+' s'],
+      ['Flame', 'Scorches the ground'], ['Frost', 'Slows foes nearby for '+R.slow+' s'], ['Storm', 'Arcs to '+R.arcs+' more foes for '+R.arcK+' × B']],
+    'When a Marked pack falls at once, its colour bursts out of the middle of it.', null), 'Chain', 'Kill four foes Marked in one colour close together.'));
+  [['slag', 'Slagburst', 'Cinderglass + Wildleap', '#ffa040', '#4fd8ff', [['Blast', U.slag.k+' × B within '+U.slag.r+' m'], ['After', 'Survivors get a flame Mark']], 'Molten glass sprays out of a foe caught by both.'],
+   ['rime', 'Rimeheart', 'Cinderglass + Squall Knot', '#7cc8e8', '#ffb35c', [['Pull', 'Foes within '+U.rime.r+' m are drawn in '+U.rime.pull+' m and frozen '+U.rime.frz+' s (not elites or bosses)'], ['Blast', U.rime.k+' × B']], 'The knot freezes solid around the glass.'],
+   ['wheel', 'Stormwheel', 'Wildleap + Squall Knot', '#b58cff', '#ff8a3d', [['Arcs', 'Jump through the '+U.wheel.n+' nearest foes within '+U.wheel.r+' m, '+U.wheel.k+' × B each'], ['After', 'Each gets a storm Mark']], 'The spiral catches fire and throws lightning down the line.']].forEach(function(f){
+    out.push(fix(mk(f[0], f[1], f[2], 'Fusions', 'pair', f[3], f[4], f[5].concat([['Window', 'Both reactions on one foe within '+U.win+' s (Crucible '+U.winC+' s), once every '+U.icd+' s']]), f[6], null), 'Fusion', 'Hit one foe with two different pair reactions.')); });
+  return out; }
+
+/* ---------- DEV (window.__feat.ch): a ready-made cascade scene for screenshots and the sim ---------- */
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.ch = { C:RX_CH, link:RX_chLink, seed:RX_seedChain, now:RX_chainNow, onChain:RX_onChain,
+  pack:function(cx, cz, el, n, el2){ var W = window.__game, out = []; n = n || 8; for(var i=0;i<n;i++){ var a = i/n*TAU, r = i===0 ? 0 : 1.2 + (i%2)*0.9, e = W.spawnEnemy('imp', i%3===0 ? 'storm' : 'flame', cx + Math.cos(a)*r, cz + Math.sin(a)*r); e.hp = e.maxHp = 30; RX_apply(e, (el2 && i%2) ? el2 : el, 2, 0, 1, true); out.push(e); } return out; },
+  fx:function(){ var n = 0; for(var i=0;i<RX_FX.length;i++) if(RX_FX[i].on && RX_FX[i].ty>=10) n++; return n; } }; }
 
 /* =====================================================================================
    11. DEV hooks (window.__feat.rx)
@@ -15134,7 +15419,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 01:57',h:'608d34e'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 02:22',h:'3519c04'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -15333,7 +15618,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.loadout = { LO:LO, p
   state:function(){ return {on:LO.on, kind:LO.kind, auto:LO.auto, firstSkip:LO.firstSkip, heroes:LO_list().map(function(x){ return {cls:x.st.cls, lo:x.st.LO || null, aff:x.st.LO_aff || null, skills:LO_skills(x.st.cls).map(function(q){ return q.id; }), spells:(x.st.spells||[]).filter(function(q){ return q; }).map(function(q){ return q.id+q.lv; })}; }), save:JSON.parse(JSON.stringify(LO_s()))}; } }; }
 /* ---------- 68 CLASS SKILLS (owned by the skills agent). Design + numbers: design/SKILLS.md ----------
    Every hero ALWAYS has two class skills, on A / E (KeyQ / KeyE), from wave 1. They are picked per class in the Armoury (Skills tab) and saved in
-   save.skills = {eq:{cls:[id,id]}, auto:{c0,c1}}. Run spells (Offerings, Kindled Sigil, Daily) keep P.spells and move to F / T (small slots above).
+   save.skills = {eq:{cls:[id,id]}, auto:{c0,c1}, m:{id:1..5 mastery}}. Run spells (Offerings, Kindled Sigil, Daily) keep P.spells and move to F / T (small slots above).
    Offerings: solo gifts can rank a class skill up (I -> III, +35% power, -15% cooldown each); party offers "Honed Arts" with a hero picker.
    PUBLIC API (same IIFE scope):
      CSKILL.pool(cls, slot)        -> unlocked skill ids that may go in that slot (all unlocked skills of the class)
@@ -15394,8 +15679,32 @@ function CSK_def(id){ var D = CSK_DEF[id]; if(!D) return null; var b = D.base, M
     cd:D.cd || (S && S.cd) || 8, lv:D.lv || (M && M.lv) || [], party:D.party || '', unlock:D.unlock || null}; }
 function CSK_unlocked(id){ var D = CSK_DEF[id]; if(!D) return false; try{ return !D.unlock || !!D.unlock.ok(); }catch(e){ return false; } }
 
+/* ---------- Mastery: permanent, Glory-bought skill upgrades (Armoury Skills tab). save.skills.m[id] = 1..5 (I is free).
+   Rule: mastery raises the skill's base; run ranks I–III (+35% power, −15% cd each) stay on top. Total power (mastery × rank) is capped at ×2;
+   mastery cuts at most ~12% of the base cooldown; the Daily caps mastery at III like gear. Never paid, never random. ---------- */
+var CSK_MAS = {
+  mend:{pw:1.15, cd:2, sig:'Hearthglow', l:['Heals 15% more', 'Also burns away 1 Brand (stacks with rank II)', 'Cooldown −2 s', 'Hearthglow: healed heroes take 25% less from unabsorbed hits for 4 s']},
+  kiln:{cd:1.5, sig:'Kiln Burst', l:['Shell lasts 2 s longer', '+1 block on your own shell', 'Cooldown −1.5 s', 'Kiln Burst: when a shell\'s last block breaks it bursts for 60 in 3 u']},
+  vow:{cd:1.5, sig:'Iron Retort', l:['Vow lasts 1 s longer', 'Drags and taunts foes from 8.5 u (was 7)', 'Cooldown −1.5 s', 'Iron Retort: the vow ends in a shockwave, 12 per hit absorbed during it (max 120) in 4 u']},
+  vault:{cd:1, sig:'Aftershock', l:['Leap 1 u further (8 u)', 'Slam radius +0.5 u', 'Cooldown −1 s', 'Aftershock: 0.45 s after landing, a second slam for 50% in 3.5 u']},
+  rime:{cd:1, sig:'Hoarfrost', l:['Zone lasts 1 s longer', 'Zone radius +0.6 u', 'Cooldown −1 s', 'Hoarfrost: the zone shatters enemy bolts of your ward colour that enter it']},
+  longdraw:{pw:1.15, cd:1, sig:'Quickdraw', l:['+15% damage', 'Shot is 50% wider: easier to line up', 'Cooldown −1 s', 'Quickdraw: half the draw time, and each kill refunds 1 s cooldown (max 3)']},
+  nova:{cdp:0.07, sig:'Rime Ward', l:['Cooldown −7%', 'Casting cools your other class skill by 1.5 s', 'Cooldown −7% more (−14%)', 'Rime Ward: casting gives you a 1-block shell for 4 s']},
+  well:{cdp:0.07, sig:'Collapse', l:['Cooldown −7%', 'Casting cools your other class skill by 1.5 s', 'Cooldown −7% more (−14%)', 'Collapse: 1.6 s after casting, the well\'s centre bursts for 45 in 3 u']},
+  shackles:{cdp:0.07, sig:'Hold the Line', l:['Cooldown −7%', 'Casting cools your other class skill by 1.5 s', 'Cooldown −7% more (−14%)', 'Hold the Line: foes within 3 u of the shackles are taunted onto you for 3 s']},
+  lance:{cdp:0.07, sig:'Prism Guard', l:['Cooldown −7%', 'Casting cools your other class skill by 1.5 s', 'Cooldown −7% more (−14%)', 'Prism Guard: casting shatters every enemy bolt within 2.5 u of you']}
+};
+var CSK_MCOST = [0, 0, 100, 250, 600, 1400];   /* same curve as gear ranks (GR_COST): Mastery I free, II–V 100 / 250 / 600 / 1,400 */
+function CSK_mRaw(id){ var m = CSK_s().m; return Math.max(1, Math.min(5, (m && m[id])|0 || 1)); }
+function CSK_m(id){ return Math.min(CSK_mRaw(id), typeof GR_cap==='function' ? GR_cap() : 5); }
+function CSK_mPw(id){ var M = CSK_MAS[id]; return M && M.pw && CSK_m(id) >= 2 ? M.pw : 1; }
+function CSK_mCd(id, cd){ var M = CSK_MAS[id], m = CSK_m(id); if(!M) return cd; if(M.cdp) return cd*(1 - (m >= 2 ? M.cdp : 0) - (m >= 4 ? M.cdp : 0)); return m >= 4 ? cd - M.cd : cd; }
+function CSK_up(id, cls){ cls = cls || (CSK_DEF[id] && CSK_DEF[id].cls); var m = CSK_mRaw(id), nx = m+1, c = CSK_MCOST[nx];
+  if(!CSK_MAS[id] || m >= 5) return {ok:false, why:'max'}; if(!save.cls[cls] || !CSK_unlocked(id)) return {ok:false, why:'sealed'}; if(save.glory < c) return {ok:false, why:'glory', need:c-save.glory};
+  save.glory -= c; var s = CSK_s(); s.m[id] = nx; persist(); return {ok:true, m:nx, cost:c}; }
+
 /* ---------- save ---------- */
-function CSK_s(){ var s = save.skills; if(!s || typeof s!=='object' || Array.isArray(s)) s = save.skills = {}; if(!s.eq || typeof s.eq!=='object') s.eq = {}; if(!s.auto || typeof s.auto!=='object') s.auto = {}; return s; }
+function CSK_s(){ var s = save.skills; if(!s || typeof s!=='object' || Array.isArray(s)) s = save.skills = {}; if(!s.eq || typeof s.eq!=='object') s.eq = {}; if(!s.auto || typeof s.auto!=='object') s.auto = {}; if(!s.m || typeof s.m!=='object' || Array.isArray(s.m)) s.m = {}; return s; }
 function CSK_eq(cls){ var pool = CSK_POOL[cls]; if(!pool) return []; var e = CSK_s().eq[cls], a = Array.isArray(e) ? e : [], out = [];
   for(var i=0;i<2;i++){ var id = a[i]; if(pool.indexOf(id) < 0 || !CSK_unlocked(id) || out.indexOf(id) >= 0) id = null; out.push(id); }
   for(var j=0;j<2;j++) if(!out[j]){ var c = CSK_START[cls].concat(pool).filter(function(x){ return out.indexOf(x) < 0 && CSK_unlocked(x); })[0]; out[j] = c; }
@@ -15408,8 +15717,8 @@ function CSK_ctl(){ return (typeof PTY!=='undefined' && PTY.on && PTY.ctl) ? PTY
 function CSK_hOf(st){ return (typeof PTY!=='undefined' && PTY.on && typeof PTY_of==='function') ? PTY_of(st) : null; }
 function CSK_as(st, fn){ if(!st || st===P) return fn(); var h = CSK_hOf(st); if(h && typeof withHero==='function') return withHero(h, fn); return fn(); }
 function CSK_near(st, R){ var o = [], L = CSK_heroes(); for(var i=0;i<L.length;i++){ var q = L[i]; if(q.dead) continue; if(q===st || Math.hypot(q.x-st.x, q.z-st.z) <= R) o.push(q); } return o; }
-function CSK_pw(s){ return Math.pow(1.35, s.lv-1)*CSK.tune.pw; }
-function CSK_cdOf(st, s){ return CSK_def(s.id).cd*Math.pow(0.85, s.lv-1)*(G.mods ? G.mods.cd : 1)*(1 - (st.GR_cd||0))*CSK.tune.cd; }
+function CSK_pw(s){ return Math.min(2, Math.pow(1.35, s.lv-1)*CSK_mPw(s.id))*CSK.tune.pw; }
+function CSK_cdOf(st, s){ return CSK_mCd(s.id, CSK_def(s.id).cd)*Math.pow(0.85, s.lv-1)*(G.mods ? G.mods.cd : 1)*(1 - (st.GR_cd||0))*CSK.tune.cd; }
 function CSK_equip(cls, slot, id, st){ slot = slot|0; var pool = CSK_POOL[cls]; if(slot < 0 || slot > 1 || !pool || pool.indexOf(id) < 0 || !CSK_unlocked(id)) return false;
   var e = CSK_eq(cls), o = 1-slot; if(e[slot]===id) return true; var sw = e[o]===id; if(sw) e[o] = e[slot]; e[slot] = id; CSK_s().eq[cls] = e.slice(); persist();
   var L = CSK_heroes().slice(); if(st && L.indexOf(st) < 0) L.push(st);
@@ -15428,9 +15737,16 @@ function CSK_castP(slot){ if(CSK.off || !P || P.dead || P.stun > 0 || G.timestop
   if(!s || s.cd > 0 || P.cskLeap || P.cskDraw) return false; var D = CSK_DEF[s.id]; if(!D) return false;
   var ap = aimPoint(), dx = ap.x-P.x, dz = ap.z-P.z, d = Math.hypot(dx, dz) || 1;
   if(D.base){ var tmp = {id:D.base, lv:s.lv, cd:0}, sp = P.spells || (P.spells = [null, null]); sp[2] = tmp; try{ castSpell(2); } finally { sp.splice(2); }
-    if(!(tmp.cd > 0)) return false; s.cd = tmp.cd*CSK.tune.cd; }
+    if(!(tmp.cd > 0)) return false; s.cd = CSK_mCd(s.id, tmp.cd)*CSK.tune.cd; CSK_altM(P, s, slot, ap); }
   else { if(CSK_FN[s.id](P, s, ap, dx/d, dz/d, d) === false) return false; s.cd = CSK_cdOf(P, s); P.castT = 0.3; P.castSlot = slot; P.castId = null; }
   G.castOnce = true; CSK.casts = (CSK.casts||0) + 1; if(P === CSK_ctl()) CSK_pulse(slot); return true; }
+/* mastery III / V for the spell-based alternatives (Frost Nova, Gravity Well, Pit Shackles, Prism Lance); runs in the caster's context */
+function CSK_altM(st, s, slot, ap){ var m = CSK_m(s.id), k = st.csk, o = k && k[1-slot]; if(m >= 3 && o && o.cd > 0) o.cd = Math.max(0, o.cd - 1.5); if(m < 5) return;
+  var a = CSK_clampAim(st, ap, s.id==='well' ? 10 : 9);
+  if(s.id==='nova'){ st.cskBlk = Math.max(st.cskBlk||0, 1); st.cskBlkT = Math.max(st.cskBlkT||0, 4); st.cskBlkLv = st.cskBlkLv||1; st.cskBlkPw = st.cskBlkPw||1; st.cskBlkBy = st.cskBlkBy||st; ringBurst(st.x, st.z, 1.4, 14, 0x8fe6ff, 0.9); }
+  else if(s.id==='well' && typeof after==='function') after(1.6, function(){ if(st.dead || G.state!=='play') return; CSK_as(st, function(){ aoe(a.x, a.z, 3, 45*CSK_pw(s), {kb:4, noArea:true}); }); CSK_ring(a.x, a.z, 3, 0xc890ff, 0.5); burst(a.x, 0.6, a.z, 20, 0xc890ff, 7, 0.5, 1.2); shake(0.15); });
+  else if(s.id==='shackles'){ CSK_taunt(st, a.x, a.z, 3, 3, 40); CSK_ring(a.x, a.z, 3, 0xff8a3d, 0.4); }
+  else if(s.id==='lance'){ for(var j=eprojs.length-1;j>=0;j--){ var p = eprojs[j]; if(Math.hypot(p.x-st.x, p.z-st.z) < 2.5){ burst(p.x, 1, p.z, 5, 0xc890ff, 4, 0.3, 1); killEProj(j); } } CSK_ring(st.x, st.z, 2.5, 0xc890ff, 0.35); } }
 function CSK_key(slot){ if(!CSK_cast(P, slot) && P && !P.dead && G.state==='play'){ var s = CSK_of(P); if(s && s[slot] && s[slot].cd > 0 && lim('cskNo', 0.4)) SFX.click(); } }
 function CSK_clampAim(st, ap, R){ var dx = ap.x-st.x, dz = ap.z-st.z, d = Math.hypot(dx, dz); if(d > R){ ap = {x:st.x+dx/d*R, z:st.z+dz/d*R}; } return clampArena({x:ap.x, z:ap.z}, 0.5); }
 var CSK_SFX = {
@@ -15445,49 +15761,54 @@ var CSK_SFX = {
   loose:function(){ noise(0.25,0.18,5000,'highpass',0,null,1200); tone(880,0.25,'sawtooth',0.04,330); tone(140,0.3,'sine',0.12,70); }
 };
 var CSK_FN = {
-  mend:function(st, s){ var pw = CSK_pw(s), L = CSK_near(st, 9);
-    L.forEach(function(o){ CSK_heal(st, o, o.maxHp*0.18*pw); o.cskHot = {r:o.maxHp*0.04*pw, t:3, by:st}; if(s.lv >= 2 && o.ruin > 0){ o.ruin--; if(o===CSK_ctl() && typeof updateRuinHud==='function') updateRuinHud(); }
+  mend:function(st, s){ var pw = CSK_pw(s), L = CSK_near(st, 9), m = CSK_m('mend');
+    L.forEach(function(o){ CSK_heal(st, o, o.maxHp*0.18*pw); o.cskHot = {r:o.maxHp*0.04*pw, t:3, by:st}; var nb = (s.lv >= 2 ? 1 : 0) + (m >= 3 ? 1 : 0); if(nb > 0 && o.ruin > 0){ o.ruin = Math.max(0, o.ruin-nb); if(o===CSK_ctl() && typeof updateRuinHud==='function') updateRuinHud(); } if(m >= 5) o.cskGlowU = G.t + 4;
       ringBurst(o.x, o.z, 1.3, 16, 0x7dff9a, 0.4); burst(o.x, 1.2, o.z, 12, 0x8fe07a, 3, 0.6, 1.0, 3); });
     if(s.lv >= 3) st.cskAbsH = 4; CSK_ring(st.x, st.z, L.length > 1 ? 9 : 2.6, 0x7dff9a, 0.7); dmgText(st.x, 2.7, st.z, 'HEARTHMEND', '#9be37a', 18); CSK_SFX.mend(); },
-  kiln:function(st, s){ var n = s.lv >= 2 ? 3 : 2, na = s.lv >= 2 ? 2 : 1, T = s.lv >= 2 ? 7 : 6;
-    CSK_near(st, 9).forEach(function(o){ var m = o===st ? n : na; o.cskBlk = Math.max(o.cskBlk||0, m); o.cskBlkT = T; o.cskBlkLv = s.lv; o.cskBlkPw = CSK_pw(s); o.cskBlkBy = st; ringBurst(o.x, o.z, 1.4, 14, 0xffb347, 0.9); });
+  kiln:function(st, s){ var m = CSK_m('kiln'), n = (s.lv >= 2 ? 3 : 2) + (m >= 3 ? 1 : 0), na = s.lv >= 2 ? 2 : 1, T = (s.lv >= 2 ? 7 : 6) + (m >= 2 ? 2 : 0);
+    CSK_near(st, 9).forEach(function(o){ var m = o===st ? n : na; o.cskBlk = Math.max(o.cskBlk||0, m); o.cskBlkT = T; o.cskBlkLv = s.lv; o.cskBlkPw = CSK_pw(s); o.cskBlkBy = st; o.cskBlkSig = m >= 5; ringBurst(o.x, o.z, 1.4, 14, 0xffb347, 0.9); });
     CSK_ring(st.x, st.z, 2.2, 0xffb347, 0.9); CSK_SFX.kiln(); },
-  vow:function(st, s){ var T = s.lv >= 2 ? 4.5 : 3.5; st.cskVowT = T; st.cskVowMax = T; st.cskVowLv = s.lv; st.cskVowPw = CSK_pw(s); st.cskVowTk = 0;
-    CSK_taunt(st, st.x, st.z, 7, T, 60); CSK_ring(st.x, st.z, 7, 0x45d6ff, 0.2); burst(st.x, 1, st.z, 18, 0x7fd8ff, 5, 0.5, 1.2); dmgText(st.x, 3.0, st.z, 'IRON VOW', '#7fd8ff', 20); shake(0.2); CSK_SFX.vow(); },
-  vault:function(st, s, ap, ux, uz, d){ var L = Math.min(7, Math.max(1.5, d)), o = clampArena({x:st.x+ux*L, z:st.z+uz*L}, 0.6);
-    st.cskLeap = {sx:st.x, sz:st.z, tx:o.x, tz:o.z, t:0, dur:0.38, lv:s.lv, pw:CSK_pw(s)}; st.inv = Math.max(st.inv||0, 0.48); burst(st.x, 0.4, st.z, 12, 0xff8a3d, 5, 0.4, 1.0); CSK_SFX.leap(); },
+  vow:function(st, s){ var m = CSK_m('vow'), T = (s.lv >= 2 ? 4.5 : 3.5) + (m >= 2 ? 1 : 0), VR = m >= 3 ? 8.5 : 7; st.cskVowT = T; st.cskVowMax = T; st.cskVowLv = s.lv; st.cskVowPw = CSK_pw(s); st.cskVowTk = 0; st.cskVowR = VR; st.cskVowSig = m >= 5; st.cskVowN = 0;
+    CSK_taunt(st, st.x, st.z, VR, T, 60); CSK_ring(st.x, st.z, VR, 0x45d6ff, 0.2); burst(st.x, 1, st.z, 18, 0x7fd8ff, 5, 0.5, 1.2); dmgText(st.x, 3.0, st.z, 'IRON VOW', '#7fd8ff', 20); shake(0.2); CSK_SFX.vow(); },
+  vault:function(st, s, ap, ux, uz, d){ var m = CSK_m('vault'), L = Math.min(m >= 2 ? 8 : 7, Math.max(1.5, d)), o = clampArena({x:st.x+ux*L, z:st.z+uz*L}, 0.6);
+    st.cskLeap = {sx:st.x, sz:st.z, tx:o.x, tz:o.z, t:0, dur:0.38, lv:s.lv, pw:CSK_pw(s), m:m}; st.inv = Math.max(st.inv||0, 0.48); burst(st.x, 0.4, st.z, 12, 0xff8a3d, 5, 0.4, 1.0); CSK_SFX.leap(); },
   rime:function(st, s, ap){ ap = CSK_clampAim(st, ap, 12); var Z = null; for(var i=0;i<CSK.zones.length;i++) if(!CSK.zones[i].on){ Z = CSK.zones[i]; break; } if(!Z) Z = CSK.zones[0];
-    Z.on = true; Z.x = ap.x; Z.z = ap.z; Z.R = 4.2*(G.mods ? G.mods.area : 1); Z.t = 0; Z.dur = s.lv >= 2 ? 5 : 4; Z.tick = 0.05; Z.own = st; Z.lv = s.lv; Z.pw = CSK_pw(s); Z.g.visible = true; Z.g.position.set(Z.x, 0, Z.z);
+    Z.on = true; Z.x = ap.x; Z.z = ap.z; var m = CSK_m('rime'); Z.R = (m >= 3 ? 4.8 : 4.2)*(G.mods ? G.mods.area : 1); Z.t = 0; Z.dur = (s.lv >= 2 ? 5 : 4) + (m >= 2 ? 1 : 0); Z.sig = m >= 5; Z.tick = 0.05; Z.own = st; Z.lv = s.lv; Z.pw = CSK_pw(s); Z.g.visible = true; Z.g.position.set(Z.x, 0, Z.z);
     ringBurst(Z.x, Z.z, Z.R*0.6, 18, 0x8fe6ff, 0.5); CSK_SFX.rime(); },
-  longdraw:function(st, s){ st.cskDraw = {t:0.5, lv:s.lv, pw:CSK_pw(s)}; st.chill = Math.max(st.chill||0, 0.5); CSK_SFX.draw(); }
+  longdraw:function(st, s){ var m = CSK_m('longdraw'); st.cskDraw = {t:m >= 5 ? 0.25 : 0.5, lv:s.lv, pw:CSK_pw(s), m:m}; st.chill = Math.max(st.chill||0, 0.5); CSK_SFX.draw(); }
 };
-function CSK_slam(st, L){ var R = 2.8, dmg = 40*L.pw, n = 0;
+function CSK_slam(st, L){ var R = L.m >= 3 ? 3.3 : 2.8, dmg = 40*L.pw, n = 0;
   for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT > 0) continue; var dx = e.x-st.x, dz = e.z-st.z, dd = Math.hypot(dx, dz); if(dd > R+e.r) continue;
     hurtEnemy(e, dmg*(e.el===st.ward ? 1.5 : 1), dx/(dd||1), dz/(dd||1), {kb:3}); n++; }
   CSK_taunt(st, st.x, st.z, R+0.5, 3, 40);
   if(L.lv >= 3 && typeof spawnHazard==='function') for(var k=0;k<5;k++){ var a = k*TAU/5; spawnHazard('trail', st.x+Math.cos(a)*1.6, st.z+Math.sin(a)*1.6); }
-  CSK_ring(st.x, st.z, R, 0xff8a3d, 0.5); burst(st.x, 0.5, st.z, 26, 0xff8a3d, 8, 0.6, 1.4); rocks(st.x, 0.3, st.z, 10, 0x4a3a3c, 7); shake(0.3); CSK_SFX.slam(); return n; }
-function CSK_loose(st, D){ var ap = aimPoint(), dx = ap.x-st.x, dz = ap.z-st.z, d = Math.hypot(dx, dz) || 1, ux = dx/d, uz = dz/d, L = 28, x0 = st.x+ux*0.5, z0 = st.z+uz*0.5, x1 = st.x+ux*L, z1 = st.z+uz*L, el = st.ward, hits = [];
-  for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT > 0) continue; if(segDist(e.x, e.z, x0, z0, x1, z1) < 0.45+e.r) hits.push(e); }
+  CSK_ring(st.x, st.z, R, 0xff8a3d, 0.5); burst(st.x, 0.5, st.z, 26, 0xff8a3d, 8, 0.6, 1.4); rocks(st.x, 0.3, st.z, 10, 0x4a3a3c, 7); shake(0.3); CSK_SFX.slam();
+  if(L.m >= 5 && typeof after==='function'){ var ex = st.x, ez = st.z; after(0.45, function(){ if(st.dead || G.state!=='play') return; CSK_as(st, function(){ aoe(ex, ez, 3.5, 20*L.pw, {kb:3, noArea:true}); }); CSK_ring(ex, ez, 3.5, 0xff8a3d, 0.4); burst(ex, 0.4, ez, 16, 0xff8a3d, 6, 0.5, 1.2); shake(0.15); CSK_SFX.slam(); }); }
+  return n; }
+function CSK_loose(st, D){ var kills = 0, ap = aimPoint(), dx = ap.x-st.x, dz = ap.z-st.z, d = Math.hypot(dx, dz) || 1, ux = dx/d, uz = dz/d, L = 28, x0 = st.x+ux*0.5, z0 = st.z+uz*0.5, x1 = st.x+ux*L, z1 = st.z+uz*L, el = st.ward, hits = [];
+  for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT > 0) continue; if(segDist(e.x, e.z, x0, z0, x1, z1) < (D.m >= 3 ? 0.68 : 0.45)+e.r) hits.push(e); }
   hits.sort(function(a, b){ return Math.hypot(a.x-st.x, a.z-st.z) - Math.hypot(b.x-st.x, b.z-st.z); });
-  hits.forEach(function(e, k){ var m = e.el===el, dmg = 95*D.pw*(m ? 1.5 : 1)*(D.lv >= 3 && k===0 ? 2 : 1); hurtEnemy(e, dmg, ux, uz, {kb:2.5, nocrit:true}); burst(e.x, 1.2, e.z, m ? 12 : 6, ELC[el], 5, 0.4, 1.1); });
+  hits.forEach(function(e, k){ var m = e.el===el, dmg = 95*D.pw*(m ? 1.5 : 1)*(D.lv >= 3 && k===0 ? 2 : 1); hurtEnemy(e, dmg, ux, uz, {kb:2.5, nocrit:true}); if(e.dead) kills++; burst(e.x, 1.2, e.z, m ? 12 : 6, ELC[el], 5, 0.4, 1.1); });
+  if(D.m >= 5 && kills > 0 && st.csk) st.csk.forEach(function(q){ if(q && q.id==='longdraw') q.cd = Math.max(0, q.cd - Math.min(3, kills)); });
   for(var j=eprojs.length-1;j>=0;j--){ var p = eprojs[j]; if(p.el===el && segDist(p.x, p.z, x0, z0, x1, z1) < 0.6){ burst(p.x, 1, p.z, 5, ELC[el], 4, 0.3, 1); killEProj(j); } }
   CSK_beam(x0, z0, ux, uz, L, ELC[el]); shake(0.18); CSK_SFX.loose(); }
 
 /* ---------- hits / absorbs: Kiln Shell blocks, Iron Vow cuts damage and feeds Overload, absorbs cool class skills ---------- */
 var CSK_hp0 = hitPlayer;
 hitPlayer = function(dmg, el, src, o){ var st = P;
-  if(st && !st.dead && !G.god && !CSK.off && (st.cskBlk > 0 || st.cskVowT > 0)){ var oo = o || {};
+  if(st && !st.dead && !G.god && !CSK.off && (st.cskBlk > 0 || st.cskVowT > 0 || st.cskGlowU > G.t)){ var oo = o || {};
     var abs = !!el && (el===st.ward || (st.prevT > 0 && el===st.prevWard)) || (typeof SPL!=='undefined' && SPL.attT > 0 && st===CSK_ctl() && !!el);
     var free = (st.dashT > 0 && !oo.noDodge) || abs || (st.inv > 0 && !oo.noInv);
     if(!free && st.cskBlk > 0 && !oo.noGuard){ st.cskBlk--; dmgText(st.x, 2.3, st.z, 'SHELLED', '#ffc070', 17); ringBurst(st.x, st.z, 1.4, 16, 0xffb347, 0.9); CSK_SFX.block();
       if(st.cskBlkLv >= 3){ var pw = st.cskBlkPw || 1, by = st.cskBlkBy || st; CSK_as(by, function(){ aoe(st.x, st.z, 2.5, 30*pw, {kb:3, noArea:true}); }); burst(st.x, 0.8, st.z, 14, 0xff8a3d, 6, 0.4, 1.1); }
+      if(st.cskBlk <= 0 && st.cskBlkSig){ st.cskBlkSig = false; var bb = st.cskBlkBy || st; CSK_as(bb, function(){ aoe(st.x, st.z, 3, 60*(st.cskBlkPw||1), {kb:5, noArea:true}); }); CSK_ring(st.x, st.z, 3, 0xff8a3d, 0.5); dmgText(st.x, 2.8, st.z, 'KILN BURST', '#ffb347', 18); shake(0.2); }
       return 'guard'; }
-    if(!free && st.cskVowT > 0) arguments[0] = dmg*(st.cskVowLv >= 2 ? 0.4 : 0.5); }
+    if(!free && st.cskVowT > 0) arguments[0] = dmg*(st.cskVowLv >= 2 ? 0.4 : 0.5);
+    if(!free && st.cskGlowU > G.t) arguments[0] *= 0.75; }
   return CSK_hp0.apply(this, arguments); };
 var CSK_ab0 = absorb;
 absorb = function(el, src){ var st = P, o0 = st ? st.over : 0; var r = CSK_ab0.apply(this, arguments);
-  if(st && !CSK.off){ if(st.cskVowT > 0 && st.over > o0) st.over = Math.min(100, st.over + (st.over-o0)*0.5);
+  if(st && !CSK.off){ if(st.cskVowT > 0 && st.over > o0) st.over = Math.min(100, st.over + (st.over-o0)*0.5); if(st.cskVowT > 0 && st.cskVowSig) st.cskVowN = (st.cskVowN||0) + 1;
     if(st.cskAbsH > 0) CSK_heal(st, st, 3); var k = st.csk; if(k) for(var i=0;i<2;i++) if(k[i] && k[i].cd > 0) k[i].cd = Math.max(0, k[i].cd - CSK.tune.abs); }
   return r; };
 
@@ -15540,10 +15861,11 @@ STEP_HOOKS.push(function CSK_step(dt){ if(!P) return; var L = CSK_heroes().slice
     if(st.cskHot){ var H = st.cskHot; H.t -= dt; CSK_heal(H.by, st, H.r*dt); if(H.t <= 0 || st.dead) st.cskHot = null; }
     if(st.dead){ st.cskLeap = null; st.cskDraw = null; st.cskVowT = 0; continue; }
     if(st.cskVowT > 0){ st.cskVowT -= dt; st.cskVowTk -= dt;
-      if(st.cskVowTk <= 0){ st.cskVowTk = 0.25; CSK_taunt(st, st.x, st.z, 7, Math.min(0.6, st.cskVowT+0.1), 8); var unst = CT('unstop') > 0;
+      if(st.cskVowTk <= 0){ st.cskVowTk = 0.25; var VR = st.cskVowR || 7; CSK_taunt(st, st.x, st.z, VR, Math.min(0.6, st.cskVowT+0.1), 8); var unst = CT('unstop') > 0;
         if(!unst) for(var j=0;j<enemies.length;j++){ var e = enemies[j]; if(e.dead || e.spawnT > 0 || e.type==='boss' || e.type==='heart' || e.type==='stalker' || e.spRoot) continue; var dx = st.x-e.x, dz = st.z-e.z, d = Math.hypot(dx, dz);
-          if(d < 7+e.r && d > 1.6){ var pull = Math.min(d-1.5, 0.55*(e.type==='brute' ? 0.4 : 1)); e.x += dx/d*pull; e.z += dz/d*pull; } } }
-      if(st.cskVowT <= 0 && st.cskVowLv >= 3){ var vp = st.cskVowPw||1; CSK_as(st, function(){ aoe(P.x, P.z, 3.5, 50*vp, {kb:4, slow:2}); }); CSK_ring(st.x, st.z, 3.5, 0x45d6ff, 0.5); burst(st.x, 0.6, st.z, 24, 0x7fd8ff, 7, 0.5, 1.2); } }
+          if(d < VR+e.r && d > 1.6){ var pull = Math.min(d-1.5, 0.55*(e.type==='brute' ? 0.4 : 1)); e.x += dx/d*pull; e.z += dz/d*pull; } } }
+      if(st.cskVowT <= 0 && st.cskVowLv >= 3){ var vp = st.cskVowPw||1; CSK_as(st, function(){ aoe(P.x, P.z, 3.5, 50*vp, {kb:4, slow:2}); }); CSK_ring(st.x, st.z, 3.5, 0x45d6ff, 0.5); burst(st.x, 0.6, st.z, 24, 0x7fd8ff, 7, 0.5, 1.2); }
+      if(st.cskVowT <= 0 && st.cskVowSig && st.cskVowN > 0){ var rd = Math.min(120, 12*st.cskVowN)*(st.cskVowPw||1); st.cskVowN = 0; CSK_as(st, function(){ aoe(P.x, P.z, 4, rd, {kb:5, noArea:true}); }); CSK_ring(st.x, st.z, 4, 0x7fd8ff, 0.6); dmgText(st.x, 3.0, st.z, 'IRON RETORT', '#7fd8ff', 18); shake(0.25); } }
     if(st.cskLeap){ var Lp = st.cskLeap; Lp.t += dt; var f = Math.min(1, Lp.t/Lp.dur); st.x = lerp(Lp.sx, Lp.tx, f); st.z = lerp(Lp.sz, Lp.tz, f); st.vx = st.vz = 0;
       glowP.emit(st.x, 0.6+Math.sin(f*Math.PI)*1.6, st.z, rnd(-1,1), rnd(0,1), rnd(-1,1), 0.35, 1.2, 0xff8a3d, 0, 2);
       if(f >= 1){ st.cskLeap = null; CSK_as(st, function(){ CSK_slam(P, Lp); }); } }
@@ -15551,6 +15873,7 @@ STEP_HOOKS.push(function CSK_step(dt){ if(!P) return; var L = CSK_heroes().slice
       if(Dr.t <= 0){ st.cskDraw = null; if(!(st.stun > 0)) CSK_as(st, function(){ CSK_loose(P, Dr); }); } } }
   /* frost rain zones */
   for(i=0;i<CSK.zones.length;i++){ var Z = CSK.zones[i]; if(!Z.on) continue; Z.t += dt; Z.tick -= dt;
+    if(Z.sig && Z.own){ var zw = Z.own.ward; for(var pj=eprojs.length-1;pj>=0;pj--){ var pp = eprojs[pj]; if(pp.el===zw && Math.hypot(pp.x-Z.x, pp.z-Z.z) < Z.R){ burst(pp.x, 1, pp.z, 5, 0x8fe6ff, 4, 0.3, 1); killEProj(pj); } } }
     if(Z.tick <= 0){ Z.tick = 0.5; CSK_as(Z.own && !Z.own.dead ? Z.own : P, function(){ aoe(Z.x, Z.z, Z.R, 6*Z.pw, {nocrit:true, kb:0.01, noArea:true, slow:0.65}); }); }
     if(Z.t >= Z.dur){ if(Z.lv >= 3 && !CT('unstop')) for(var q=0;q<enemies.length;q++){ var e2 = enemies[q]; if(e2.dead || e2.type==='boss' || e2.type==='heart') continue; if(Math.hypot(e2.x-Z.x, e2.z-Z.z) < Z.R+e2.r){ e2.vxFrz = 1.0; e2.vxFx = e2.x; e2.vxFz = e2.z; e2.slowT = Math.max(e2.slowT, 2); } }
       Z.on = false; Z.g.visible = false; } }
@@ -15655,26 +15978,38 @@ function CSK_armBoard(cls, sel){ var e = CSK_eq(cls), pool = CSK_POOL[cls] || []
   e.forEach(function(id, i){ var D = CSK_def(id); h += '<button class="sock iron full'+(sel===id ? ' sel' : '')+'" data-a="sel:s:'+id+'"><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><span>Slot '+kl(i ? 'KeyE' : 'KeyQ')+' · '+D.role+'</span><b>'+D.name+'</b></div></button>'; });
   h += '</div><div class="sec"><span class="lbl">Skill pool · '+pool.length+'</span><span class="note">Starters are free · deeds unseal the rest · never bought, never random</span></div><div class="grid cskGrid">';
   pool.forEach(function(id){ var D = CSK_def(id), ok = un && CSK_unlocked(id), slot = e.indexOf(id), ft = slot >= 0 ? GR_ft('t', 'Equipped · '+kl(slot ? 'KeyE' : 'KeyQ'), 'worn') : ok ? GR_ft('t', 'Free swap') : GR_ft('deed', D.unlock ? D.unlock.t : 'Unlock the hero');
-    h += '<button class="tile iron'+(sel===id ? ' sel' : '')+(ok ? '' : ' lock dim')+(slot >= 0 ? ' wornT' : '')+'" data-a="sel:s:'+id+'"><div class="cat"><span>'+D.role+'</span><em>'+D.el+'</em></div><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><div class="nm">'+D.name+'</div><div class="ef">'+Math.round(D.cd)+' s cooldown</div></div>'+ft+'</button>'; });
+    h += '<button class="tile iron'+(sel===id ? ' sel' : '')+(ok ? '' : ' lock dim')+(slot >= 0 ? ' wornT' : '')+'" data-a="sel:s:'+id+'"><div class="cat"><span>'+D.role+'</span><em>'+D.el+'</em></div><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><div class="nm">'+D.name+'</div><div class="ef">'+(ok ? 'Mastery '+GR_rom(CSK_mRaw(id))+' · ' : '')+(Math.round(CSK_mCd(id, D.cd)*10)/10)+' s</div></div>'+ft+'</button>'; });
   return h+'</div>'; }
-function CSK_armDetail(cls, sel){ var D = CSK_def(sel), e = CSK_eq(cls), ok = save.cls[cls] && CSK_unlocked(sel), slot = e.indexOf(sel), h = '';
-  h += '<div class="dh"><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><div class="lbl">'+CLASSES[cls].name.split(' ')[1]+' skill · '+D.el+'</div><h2>'+D.name+'</h2><div class="rk">'+D.role+' · <b>'+Math.round(D.cd)+' s</b> cooldown</div></div></div>';
-  h += '<p class="mwr dsc">'+D.desc+'</p><table class="cmp"><tr><th>In a run</th><th></th><th>Effect</th></tr>'+[0,1,2].map(function(i){ return '<tr'+(i ? ' class="opt"' : '')+'><td>Rank '+ROMAN[i+1]+'</td><td></td><td class="nx" style="text-align:left;font-weight:400">'+(i ? (D.lv[i]||'Stronger')+' (+35%, −15% cd)' : 'Equipped from wave 1')+'</td></tr>'; }).join('')+
-    '<tr><td>In a party</td><td></td><td class="nx" style="text-align:left;font-weight:400">'+D.party+'</td></tr></table>';
+function CSK_armDetail(cls, sel){ var D = CSK_def(sel), e = CSK_eq(cls), ok = save.cls[cls] && CSK_unlocked(sel), slot = e.indexOf(sel), h = '', M = CSK_MAS[sel], m = CSK_mRaw(sel), nx = Math.min(5, m+1), c = CSK_MCOST[nx], just = GRU.just && GRU.just.key === 's:'+sel, pn = '';
+  for(var i=1;i<=5;i++) pn += '<span>'+GR_rom(i)+'</span>';
+  var cdNow = CSK_mCd(sel, D.cd), cdTx = (Math.round(cdNow*10)/10)+' s';
+  h += '<div class="dh"><div class="ico cskI" style="color:'+D.c+'">'+D.icon+'</div><div><div class="lbl">'+CLASSES[cls].name.split(' ')[1]+' skill · '+D.role+'</div><h2>'+D.name+'</h2><div class="rk">Mastery <b>'+(ok ? GR_rom(m) : '—')+'</b> of V · <b>'+cdTx+'</b> cooldown</div></div></div>';
+  h += '<div class="big">'+GR_pips(ok ? m : 0, just)+'<div class="pnum">'+pn+'</div></div>';
+  h += '<p class="mwr dsc">'+D.desc+'</p>';
+  if(M) h += '<div class="lad"><div class="lbl">Mastery ladder · permanent</div>'+[1,2,3,4,5].map(function(k){ var done = ok && k <= m, tx = k === 1 ? 'Base skill' : (k === 5 ? '<b class="cskSig">'+M.sig+'</b> '+M.l[3].replace(/^[^:]*: /, '') : M.l[k-2]);
+    return '<div class="lr'+(done ? ' dn' : ok && k === nx && m < 5 ? ' nx' : '')+'"><b>'+GR_rom(k)+'</b><span>'+tx+'</span><em>'+(done ? (k === 1 ? 'owned' : 'learned') : k === 1 ? 'free' : GR_fmt(CSK_MCOST[k]))+'</em></div>'; }).join('')+'</div>';
+  h += '<p class="mwr">In a run, Offerings rank it to III on top of mastery (+35% power, −15% cooldown each; total power capped at ×2). Party: '+D.party+'</p>';
   if(D.unlock) h += GR_deed({t:D.unlock.t, ok:CSK_unlocked(sel)});
-  h += '<p class="mwr">Offerings can rank an equipped skill up to III during a run. Keys here: ←/→ choose, '+kl('KeyQ')+' / '+kl('KeyE')+' equip into that slot.</p><div class="fill"></div>';
+  h += '<div class="fill"></div>';
   if(!ok) h += GR_go(save.cls[cls] ? 'Sealed · '+(D.unlock ? D.unlock.t : '') : 'Unlock the '+CLASSES[cls].name, null, true, 'none');
-  else [0,1].forEach(function(i){ var cur = CSK_def(e[i]); h += slot===i ? '<button class="go2 cskOn" data-a="none">Equipped in slot '+kl(i ? 'KeyE' : 'KeyQ')+'</button>' : '<button class="go2" data-a="csk:'+i+'">Equip in slot '+kl(i ? 'KeyE' : 'KeyQ')+(slot >= 0 ? ' (swap)' : ' · replaces '+cur.name)+'</button>'; });
-  return h+'<div class="sub2">Free · saved per hero · used by allies in a party too</div>'; }
+  else { if(m >= 5) h += GR_go('Mastery V · '+M.sig, null, true, 'none');
+    else h += '<div class="cost"><span>Mastery '+GR_rom(nx)+' · '+M.l[nx-2]+'</span><b>'+(save.glory >= c ? 'after '+GR_fmt(save.glory-c) : '—')+'</b></div>'+GR_go('Upgrade', c, save.glory < c, 'cskup');
+    [0,1].forEach(function(i){ var cur = CSK_def(e[i]); h += slot===i ? '<button class="go2 cskOn" data-a="none">Equipped in slot '+kl(i ? 'KeyE' : 'KeyQ')+'</button>' : '<button class="go2" data-a="csk:'+i+'">Equip in slot '+kl(i ? 'KeyE' : 'KeyQ')+(slot >= 0 ? ' (swap)' : ' · replaces '+cur.name)+'</button>'; }); }
+  return h+'<div class="sub2">'+(G.touch ? 'Glory only · no chance · allies use it too' : kl('KeyQ')+' / '+kl('KeyE')+' equip · U upgrade · ←/→ choose · allies use it too')+'</div>'; }
+function CSK_armUp(){ var cls = GR_cls(), s = GRU.sel; if(!s || s.k!=='s') return; var id = s.id, D = CSK_def(id), r = CSK_up(id, cls);
+  if(!r.ok){ SFX.click(); GR_say(r.why==='glory' ? 'You need ⚜ '+GR_fmt(r.need)+' more Glory.' : r.why==='max' ? D.name+' is at Mastery V.' : 'Sealed: '+((D.unlock||{}).t || 'unlock the hero')+'.'); return; }
+  var M = CSK_MAS[id], tx = M.l[r.m-2];
+  GR_fx('s:'+id, r.m, D.name+' reached Mastery '+GR_rom(r.m)+' · '+tx, D.name+' Mastery '+GR_rom(r.m), cls === 'mage' ? 'staff' : cls === 'blade' ? 'sword' : 'bow'); }
 function CSK_armEquip(slot){ var cls = GR_cls(), s = GRU.sel; if(!s || s.k!=='s') return; if(CSK_equip(cls, slot, s.id)){ SFX.pick(); GR_say(CSK_def(s.id).name+' equipped in slot '+kl(slot ? 'KeyE' : 'KeyQ')+'.'); } else { SFX.click(); GR_say('Sealed: '+((CSK_def(s.id).unlock||{}).t||'unlock the hero')+'.'); } GR_render(); }
 (function(){ var css = document.createElement('style'); css.textContent = '#relicP .sockets.cskEq{grid-template-columns:repeat(2,minmax(0,1fr))}#relicP .cskI .vxi{width:100%;height:100%}#relicP .tile .cskI{padding:4px}#relicP .sock .cskI{padding:2px}'+
-  '#relicP[data-tab=skills] .grid{grid-template-columns:repeat(4,minmax(0,1fr))}#relicP .go2.cskOn{color:var(--arm-ember);cursor:default;box-shadow:inset 0 0 0 1px #5a3d2c}'; document.head.appendChild(css); })();
+  '#relicP[data-tab=skills] .grid{grid-template-columns:repeat(4,minmax(0,1fr))}#relicP .go2.cskOn{color:var(--arm-ember);cursor:default;box-shadow:inset 0 0 0 1px #5a3d2c}#relicP .lr .cskSig{font-family:inherit;color:var(--arm-gild)}#relicP[data-tab=skills] .cost span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}'; document.head.appendChild(css); })();
 window.addEventListener('keydown', function(e){ var r = $('relicP'); if(!r || r.hidden || typeof GRU==='undefined' || GRU.tab!=='skills' || e.repeat) return; var cls = GR_cls(), pool = CSK_POOL[cls] || [], cur = GRU.sel && GRU.sel.k==='s' ? GRU.sel.id : CSK_eq(cls)[0], i = pool.indexOf(cur);
   if(e.code==='ArrowRight' || e.code==='ArrowDown' || e.code==='ArrowLeft' || e.code==='ArrowUp'){ e.preventDefault(); var d = (e.code==='ArrowRight' || e.code==='ArrowDown') ? 1 : -1; GRU.sel = {k:'s', id:pool[(i+d+pool.length)%pool.length]}; SFX.click(); GR_render(); }
+  else if(e.code==='KeyU' || ((e.code==='Enter' || e.code==='NumpadEnter') && !(document.activeElement && document.activeElement.tagName==='BUTTON'))){ e.preventDefault(); CSK_armUp(); }
   else if(e.code==='KeyQ' || e.code==='Digit1'){ e.preventDefault(); CSK_armEquip(0); } else if(e.code==='KeyE' || e.code==='Digit2'){ e.preventDefault(); CSK_armEquip(1); } });
 
 var CSKILL = {pool:function(cls){ return (CSK_POOL[cls]||[]).filter(CSK_unlocked); }, all:function(cls){ return (CSK_POOL[cls]||[]).slice(); }, equipped:CSK_eq, equip:CSK_equip, def:CSK_def, of:CSK_of,
-  cast:CSK_cast, aiWants:CSK_aiWants, rankUp:CSK_rankUp, want:CSK_wantId};
+  cast:CSK_cast, aiWants:CSK_aiWants, rankUp:CSK_rankUp, want:CSK_wantId, mastery:CSK_m, upgrade:CSK_up, ladder:function(id){ return CSK_MAS[id] || null; }};
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.skills = {CSK:CSK, API:CSKILL, off:function(b){ CSK.off = b!==false; return CSK.off; }, auto:function(on){ var s = CSK_s(); s.auto.c0 = s.auto.c1 = on ? 1 : 0; CSK_autoUi(); return on; },
   state:function(){ return CSK_heroes().map(function(st){ var k = CSK_of(st); return {cls:st.cls, sk:k ? k.map(function(s){ return s.id+s.lv+':'+s.cd.toFixed(1); }) : null, blk:st.cskBlk||0, vow:+(st.cskVowT||0).toFixed(2)}; }); },
   cast:function(slot, x, z){ if(x!=null){ G.touch = false; mouseW.x = x; mouseW.z = z; } return CSK_cast(P, slot); }, ready:function(){ CSK_heroes().forEach(function(st){ var k = CSK_of(st); if(k) k.forEach(function(s){ s.cd = 0; }); }); }}; }
@@ -15807,6 +16142,104 @@ window.addEventListener('resize', function(){ HUI.sig = ''; HUI.t = 0; });
 LOBBY_EXTRAS.push(function HUI_extras(){ HUI_chips(); HUI.sig = ''; });
 HUI_chips();
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.hubui = {HUI:HUI, sync:function(){ HUI.sig = ''; HUI_sync(true); return HUI.el && HUI.el.getBoundingClientRect(); }, collapse:function(on){ HUI.col = !!on; HUI.sig = ''; HUI_sync(true); }}; }
+/* ==========================================================================
+   70-pillars.js — Attuned pillars (design/PILLARS.md)
+   One rule: each arena pillar glows in a ward colour. Absorbing that colour while
+   standing beside it charges it (3 absorbs, any hero in the party). Dash into a
+   charged pillar to shatter it: a blast of its colour that hurts and marks foes
+   (feeds 54-reactions via RX_apply) and eats enemy bolts of the same colour.
+   The pillar falls (cover traded for the burst) and regrows next round as usual.
+   Player-side only: no enemy attack is added, so the CMB arrival spacing is untouched.
+   Wraps (each calls the original): absorb, startWave, updateRigs. Uses STEP_HOOKS.
+   Visuals: per pillar a ground zone ring + 3 charge gems, separate scene objects so
+   they also show on the Spire's storm columns (51-spire-env hides the pillar's children).
+   No white anywhere: every mesh and text uses the element colours.
+   ========================================================================== */
+var PIL = {on:true, need:3, zone:3.4, blastR:4.6, dmg0:34, dmgW:5, marks:2, kb:6, dashPad:0.8, gemY:4.05, spireGemY:4.6,
+  vis:[], free:[], fx:[]};
+if(typeof location!=='undefined' && /[?&]piloff\b/.test(location.search)) PIL.on = false;
+/* dashed zone ring: 16 arcs, so it never reads as a Stone Circles objective ring */
+var PIL_ringGeo = (function(){ var pos = [], N = 16, S = 3, r0 = 0.9, r1 = 1;
+  for(var i=0;i<N;i++){ var a0 = i/N*TAU, a1 = a0 + TAU/N*0.55;
+    for(var j=0;j<S;j++){ var u0 = a0+(a1-a0)*j/S, u1 = a0+(a1-a0)*(j+1)/S, c0 = Math.cos(u0), s0 = Math.sin(u0), c1 = Math.cos(u1), s1 = Math.sin(u1);
+      pos.push(c0*r0,0,s0*r0, c0*r1,0,s0*r1, c1*r1,0,s1*r1,  c0*r0,0,s0*r0, c1*r1,0,s1*r1, c1*r0,0,s1*r0); } }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g; })();
+var PIL_gemGeo = new THREE.OctahedronGeometry(0.34, 0);
+var PIL_auraGeo = new THREE.CylinderGeometry(1.25, 1.45, 3.8, 12, 1, true);
+var PIL_blastGeo = new THREE.RingGeometry(0.8, 1, 48).rotateX(-Math.PI/2);
+var PIL_DIM = new THREE.Color(0x2b2333), PIL_tc = new THREE.Color();
+
+/* ---------- state ---------- */
+function PIL_live(p){ return p && !p.temp && !p.dead && p !== G.spear; }
+function PIL_assign(n){ var k = 0, rot = (n||1) % 3, ward = (typeof MOD!=='undefined' && MOD.wardRings) ? MOD.wardRings : null;
+  for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(p.temp) continue;
+    var el = k < 3 ? EL[k] : EL[rot];   /* fixed flame / frost / storm, the 4th turns each round */
+    if(ward) for(var w=0; w<ward.length; w++) if(ward[w].pil === p){ el = ward[w].el; break; }   /* Pillar Wardens: match the warden's colour */
+    p.pcEl = el; p.pcN = 0; k++; } }
+function PIL_full(p){ return p.pcN >= PIL.need; }
+
+/* ---------- charge: absorb beside a pillar of that colour (any hero: absorb runs with P = the hit hero) ---------- */
+var PIL_ab0 = absorb;
+absorb = function(el, src){ var r = PIL_ab0.apply(this, arguments);
+  if(PIL.on && P && !P.dead && G.waveActive){ for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(!PIL_live(p) || p.pcEl !== el || PIL_full(p)) continue;
+      if(Math.hypot(P.x-p.x, P.z-p.z) > PIL.zone) continue;
+      p.pcN++; p.pcPop = 1; PIL_stream(P.x, P.z, p, el);
+      if(PIL_full(p)){ dmgText(p.x, 4.6, p.z, 'CHARGED', ELCSS[el], 17); }
+      PIL_hint(); break; } }
+  return r; };
+function PIL_stream(x, z, p, el){ for(var i=0;i<6;i++){ var f = i/6; glowP.emit(x+(p.x-x)*f, 1.2+f*2.2, z+(p.z-z)*f, (p.x-x)*1.5, 2, (p.z-z)*1.5, 0.3, 0.9, ELC[el], 0, 1); } }
+function PIL_hint(){ if(typeof HINTS==='undefined' || typeof hintOnce!=='function') return;
+  if(!HINTS.pillarc) HINTS.pillarc = function(){ return '<b style="color:#ffb35c">Attuned pillar!</b> Absorbing its colour <b>beside it</b> charges it. Full: '+(G.touch ? 'tap 💨 to dash' : '<b class="kc">Space</b>-dash')+' <b>into it</b> for a blast that marks foes.'; };
+  hintOnce('pillarc'); }
+
+/* ---------- shatter: the controlled hero dashes into a charged pillar ---------- */
+function PIL_step(dt){ if(!PIL.on || !P || P.dead || G.state!=='play') return;
+  for(var f=PIL.fx.length-1; f>=0; f--){ var F = PIL.fx[f]; F.t += dt; if(F.t >= 0.5){ F.m.visible = false; PIL.free.push(F.m); PIL.fx.splice(f, 1); } }
+  if(!G.waveActive || !(P.dashT > 0)) return;
+  for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(!PIL_live(p) || !PIL_full(p)) continue;
+    var dx = p.x-P.x, dz = p.z-P.z, d = Math.hypot(dx, dz); if(d > p.r + PIL.dashPad) continue;
+    if(d > 0.01 && (dx*P.ddx + dz*P.ddz)/d < 0.3) continue;   /* only a dash aimed at the pillar: dashing away from cover never spends it */
+    PIL_shatter(p); } }
+function PIL_shatter(p){ var el = p.pcEl, R = PIL.blastR, dmg = PIL.dmg0 + PIL.dmgW*((G.wave||1)-1), n = 0;
+  p.pcN = 0; p.dead = true; p.g.visible = false;
+  for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT>0) continue; var dx = e.x-p.x, dz = e.z-p.z, d = Math.hypot(dx, dz); if(d > R + e.r) continue;
+    if(typeof RX_apply==='function' && typeof RX!=='undefined' && RX.on && typeof RX_okP==='function' && RX_okP() && !e.invuln) RX_apply(e, el, PIL.marks, 0, 1, true);
+    if(!e.dead) hurtEnemy(e, dmg, dx/(d||1), dz/(d||1), {kb:PIL.kb, nocrit:true}); n++; }
+  for(var j=eprojs.length-1; j>=0; j--){ var b = eprojs[j]; if(b.el === el && Math.hypot(b.x-p.x, b.z-p.z) < R){ burst(b.x, 1, b.z, 4, ELC[el], 3, 0.3, 1); killEProj(j); } }
+  rocks(p.x, 1.5, p.z, 18, 0x2b2333, 7); burst(p.x, 1.6, p.z, 26, ELC[el], 9, 0.6, 1.4); SFX.slam(); if(SFX.absorb) SFX.absorb(el); shake(0.3);
+  dmgText(p.x, 4.4, p.z, 'SHATTER', ELCSS[el], 22); PIL_blast(p.x, p.z, el); G.pilShat = (G.pilShat||0) + 1; return n; }
+function PIL_blast(x, z, el){ var m = PIL.free.pop(); if(!m){ m = new THREE.Mesh(PIL_blastGeo, addMat(0xff6a1f, 0.55)); m.renderOrder = 8; scene.add(m); }
+  m.material.color.setHex(ELC[el]); m.position.set(x, 0.12, z); m.visible = true; PIL.fx.push({m:m, t:0}); }
+
+/* ---------- visuals ---------- */
+function PIL_mkVis(){ var g = new THREE.Group(), ring = new THREE.Mesh(PIL_ringGeo, addMat(0xff6a1f, 0.14)); ring.material.side = THREE.DoubleSide; ring.position.y = 0.06; ring.renderOrder = 7; g.add(ring);
+  var aura = new THREE.Mesh(PIL_auraGeo, addMat(0xff6a1f, 0.2)); aura.position.y = 1.9; aura.renderOrder = 7; aura.material.side = THREE.DoubleSide; g.add(aura);
+  var gems = []; for(var i=0;i<3;i++){ var m = new THREE.Mesh(PIL_gemGeo, new THREE.MeshBasicMaterial({color:0x2b2333})); g.add(m); gems.push(m); }
+  scene.add(g); return {g:g, ring:ring, aura:aura, gems:gems, p:null}; }
+function PIL_render(){ var V = PIL.vis, i, t = G.rt || 0, play = PIL.on && (G.state==='play' || G.state==='over');
+  for(i=0;i<PIL.fx.length;i++){ var F = PIL.fx[i], u = Math.min(1, F.t/0.5), sc = PIL.blastR*(0.25 + 0.75*(1-(1-u)*(1-u))); F.m.scale.set(sc, 1, sc); F.m.material.opacity = 0.55*(1-u); }
+  for(i=V.length-1; i>=0; i--){ if(pillars.indexOf(V[i].p) < 0 || V[i].p.temp){ V[i].g.visible = false; V[i].p = null; PIL.vfree = PIL.vfree || []; PIL.vfree.push(V[i]); V.splice(i, 1); } }
+  for(i=0;i<pillars.length;i++){ var p = pillars[i]; if(p.temp || p === G.spear) continue; if(!p.pcV){ var nv = (PIL.vfree && PIL.vfree.pop()) || PIL_mkVis(); nv.p = p; p.pcV = nv; V.push(nv); } else if(V.indexOf(p.pcV) < 0){ p.pcV.p = p; V.push(p.pcV); } }
+  for(i=0;i<V.length;i++){ var v = V[i], q = v.p, on = play && q.pcEl && !q.dead && q.g.visible; v.g.visible = !!on; if(!on) continue;
+    var col = ELC[q.pcEl], full = PIL_full(q), inZ = P && !P.dead && Math.hypot(P.x-q.x, P.z-q.z) < PIL.zone, pulse = 0.5+0.5*Math.sin(t*7);
+    if(q.pcPop > 0) q.pcPop = Math.max(0, q.pcPop - (G.paused ? 0 : 0.05));
+    v.g.position.set(q.x, 0, q.z); v.ring.scale.set(PIL.zone, 1, PIL.zone); v.ring.material.color.setHex(col);
+    v.ring.material.opacity = full ? 0.4 + 0.25*pulse : inZ ? 0.42 : 0.2;
+    v.aura.visible = full; if(full){ v.aura.material.color.setHex(col); v.aura.material.opacity = 0.14 + 0.12*pulse; }
+    var gy = q._spc ? PIL.spireGemY : PIL.gemY, spin = t*(full ? 3.2 : 0.9);
+    for(var k=0;k<3;k++){ var m = v.gems[k], a = spin + k/3*TAU, lit = k < q.pcN; m.position.set(Math.cos(a)*0.55, gy + (full ? 0.12*Math.sin(t*5+k) : 0), Math.sin(a)*0.55);
+      var s = lit ? 1 + (k === q.pcN-1 ? q.pcPop*0.8 : 0) + (full ? 0.18*pulse : 0) : 0.75; m.scale.setScalar(s); m.rotation.y = a*2;
+      if(lit) m.material.color.setHex(col); else { PIL_tc.setHex(col).multiplyScalar(0.28).add(PIL_DIM); m.material.color.copy(PIL_tc); } }
+    /* Act I bands: element colour, dim → bright with charge (59-hitfx's warm hit flash still wins while flashing) */
+    if(q.bm && !(q.flash > 0)){ PIL_tc.setHex(col).multiplyScalar(0.35 + 0.65*(q.pcN/PIL.need)*(full ? 0.8+0.2*pulse : 1)); q.bm.color.copy(PIL_tc); } } }
+var PIL_ur0 = updateRigs; updateRigs = function(){ var r = PIL_ur0.apply(this, arguments); try{ PIL_render(); }catch(err){ if(DEV) console.warn('pillars render', err); } return r; };
+
+/* ---------- round flow ---------- */
+var PIL_sw0 = startWave; startWave = function(n){ var r = PIL_sw0.apply(this, arguments); PIL_assign(n); return r; };
+STEP_HOOKS.push(PIL_step);
+
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.pillars = { PIL:PIL, charge:function(i, k){ var p = pillars[i||0]; if(!p.pcEl) PIL_assign(G.wave||1); p.pcN = k==null ? PIL.need : k; return p.pcEl; },
+  shatter:function(i){ return PIL_shatter(pillars[i||0]); }, assign:function(){ PIL_assign(G.wave||1); }, hero:function(){ return P; }, render:function(){ PIL_render(); }, state:function(){ return pillars.filter(function(p){ return !p.temp; }).map(function(p){ return {el:p.pcEl, n:p.pcN, dead:p.dead}; }); } }; }
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
