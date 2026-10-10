@@ -651,7 +651,7 @@ var EL = ['flame','frost','storm'];
 var ELC = {flame:0xff6a1f, frost:0x45d6ff, storm:0xc06bff, pure:0xfff2d6, gold:0xffc94d};
 var ELCSS = {flame:'#ff7a33', frost:'#4fd8ff', storm:'#c27cff', pure:'#fff2d6'};
 var ELNAME = {flame:'FLAME', frost:'FROST', storm:'STORM'};
-var ELICO = {flame:'🔥', frost:'❄️', storm:'⚡'};
+var ELICO = {flame:ICON('flame'), frost:ICON('frost'), storm:ICON('storm')};
 function after(sec, fn){ G.timers.push({t:sec, fn:fn}); }
 
 /* ---------- save ---------- */
@@ -945,9 +945,9 @@ function setModelEl(P, el){ for(var i=0;i<P.glow.length;i++) P.glow[i].material 
 function flashModel(P, on){ for(var i=0;i<P.all.length;i++) P.all[i].m.material = on ? whiteMat : P.all[i].mat; }
 
 var CLASSES = {
-  mage:{name:'Ember Mage', icon:'🔮', hp:90, rate:3.2, dmg:15, robe:0x3b4cc0, trim:0xffc94d, ult:'Inferno Nova', ultIco:'🌋', desc:'Ranged fire bolts. Absorbs charge Overload faster.'},
-  blade:{name:'Ward Blade', icon:'⚔️', hp:150, rate:2.5, dmg:28, robe:0x9a2b2b, trim:0xd8d8e0, ult:'Whirlwind', ultIco:'🌀', desc:'Tough. Sweeps cut bolts, kills heal you, absorbed bolts fly back.'},
-  archer:{name:'Storm Archer', icon:'🏹', hp:100, rate:4.4, dmg:11, robe:0x2f7d4a, trim:0xc9e86a, ult:'Arrow Storm', ultIco:'🌧️', pierce:1, desc:'Fast piercing arrows. Absorbs empower your next arrows to explode.', cost:150}
+  mage:{name:'Ember Mage', icon:ICON('mage'), hp:90, rate:3.2, dmg:15, robe:0x3b4cc0, trim:0xffc94d, ult:'Inferno Nova', ultIco:'🌋', desc:'Ranged fire bolts. Absorbs charge Overload faster.'},
+  blade:{name:'Ward Blade', icon:ICON('blade'), hp:150, rate:2.5, dmg:28, robe:0x9a2b2b, trim:0xd8d8e0, ult:'Whirlwind', ultIco:'🌀', desc:'Tough. Sweeps cut bolts, kills heal you, absorbed bolts fly back.'},
+  archer:{name:'Storm Archer', icon:ICON('archer'), hp:100, rate:4.4, dmg:11, robe:0x2f7d4a, trim:0xc9e86a, ult:'Arrow Storm', ultIco:'🌧️', pierce:1, desc:'Fast piercing arrows. Absorbs empower your next arrows to explode.', cost:150}
 };
 function makePlayerModel(cls){ var C=CLASSES[cls]; var root=new THREE.Group(), g=new THREE.Group(); root.add(g);
   var robe=phong(C.robe), trim=phong(C.trim,C.trim,0.15), skin=phong(0xe8b48a), dark=phong(0x2a2024), eye=basic(0xbff6ff);
@@ -6970,12 +6970,12 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.mods = { MOD:MOD, fo
   setMarks:function(n){ if(P){ P.MOD_marks = n; MOD_marksHud(); } }, pool:MOD_pool, spawnMender:MOD_spawnMender, scatter:function(i){ MOD_mothScatter(MOD.swarms[i||0]); }, swarms:MOD.swarms,
   pose:function(i, st, x, z, t){ var s = MOD.swarms[i||0]; s.st = st; s.x = x; s.z = z; s.t = t||0; }, kiln:function(e){ MOD_kiln(e); }, gate:function(type, el){ return spawnEnemy(type, el||'flame', null, {}); }, teles:function(){ return teles.map(function(t){ return {el:t.el, mod:!!t.MOD, c:t.v.fm.color.getHexString(), vis:t.v.g.visible}; }); } }; }
 /* spells agent: six new spells (see design/MODIFIERS.md). Prefix SP_. Wraps castSpell, hitPlayer, updateProjectiles, clearWorld, roundCleared. */
-SPELLS.mirror   = {name:'Mirror Shell',   icon:'💠', cd:12, desc:'For 2.5 s, coloured bolts that touch you bounce back at their shooter.'};
-SPELLS.attune   = {name:'Attunement',     icon:'🌈', cd:16, desc:'For 3 s your ward absorbs every colour.'};
-SPELLS.well     = {name:'Gravity Well',   icon:'🌀', cd:9,  desc:'A vortex at your aim drags in foes and bolts, then implodes.'};
-SPELLS.lance    = {name:'Prism Lance',    icon:'💎', cd:6,  desc:'A piercing beam in your ward colour. Foes of that colour take double damage.'};
-SPELLS.familiar = {name:'Ember Familiar', icon:'🧚', cd:14, desc:'An ember sprite fights beside you for 10 s, shooting the nearest foe.'};
-SPELLS.shackles = {name:'Pit Shackles',   icon:'⛓️', cd:8,  desc:'Chains burst from the floor and root foes in an area for 1.5 s.'};
+SPELLS.mirror   = {name:'Mirror Shell',   icon:ICON('mirror'), cd:12, desc:'For 2.5 s, coloured bolts that touch you bounce back at their shooter.'};
+SPELLS.attune   = {name:'Attunement',     icon:ICON('attune'), cd:16, desc:'For 3 s your ward absorbs every colour.'};
+SPELLS.well     = {name:'Gravity Well',   icon:ICON('well'), cd:9,  desc:'A vortex at your aim drags in foes and bolts, then implodes.'};
+SPELLS.lance    = {name:'Prism Lance',    icon:ICON('lance'), cd:6,  desc:'A piercing beam in your ward colour. Foes of that colour take double damage.'};
+SPELLS.familiar = {name:'Ember Familiar', icon:ICON('familiar'), cd:14, desc:'An ember sprite fights beside you for 10 s, shooting the nearest foe.'};
+SPELLS.shackles = {name:'Pit Shackles',   icon:ICON('shackles'), cd:8,  desc:'Chains burst from the floor and root foes in an area for 1.5 s.'};
 var SP_IDS = {mirror:1, attune:1, well:1, lance:1, familiar:1, shackles:1};
 // roles, card accents and per-level text (read by 34-visuals.js: VX_meta, spell cards, slot tooltips)
 var SP_META = {
@@ -8042,14 +8042,14 @@ var DLY_GOAL = 3, DLY_REWARD = 50;
 var DLY = {run:null, pending:null, fakeNow:null, shownDay:null, open:false, rolls:{}, note:null};
 var DLY_POOL = ['ruin','cold','dead','runes','razor','miasma','escspd','resist','swarm','prism','reach','slowcd','drain','unstop','shield','totem','brittle','drought','hinder','recov'];
 var DLY_TWISTS = [
-  {id:'tempered', icon:'⚒️', name:'Tempered Curse', d:'One starting curse is already tier II.'},
-  {id:'swift',    icon:'🏃', name:'Restless Horde', d:'Foes move 15% faster.'},
-  {id:'iron',     icon:'🛡️', name:'Iron Hides',     d:'Foes have 25% more HP.'},
-  {id:'narrow',   icon:'🔥', name:'Closing Pit',    d:'The arena is 15% smaller.'},
-  {id:'arcane',   icon:'✨', name:'Arcane Tide',    d:'Your spells recharge 30% faster.'},
-  {id:'bounty',   icon:'💰', name:'Golden Crowd',   d:'+25% Glory from every round.'},
-  {id:'gauntlet', icon:'🎲', name:'Fixed Gauntlet', d:'Rounds 2–9 come in a set, shuffled order.'},
-  {id:'gifted',   icon:'🎁', name:"Pitmaster's Gift", d:'You start with a spell.'}
+  {id:'tempered', icon:ICON('anvil'), name:'Tempered Curse', d:'One starting curse is already tier II.'},
+  {id:'swift',    icon:ICON('swift'), name:'Restless Horde', d:'Foes move 15% faster.'},
+  {id:'iron',     icon:ICON('hide'), name:'Iron Hides',     d:'Foes have 25% more HP.'},
+  {id:'narrow',   icon:ICON('closing'), name:'Closing Pit',    d:'The arena is 15% smaller.'},
+  {id:'arcane',   icon:ICON('arcane'), name:'Arcane Tide',    d:'Your spells recharge 30% faster.'},
+  {id:'bounty',   icon:ICON('purse'), name:'Golden Crowd',   d:'+25% Glory from every round.'},
+  {id:'gauntlet', icon:ICON('dice'), name:'Fixed Gauntlet', d:'Rounds 2–9 come in a set, shuffled order.'},
+  {id:'gifted',   icon:ICON('gift'), name:"Pitmaster's Gift", d:'You start with a spell.'}
 ];
 var DLY_TW = {}; DLY_TWISTS.forEach(function(t){ DLY_TW[t.id]=t; });
 
@@ -8204,7 +8204,7 @@ DLY_box.addEventListener('click', function(e){ if(e.target===DLY_box && DLY.open
 
 function DLY_render(){ var day=DLY_day(), C=DLY_make(day), d=DLY_sync(), T=DLY_TW[C.twist], cn=CLASSES[C.cls].name, own=!!save.cls[C.cls]; DLY.shownDay=day;
   var mods = C.curses.map(function(c){ var D=CURSE_BY[c.id]; return '<span title="'+D.t[c.tier-1].replace(/"/g,'&quot;')+'">'+D.icon+' '+D.name+'<b>'+ROMAN[c.tier]+'</b></span>'; }).join('')+
-    '<span class="tw" title="'+DLY_twistText(C).replace(/"/g,'&quot;')+'">'+T.icon+' '+T.name+'</span>';
+    '<span class="tw" title="'+DLY_twistText(C).replace(/<svg[\s\S]*?<\/svg>\s?/g,'').replace(/"/g,'&quot;')+'">'+T.icon+' '+T.name+'</span>';
   var best = d.best ? 'Round '+d.best+' · ⚜ '+d.bestStake : 'Not played yet', sk=DLY_streakNow();
   var rew = d.claimed ? '<span class="ok">✓ +'+DLY_REWARD+' ⚜ claimed</span>' : 'Clear R'+DLY_GOAL+': <b>+'+DLY_REWARD+' ⚜</b>';
   DLY_box.innerHTML =
@@ -11912,12 +11912,12 @@ var RX_SFX = {
    9. BOONS (fit the existing r0 / r1 / r2 pools)
    ===================================================================================== */
 BOONS.push(
-  {id:'rxheat', r:0, name:'Kindled Hands', icon:'♨️', desc:'Reactions and saturations deal +25% damage', ok:function(){ return RX.on && (P.rxHeat||0) < 2; }, ap:function(){ RX_okP(); P.rxHeat++; }},
-  {id:'rxprime', r:0, name:'Steady Palm', icon:'✋', desc:'+1 max prime. Every 4th absorb primes 2 hits', ok:function(){ return RX.on && (P.rxPalm||0) < 2; }, ap:function(){ RX_okP(); P.rxPalm++; }},
-  {id:'rxlinger', r:1, name:'Deep Mark', icon:'⏳', desc:'Marks last 6 s instead of 4 s. Bosses hold 3 Marks (they still cannot saturate)', ok:function(){ return RX.on && !P.rxLinger; }, ap:function(){ RX_okP(); P.rxLinger = 1; }},
-  {id:'rxleap', r:1, name:'Wildfire Tongue', icon:'💫', desc:'Wildleap and Discharge reach +1 foe. Shard-scatter fires +2 shards', ok:function(){ return RX.on && !P.rxLeap; }, ap:function(){ RX_okP(); P.rxLeap = 1; }},
-  {id:'rxtide', r:2, name:'Turning Tide', icon:'🌊', desc:'Tide-Turn reaches 4.5 m, recharges in 1.5 s and grants 2 primes', ok:function(){ return RX.on && !P.rxTideBig; }, ap:function(){ RX_okP(); P.rxTideBig = 1; }},
-  {id:'rxtrine', r:2, name:'Trinity Mark', icon:'🔱', desc:'A foe struck by all three colours within 4 s erupts in a Crown of Three (once every 6 s)', ok:function(){ return RX.on && !P.rxTrine; }, ap:function(){ RX_okP(); P.rxTrine = 1; }}
+  {id:'rxheat', r:0, name:'Kindled Hands', icon:ICON('kindle'), desc:'Reactions and saturations deal +25% damage', ok:function(){ return RX.on && (P.rxHeat||0) < 2; }, ap:function(){ RX_okP(); P.rxHeat++; }},
+  {id:'rxprime', r:0, name:'Steady Palm', icon:ICON('palm'), desc:'+1 max prime. Every 4th absorb primes 2 hits', ok:function(){ return RX.on && (P.rxPalm||0) < 2; }, ap:function(){ RX_okP(); P.rxPalm++; }},
+  {id:'rxlinger', r:1, name:'Deep Mark', icon:ICON('hourglass'), desc:'Marks last 6 s instead of 4 s. Bosses hold 3 Marks (they still cannot saturate)', ok:function(){ return RX.on && !P.rxLinger; }, ap:function(){ RX_okP(); P.rxLinger = 1; }},
+  {id:'rxleap', r:1, name:'Wildfire Tongue', icon:ICON('leap'), desc:'Wildleap and Discharge reach +1 foe. Shard-scatter fires +2 shards', ok:function(){ return RX.on && !P.rxLeap; }, ap:function(){ RX_okP(); P.rxLeap = 1; }},
+  {id:'rxtide', r:2, name:'Turning Tide', icon:ICON('tide'), desc:'Tide-Turn reaches 4.5 m, recharges in 1.5 s and grants 2 primes', ok:function(){ return RX.on && !P.rxTideBig; }, ap:function(){ RX_okP(); P.rxTideBig = 1; }},
+  {id:'rxtrine', r:2, name:'Trinity Mark', icon:ICON('trident'), desc:'A foe struck by all three colours within 4 s erupts in a Crown of Three (once every 6 s)', ok:function(){ return RX.on && !P.rxTrine; }, ap:function(){ RX_okP(); P.rxTrine = 1; }}
 );
 
 /* =====================================================================================
@@ -12157,9 +12157,9 @@ RX_SFX.tier = function(tier){ if(!lim('rxTi',0.15)) return; var f = 523*(1 + 0.1
 
 /* ---------- offering cards (Crowd Gifts): they join BOONS like the reaction boons ---------- */
 BOONS.push(
-  {id:'chkindle', r:0, name:'Kindling Chain', icon:'🔗', desc:'When a Marked foe dies, its Mark spreads to 1 more foe and 0.75 m farther', ok:function(){ return RX.on && RX_CH.on && (P.chSpread||0) < 2; }, ap:function(){ RX_okP(); P.chSpread = (P.chSpread||0) + 1; }},
-  {id:'chfuse', r:1, name:'Long Fuse', icon:'🧨', desc:'Chains stay open 0.75 s longer and spread one step deeper. Chain payouts give +50% Overload', ok:function(){ return RX.on && RX_CH.on && !P.chFuse; }, ap:function(){ RX_okP(); P.chFuse = 1; }},
-  {id:'chcruc', r:2, name:'Crucible', icon:'⚗️', desc:'Ruptures need 3 Marked deaths instead of 4. Fusions hit 40% harder and their window is 2 s', ok:function(){ return RX.on && RX_CH.on && !P.chCruc; }, ap:function(){ RX_okP(); P.chCruc = 1; }}
+  {id:'chkindle', r:0, name:'Kindling Chain', icon:ICON('chain'), desc:'When a Marked foe dies, its Mark spreads to 1 more foe and 0.75 m farther', ok:function(){ return RX.on && RX_CH.on && (P.chSpread||0) < 2; }, ap:function(){ RX_okP(); P.chSpread = (P.chSpread||0) + 1; }},
+  {id:'chfuse', r:1, name:'Long Fuse', icon:ICON('fuse'), desc:'Chains stay open 0.75 s longer and spread one step deeper. Chain payouts give +50% Overload', ok:function(){ return RX.on && RX_CH.on && !P.chFuse; }, ap:function(){ RX_okP(); P.chFuse = 1; }},
+  {id:'chcruc', r:2, name:'Crucible', icon:ICON('crucible'), desc:'Ruptures need 3 Marked deaths instead of 4. Fusions hit 40% harder and their window is 2 s', ok:function(){ return RX.on && RX_CH.on && !P.chCruc; }, ap:function(){ RX_okP(); P.chCruc = 1; }}
 );
 
 /* ---------- Codex: Chains (rule, always open), Rupture and the three Fusions (open on first trigger) ---------- */
@@ -15033,7 +15033,7 @@ RENDER_HOOKS.push(function PTY_render(t, dt){ if(!PTY.on) return; var D = PTY.do
     PTY_set(o, 'wc', st.ward, function(v){ b.style.setProperty('--wc', ELCSS[v]||'#ccc'); });
     PTY_set(o, 'cd', ctl ? 0 : Math.round(Math.max(0, PTY.swapCd)/PARTY.swapCd*50)*2, function(v){ b.style.setProperty('--cd', v); });
     PTY_set(o, 'ov', Math.round(st.over), function(v){ o.ov.style.width = v+'%'; });
-    PTY_set(o, 'dt', st.downed && !st.out ? Math.ceil(Math.max(0, st.downT))+'' : st.out ? '✖' : '', function(v){ o.dt.textContent = v; }); }
+    PTY_set(o, 'dt', st.downed && !st.out ? Math.ceil(Math.max(0, st.downT))+'' : st.out ? ICON('helm') : '', function(v){ o.dt.innerHTML = v; }); }
   if(D.mode){ var mt = (PTY.mode==='rally' ? 'RALLY' : 'PRESS'); if(D.modeT !== mt){ D.modeT = mt; D.mode.innerHTML = mt+'<b>'+(G.touch?'':'[G]')+'</b>'; } } });
 function PTY_nextIdx(){ for(var k=1;k<HEROES.length;k++){ var i = (PTY.ctl.i + k) % HEROES.length; if(!HEROES[i].st.dead) return i; } return -1; }
 
@@ -15188,7 +15188,7 @@ if(typeof HX_CARDS!=='undefined' && typeof HX_MAKE!=='undefined'){
       H.forEach(function(h, i){ o += HX_plate(h[1]-66, 18, 132, 264, 7)+'<g opacity="0">'+HX_vis([[i*2, i*2+2]], D)+HX_plate(h[1]-66, 18, 132, 264, 7, 'rgba(255,122,46,.08)', '#ff7a2e')+'</g>';
         o += '<ellipse cx="'+h[1]+'" cy="196" rx="44" ry="12" fill="url(#hxG_ember)"/><g transform="translate('+h[1]+',198) scale(1.15)">'+HX_use(h[0], 0, 0)+'</g>';
         o += HX_lbl(h[1], 44, h[2], HX_C.bone2, 10, 'middle')+HX_cz(h[1], 252, h[3], HX_C.gold, 18, 'middle', '.04em')+HX_lbl(h[1], 270, 'GLORY', HX_C.bone3, 8, 'middle'); });
-      o += '<g opacity="0">'+HX_an('opacity', [[0,0],[1.6,0],[1.8,1],[2.4,1],[2.6,0]], D)+HX_cz(168, 120, '⇄', HX_C.gold, 26, 'middle')+'</g><g opacity="0">'+HX_an('opacity', [[0,0],[3.6,0],[3.8,1],[4.4,1],[4.6,0]], D)+HX_cz(312, 120, '⇄', HX_C.gold, 26, 'middle')+'</g>';
+      o += '<g opacity="0">'+HX_an('opacity', [[0,0],[1.6,0],[1.8,1],[2.4,1],[2.6,0]], D)+ICON('swap', {x:155, y:98, w:26})+'</g><g opacity="0">'+HX_an('opacity', [[0,0],[3.6,0],[3.8,1],[4.4,1],[4.6,0]], D)+ICON('swap', {x:299, y:98, w:26})+'</g>';
       return {D:D, svg:o+HX_vig()}; } };
   (function(){ var at = -1; HX_CARDS.forEach(function(c, i){ if(c.id==='next') at = i; }); HX_CARDS.splice(at < 0 ? HX_CARDS.length : at, 0, PTY_hxCard); })(); }
 
@@ -15715,7 +15715,7 @@ function OF_gText(x){ var b = x.card, t = x.hs ? x.hs[x.ti] : null;
 function OF_bText(x){ var b = x.card;
   if(x.wager) return [b.a, b.b].map(function(c){ return '<p class="dn">'+OF_esc(c.name)+' '+ROMAN[c.tier]+': '+OF_esc(OF_strip(c.desc))+'</p>'; }).join('');
   return '<p>'+OF_esc(OF_strip(b.desc))+'</p>'; }
-function OF_ic(x, bar){ var s = bar && x.wager ? '⚖️' : x.card.icon, vc = '';
+function OF_ic(x, bar){ var s = bar && x.wager ? ICON('scales') : x.card.icon, vc = '';
   if(!bar && x.card.spell && typeof VX_meta==='function'){ try{ vc = ' style="--vxc:'+OF_noWhite(VX_meta(x.card.spell).c)+'"'; }catch(e){} }
   return '<div class="ofIc'+(bar ? ' b' : '')+(/<svg/.test(s) ? ' v' : '')+'"'+vc+'><span>'+s+'</span></div>'; }
 /* a near-white spell colour (Mirror Shell, Prism Lance) is pulled toward bronze: no white icons on this screen */
@@ -16258,7 +16258,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:52',h:'6f53e10'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:55',h:'d8bc18d'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -18915,7 +18915,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.range = {RG:RG, star
    row/column layout and an extra scale (--phK) so the plates never cover the skill bar, the top-left block or the stick.
    All top-level names are PH_-prefixed (shared IIFE scope). */
 var PH = {el:null, top:null, mode:null, row:null, ps:[], sig:'', fitT:0, lay:'', k:1, shT:0, modeT:''};
-var PH_ICON = {mage:'✦', blade:'⚔', archer:'➶'};
+var PH_ICON = {mage:ICON('mage'), blade:ICON('blade'), archer:ICON('archer')};
 function PH_svg(cls){ var I = (typeof LB_INFO!=='undefined' && LB_INFO[cls]) ? LB_INFO[cls].svg : '';
   return I ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+I+'</svg>' : '<b class="PH_gl">'+(PH_ICON[cls]||'?')+'</b>'; }
 function PH_name(cls){ var c = CLASSES[cls]; return c ? c.name.split(' ').pop() : cls; }
@@ -19031,7 +19031,7 @@ RENDER_HOOKS.push(function PH_render(t, dt){ var E = PH.el; if(!E) return; var o
     PH_set(o, 'wc', st.ward, function(v){ b.style.setProperty('--wc', ELCSS[v] || '#ff7a33'); });
     PH_set(o, 'cd', ctl || st.dead ? 0 : cdP, function(v){ b.style.setProperty('--cd', v); });
     PH_set(o, 'ov', Math.round(Math.min(100, st.over||0))/100, function(v){ o.ov.style.transform = 'scaleX('+v+')'; });
-    PH_set(o, 'dt', dn ? Math.ceil(Math.max(0, st.downT))+'' : st.out ? '✖' : '', function(v){ o.dn.textContent = v; });
+    PH_set(o, 'dt', dn ? Math.ceil(Math.max(0, st.downT))+'' : st.out ? ICON('helm') : '', function(v){ o.dn.innerHTML = v; });
     PH_set(o, 'rv', dn ? Math.round(Math.min(1, st.revT||0)*50)/50 : 0, function(v){ o.rv.style.transform = 'scaleX('+v+')'; });
     PH_set(o, 'nmT', st.out ? 'FALLEN' : dn ? 'DOWN' : PH_name(st.cls).toUpperCase(), function(v){ o.nm.textContent = v; });
     PH_set(o, 'tgT', brd ? 'BRAND' : 'YOU', function(v){ o.tg.textContent = v; });
@@ -19057,15 +19057,22 @@ if(DEV && window.__feat && window.__feat.party){ window.__feat.party.hud = funct
    can call ICON() while they load, before this file runs.
    opts: a colour string, or {c:'#hex' | 'cur' (inherit currentColor), cls:'extra', x, y, w (nested inside another SVG)}.
    Names: gust gusts crack helm storm rod laurel elite dash flame frost hedge moth lantern stick skills card tap shield
-   glory campfire column floor blood. DEV: window.__icons = {get, names, tint}. */
+   glory campfire column floor blood; spells mirror attune well lance familiar shackles; heroes mage blade archer;
+   daily anvil swift hide closing arcane purse dice gift; reactions kindle palm hourglass leap tide trident chain fuse crucible;
+   status mouse bleed stun nodmg tether timestop rising; scales swap. DEV: window.__icons = {get, names, tint}. */
 function IC_st(d, w, col){ return '<path class="o" d="'+d+'" style="stroke-width:'+(w+3.2)+'"/><path class="c" d="'+d+'" style="stroke-width:'+w+(col ? ';stroke:'+col : '')+'"/>'; }
 function IC_n(v){ return (+v).toFixed(1); }
 function IC_star(cx, cy, n, R, r, rot){ var d = ''; for(var i=0;i<n*2;i++){ var a = (rot||0)+i*Math.PI/n-Math.PI/2, rr = i%2 ? r : R; d += (i ? 'L' : 'M')+IC_n(cx+Math.cos(a)*rr)+' '+IC_n(cy+Math.sin(a)*rr); } return d+'Z'; }
+function IC_poly(cx, cy, n, R){ var d = ''; for(var i=0;i<n;i++){ var a = i*Math.PI*2/n-Math.PI/2; d += (i ? 'L' : 'M')+IC_n(cx+Math.cos(a)*R)+' '+IC_n(cy+Math.sin(a)*R); } return d+'Z'; }
 function IC_wedge(cx, cy, r0, r1, a0, a1){ var p = function(r, a){ a = a*Math.PI/180; return IC_n(cx+Math.cos(a)*r)+' '+IC_n(cy+Math.sin(a)*r); };
   return 'M'+p(r1, a0)+'A'+r1+' '+r1+' 0 0 1 '+p(r1, a1)+'L'+p(r0, a1)+'A'+r0+' '+r0+' 0 0 0 '+p(r0, a0)+'Z'; }
 function IC_tints(){ return {gust:'#a99bff', gusts:'#a99bff', crack:'#e0533a', helm:'#cf9a62', storm:'#c27cff', rod:'#c27cff', laurel:'#e8b04a', elite:'#e8b04a',
   dash:'#ffc46b', flame:'#ff7a33', frost:'#4fd8ff', hedge:'#7cc46a', moth:'#ffb35c', lantern:'#ff9a3c', stick:'#d9a46a', skills:'#ffd27a', card:'#e8b04a',
-  tap:'#d9a46a', shield:'#c98a4a', glory:'#e8b04a', campfire:'#ff7a33', column:'#bba68c', floor:'#7fc8e0', blood:'#d8344a'}; }
+  tap:'#d9a46a', shield:'#c98a4a', glory:'#e8b04a', campfire:'#ff7a33', column:'#bba68c', floor:'#7fc8e0', blood:'#d8344a',
+  mirror:'#d9b98a', attune:'#e8b04a', well:'#c27cff', lance:'#9fe0ff', familiar:'#ff8a3d', shackles:'#bba68c', mage:'#ff8a3d', blade:'#e8a050', archer:'#9fd46a',
+  anvil:'#9aa0a8', swift:'#ffb35c', hide:'#8f9aa6', closing:'#ff7a33', arcane:'#c27cff', purse:'#e8b04a', dice:'#d9c09a', gift:'#e8b04a',
+  kindle:'#ff7a33', palm:'#d9a46a', hourglass:'#e8b04a', leap:'#ff9a3c', tide:'#4fd8ff', trident:'#e8b04a', chain:'#ff9a3c', fuse:'#ff7a33', crucible:'#c98a4a',
+  mouse:'#d9c09a', bleed:'#d8344a', stun:'#e8b04a', nodmg:'#e0533a', tether:'#d8344a', timestop:'#c9a0ff', rising:'#e0533a', scales:'#e8b04a', swap:'#e8b04a'}; }
 function IC_tint(n){ return IC_tints()[n] || '#e8b04a'; }
 function IC_names(){ return Object.keys(IC_tints()); }
 
@@ -19153,6 +19160,101 @@ function IC_body(n){ var I = ICON.body || (ICON.body = {}); if(I[n] !== undefine
   case 'blood':  // Blood Sport: a blood drop over crossed gladii
     s = '<g style="fill:#bba68c"><path d="M7 6l3-1 22 25-3 3z"/><path d="M41 6l-3-1-22 25 3 3z"/><path d="M27 31l5-5 3 3-5 5zM21 31l-5-5-3 3 5 5z"/><path d="M33 35l3-3 5 5-3 3zM15 35l-3-3-5 5 3 3z"/></g>'+
       '<path d="M24 11c5 8 10.5 13 10.5 20a10.5 10.5 0 0 1-21 0c0-7 5.5-12 10.5-20z"/><path class="hl" d="M19 30c0-3 1.5-6 3.5-9-.5 3.5-1 6 0 9.5z"/>'; break;
+  /* ---- spells (33-spells.js): same silhouettes as the HUD spell slots (34-visuals VX_ICON) ---- */
+  case 'mirror':   // Mirror Shell
+    s = IC_st(IC_poly(24,24,6,19), 4)+'<path class="hl" d="'+IC_poly(24,24,6,13)+'" style="opacity:.3"/>'+IC_st('M10 31l14-12 14 12', 3)+'<path d="M38 31l-7 .5 3.5-6z"/>'; break;
+  case 'attune':   // Attunement: the three colours overlapping
+    s = '<circle cx="24" cy="15.5" r="10.5" style="fill:#ff7a33;fill-opacity:.9"/><circle cx="15.5" cy="30" r="10.5" style="fill:#4fd8ff;fill-opacity:.85"/><circle cx="32.5" cy="30" r="10.5" style="fill:#c27cff;fill-opacity:.85"/><circle class="hl" cx="24" cy="25" r="4"/>'; break;
+  case 'well':     // Gravity Well: a three-armed vortex
+    var sw = ''; for(var a2=0;a2<3;a2++){ for(var j2=0;j2<=14;j2++){ var fr = j2/14, rr2 = 21-17*fr, an = a2*Math.PI*2/3+fr*3.3; sw += (j2 ? 'L' : 'M')+IC_n(24+Math.cos(an)*rr2)+' '+IC_n(24+Math.sin(an)*rr2); } }
+    s = IC_st(sw, 3.4)+'<circle class="dk" cx="24" cy="24" r="5.5"/><circle cx="24" cy="24" r="5.5" style="fill:none;stroke:currentColor;stroke-width:1.6"/>'; break;
+  case 'lance':    // Prism Lance
+    s = '<path d="M4 44l10-17 7 7z"/><path d="M12 33L41 4l3 3-29 29z"/><path class="hl" d="M15 32.5L41.5 6l.6.6L15.6 33z"/><path class="hl" d="'+IC_star(41,7,4,7,1.8)+'"/>'; break;
+  case 'familiar': // Ember Familiar: a horned ember sprite
+    s = '<path d="M17 24L3 13l5 16z"/><path d="M31 24l14-11-5 16z"/><path d="M24 35l-5 10 5-3 5 3z"/><path d="M19 17l-2-7 5 5zM29 17l2-7-5 5z"/><circle cx="24" cy="25" r="9.5"/><circle class="hl" cx="21" cy="22" r="3"/><path class="dk" d="M19.5 26h3v3h-3zM25.5 26h3v3h-3z"/>'; break;
+  case 'shackles': // Pit Shackles
+    s = IC_st('M10.5 13.5a7 10 -40 1 1 12 13a7 10 -40 1 1 -12 -13z', 3.4)+IC_st('M25.5 21.5a7 10 -40 1 1 12 13a7 10 -40 1 1 -12 -13z', 3.4)+'<path d="M4 44h40v-3H4z" style="opacity:.7"/>'; break;
+  /* ---- heroes (CLASSES in 00-shell.html, party HUD fallback) ---- */
+  case 'mage':     // Ember Mage: a staff crowned with an ember orb
+    s = IC_st('M9 45L27 21', 3.4, '#8a5a34')+'<path d="M24 12c-4 2-6 6-5 10l4-1c-1-3 0-5 2-7zM36 12c4 2 6 6 5 10l-4-1c1-3 0-5-2-7z" style="fill:#c98a4a"/>'+
+      '<circle cx="30" cy="16" r="8.5"/><path class="hl" d="M30 10c2 3 4 4.5 4 7 0 2.2-1.8 3.8-4 3.8s-4-1.6-4-3.8c0-2.5 2-4 4-7z"/><circle cx="12" cy="10" r="1.8"/><circle cx="42" cy="34" r="1.6"/>'; break;
+  case 'blade':    // Ward Blade: a gladius over a ward ring
+    s = IC_st('M10.5 24a13.5 13.5 0 0 1 27 0', 2.6)+'<path d="M22 4h4l2.5 25h-9z"/><path class="ln" d="M24 7.5v20"/><path d="M13 29h22l-2 4.5H15z"/><path d="M22 33.5h4V41h-4z"/><circle cx="24" cy="43.5" r="3"/><path class="hl" d="M22.6 7l.9-1.5.6 21h-2.2z"/>'; break;
+  case 'archer':   // Storm Archer: a recurve bow with a storm-tipped arrow
+    s = IC_st('M14 4c-4 2 1 6 4 12 4 8 4 8 0 16-3 6-8 10-4 12', 3.2)+'<path class="ln" d="M14.5 5.5L14.5 42.5" style="stroke:#e2c89a;opacity:.7"/>'+
+      IC_st('M6 24h28', 2.4, '#d9a46a')+'<path d="M6 24l-3-4h5l3 4-3 4H3z" style="fill:#d9a46a"/><path d="M33 19l11 5-11 5 2.5-5z" style="fill:#c27cff"/>'; break;
+  /* ---- daily twists (37-daily.js) ---- */
+  case 'anvil':    // Tempered Curse: hammer over an anvil
+    s = '<path d="M5 24h27c0 4 4 6 10 6v3H31l2 6h4v5H13v-5h4l2-6h-6c-5 0-8-4-8-9z"/><path class="hl" d="M8 26h22v1.8H8z"/>'+
+      '<path d="M27 3l9 9-4 4-9-9z" style="fill:#bba68c"/><path d="M28 13l-12 12 2.5 2.5 12-12z" style="fill:#8a5a34"/><path class="ln" d="M36 20l3-1M38 15l3 0"/>'; break;
+  case 'swift':    // Restless Horde: a winged sandal
+    s = '<path d="M7 38h27c4 0 7 2 7 5H7z"/><path d="M14 38V24c0-3 2-4 4-4h3v11l10 7z"/><path class="ln" d="M14 30l8-2M14 34l12-2"/>'+
+      '<path d="M14 25c-3-6-9-7-12-5 3 1 5 2.5 6 4.5-3-1-5.5 0-6.5 2 3 0 6 .8 8 2-2 .3-3.5 1.5-3.5 3 3-1 6-2.5 8-3.5z" style="fill:#e8b04a"/>'+IC_st('M30 22h10M33 28h9', 2); break;
+  case 'hide':     // Iron Hides: a riveted iron plate
+    s = '<path d="M9 9c10-4 20-4 30 0 1 13-3 27-15 34C12 36 8 22 9 9z"/><path class="ln" d="M13 15c7-2.5 15-2.5 22 0M13 23c7-2.5 15-2.5 22 0M15 31c6-2 12-2 18 0"/>'+
+      '<circle class="dk" cx="13" cy="11.5" r="1.5"/><circle class="dk" cx="35" cy="11.5" r="1.5"/><circle class="dk" cx="24" cy="39" r="1.5"/><path class="hl" d="M11.5 11c1 9 3 17 8 23-6-5-8.5-14-8-23z"/>'; break;
+  case 'closing':  // Closing Pit: the arena ring pressing inward
+    s = IC_st('M24 4.5a19.5 19.5 0 1 1 0 39a19.5 19.5 0 1 1 0-39z', 2.6)+'<path d="M24 19l-4.5-7h9zM24 29l-4.5 7h9zM19 24l-7-4.5v9zM29 24l7-4.5v9z"/><circle class="dk" cx="24" cy="24" r="2.4"/>'; break;
+  case 'arcane':   // Arcane Tide: three spell sparks
+    s = '<path d="'+IC_star(19,21,4,15,3.6)+'"/><path d="'+IC_star(36,12,4,8,2)+'"/><path d="'+IC_star(35,36,4,9,2.2)+'"/><path class="hl" d="'+IC_star(19,21,4,6,1.5)+'"/>'; break;
+  case 'purse':    // Golden Crowd: a coin purse
+    s = '<path d="M15 18c-6 6-9 14-7 20 2 5 8 6 16 6s14-1 16-6c2-6-1-14-7-20z"/><path d="M16 14h16l-3 4.5H19z"/><path d="M18 14l-3-7 5.5 2.5L24 5l3.5 4.5L33 7l-3 7z"/>'+
+      '<path class="dk" d="M24 25l3.5 4-3.5 8-3.5-8z"/><path class="hl" d="M12 33c0-5 2-9 5-12-1 4-2 8-1.5 12z"/>'; break;
+  case 'dice':     // Fixed Gauntlet: a bone die
+    s = '<path d="M24 5l17 8.5-17 8.5L7 13.5z"/><path d="M7 13.5l17 8.5v21L7 34.5z" style="opacity:.85"/><path d="M41 13.5L24 22v21l17-8.5z" style="opacity:.7"/>'+
+      '<circle class="dk" cx="24" cy="13.5" r="2"/><circle class="dk" cx="12" cy="21" r="1.7"/><circle class="dk" cx="19" cy="34" r="1.7"/><circle class="dk" cx="29" cy="25" r="1.7"/><circle class="dk" cx="32.5" cy="31" r="1.7"/><circle class="dk" cx="36" cy="37" r="1.7"/>'; break;
+  case 'gift':     // Pitmaster's Gift: a bound offering chest
+    s = '<path d="M8 22h32v20H8z"/><path d="M6 15h36v7H6z"/><path d="M21 15h6v27h-6z" style="fill:#c0392b"/><path d="M24 15c-4-8-12-9-12-4 0 3 6 4 12 4zM24 15c4-8 12-9 12-4 0 3-6 4-12 4z" style="fill:#c0392b"/><path class="hl" d="M9 23.5h11v2H9z"/>'; break;
+  /* ---- reaction boons (54-reactions.js) ---- */
+  case 'kindle':   // Kindled Hands: heat rising off a brazier
+    s = IC_st('M16 24c-3-3.5 3-5.5 0-9s3-5.5 0-9M24 24c-3-3.5 3-5.5 0-9s3-5.5 0-9M32 24c-3-3.5 3-5.5 0-9s3-5.5 0-9', 2.4)+
+      '<path d="M7 28h34c0 7-7 11-17 11S7 35 7 28z"/><path d="M15 38l-3 7h3l3-6zM33 38l3 7h-3l-3-6z"/><path class="hl" d="M11 30h26c-1 2-3 3-5 3.5H16c-2-.5-4-1.5-5-3.5z"/>'; break;
+  case 'palm':     // Steady Palm: an open gauntlet
+    s = '<path d="M13 27V15a3 3 0 0 1 6 0v8V10a3 3 0 0 1 6 0v13V12a3 3 0 0 1 6 0v14l2.5-5.5a3 3 0 0 1 5.3 2.6L34 35c-2 6-6 9-12 9h-1c-5 0-8-3-8-8z"/>'+
+      '<path class="ln" d="M19 23v5M25 23v5M31 26v4M15 35h14"/><path class="hl" d="M14.5 26V15a1.5 1.5 0 0 1 3 0v11z"/>'; break;
+  case 'hourglass': // Deep Mark: an hourglass
+    s = '<path d="M9 4h30v4H9zM9 40h30v4H9z"/><path d="M13 8h22c0 8-7 12-9 16 2 4 9 8 9 16H13c0-8 7-12 9-16-2-4-9-8-9-16z" style="fill-opacity:.55"/>'+
+      '<path class="hl" d="M17 13h14c-2 3-5 5-7 8-2-3-5-5-7-8zM15.5 38c1-4 5-7 8.5-8.5 3.5 1.5 7.5 4.5 8.5 8.5z" style="opacity:.85"/>'; break;
+  case 'leap':     // Wildfire Tongue: a spark leaping foe to foe
+    s = IC_st('M7 38c4-14 10-18 16-12M23 26c4-12 12-16 18-12', 2.4)+'<circle cx="7" cy="39" r="3.5"/><circle cx="23" cy="26.5" r="3.5"/><path d="'+IC_star(40,13,4,8,2)+'"/><path class="hl" d="'+IC_star(40,13,4,3.4,1)+'"/>'; break;
+  case 'tide':     // Turning Tide: a curling wave
+    s = '<path d="M3 36c7 0 9-5 11-11 3-9 12-15 21-12 6 2 9 8 6 13-1-4-5-6-9-4 4 2 5 7 2 10-3 2.5-8 1.5-9.5-2.5L22 36c3 4 9 5 14 4l9 0v5H3z"/><path class="hl" d="M14 27c2-7 8-12 16-12-5 2-10 6-12 13z"/>'; break;
+  case 'trident':  // Trinity Mark: a trident tipped in the three colours
+    s = '<path d="M22.5 22h3v24h-3z" style="fill:#c98a4a"/><path d="M12 18h24v4c0 3-3 5-6 5H18c-3 0-6-2-6-5z" style="fill:#c98a4a"/>'+
+      '<path d="M12 18V8l-3 1 4.5-7 4.5 7-3-1v10z" style="fill:#ff7a33"/><path d="M22 18V6l-2.5 1L24 0l4.5 7L26 6v12z" style="fill:#4fd8ff"/><path d="M32 18V8l-3 1 4.5-7 4.5 7-3-1v10z" style="fill:#c27cff"/>'; break;
+  case 'chain':    // Kindling Chain: two burning links
+    s = IC_st('M7 22l7-7a6 6 0 0 1 8.5 0l2 2a6 6 0 0 1 0 8.5l-7 7a6 6 0 0 1-8.5 0l-2-2a6 6 0 0 1 0-8.5z', 3.4)+IC_st('M23.5 23.5l7-7a6 6 0 0 1 8.5 0l2 2a6 6 0 0 1 0 8.5l-7 7a6 6 0 0 1-8.5 0l-2-2a6 6 0 0 1 0-8.5z', 3.4)+
+      '<path d="M38 2c1 2.5 3.5 3.5 3.5 6 0 2-1.5 3.3-3.5 3.3s-3.5-1.3-3.5-3.3c0-2.5 2.5-3.5 3.5-6z" style="fill:#ffc46b"/>'; break;
+  case 'fuse':     // Long Fuse: a clay fire-pot with a long fuse
+    s = IC_st('M27 20c0-6 4-9 8-7s2 7 6 7', 2.2, '#bba68c')+'<path d="M17 18h12v5H17z" style="fill:#8a5a34"/><circle cx="21" cy="33" r="12" style="fill:#8a5a34"/>'+
+      '<path class="ln" d="M10 31c4 2 18 2 22 0"/><path class="hl" d="M13 30c0-4 3-7 6-8-2 3-3 5-3 8z"/><path d="'+IC_star(42,19,6,6.5,2.4)+'"/>'; break;
+  case 'crucible': // Crucible: a molten crucible fed by three colours
+    s = '<path d="M7 19h34v5H7z"/><path d="M10 24h28l-3 14c-1 4-4 6-8 6h-6c-4 0-7-2-8-6z"/><ellipse class="hl" cx="24" cy="21.5" rx="13" ry="1.6" style="fill:#ffc46b!important;opacity:1"/>'+
+      '<circle cx="15" cy="9" r="3.2" style="fill:#ff7a33"/><circle cx="24" cy="5" r="3.2" style="fill:#4fd8ff"/><circle cx="33" cy="9" r="3.2" style="fill:#c27cff"/><path class="ln" d="M14 30h20"/>'; break;
+  /* ---- status chips and hints (40-ui-loop.js) ---- */
+  case 'mouse':    // hold the mouse to attack
+    s = '<path d="M14 18a10 10 0 0 1 20 0v13a10 10 0 0 1-20 0z"/><path d="M14 18a10 10 0 0 1 10-10v12H14z" style="fill:#ff7a33"/><path class="ln" d="M24 8v12M14 20h20"/>'; break;
+  case 'bleed':    // Bleed: a falling drop of blood
+    s = '<path d="M22 6c5 8 10.5 13 10.5 20a10.5 10.5 0 0 1-21 0c0-7 5.5-12 10.5-20z"/><path d="M37 30c1.6 2.6 3.2 4.2 3.2 6.2a3.2 3.2 0 0 1-6.4 0c0-2 1.6-3.6 3.2-6.2z"/><path class="hl" d="M17 25c0-3 1.5-6 3.5-9-.5 3.5-1 6 0 9.5z"/>'; break;
+  case 'stun':     // Stunned: stars circling
+    s = IC_st('M6 26c0-6 8-9 18-9s18 3 18 9-8 9-18 9-18-3-18-9z', 2)+'<path d="'+IC_star(10,22,5,7,3)+'"/><path d="'+IC_star(34,33,5,7.5,3.2)+'"/><path d="'+IC_star(31,14,5,5.5,2.4)+'"/>'; break;
+  case 'nodmg':    // No damage: a snapped gladius
+    s = '<path d="M12 33h24l-2 4.5H14z"/><path d="M22 37.5h4V44h-4z"/><path d="M20.5 33V21l2.5-2.5 1.5 3 3-2.5v14z"/>'+
+      '<path d="M20.5 15.5l2.5-2.5 1.5 3 3-2.5V6l-3.5-4.5L20.5 6z" transform="translate(7 -1) rotate(18 24 9)"/><path class="hl" d="M22 31V22l1-1v10z"/>'; break;
+  case 'tether':   // Tethered: a heart bound by a chain
+    s = IC_st('M4 14l8 4M36 34l8 4', 2.6)+'<path d="M24 41C12 33 7 26 7 19c0-5 4-9 8.5-9 3.5 0 6.5 2 8.5 5 2-3 5-5 8.5-5C37 10 41 14 41 19c0 7-5 14-17 22z"/>'+
+      IC_st('M9 22h30', 2.8, '#bba68c')+'<path class="hl" d="M12 18c0-3 2-5 4.5-5-1.5 1.5-2.5 3-2.5 5z"/>'; break;
+  case 'timestop': // Time stopped: a cracked dial with frozen hands
+    s = '<circle cx="24" cy="26" r="17"/><path d="M20 3h8v5h-8z"/><circle class="dk" cx="24" cy="26" r="13"/><path d="M24 26V16M24 26l7 4" style="stroke:currentColor;stroke-width:2.6;fill:none"/><circle cx="24" cy="26" r="2.2"/>'+
+      '<path class="ln" d="M33 14l-4 6 3 2-3 5" style="stroke:currentColor;opacity:.8"/>'; break;
+  case 'rising':   // Damage taken rising: a stepped spike climbing
+    s = '<path d="M6 40h8V30H6zM18 40h8V22h-8zM30 40h8V14h-8z" style="opacity:.75"/>'+IC_st('M5 30l12-9 9 5 15-17', 3)+'<path d="M43 4l-1.5 11-9-8z"/>'; break;
+  /* ---- offerings + party ---- */
+  case 'scales':   // the Wager: a balance
+    s = '<path d="M22.5 7h3v33h-3z"/><path d="M14 40h20l2 5H12z"/><path d="M6 11h36v3H6z"/><circle cx="24" cy="7" r="3"/><path class="ln" d="M10 14L5 27M10 14l5 13M38 14l-5 13M38 14l5 13"/>'+
+      '<path d="M3 27h14c0 4-3 6-7 6s-7-2-7-6zM31 27h14c0 4-3 6-7 6s-7-2-7-6z"/>'; break;
+  case 'swap':     // swap hero
+    s = IC_st('M8 18h26', 3.2)+'<path d="M32 11l10 7-10 7z"/>'+IC_st('M40 32H14', 3.2)+'<path d="M16 25L6 32l10 7z"/>'; break;
   }
   return (I[n] = s); }
 
@@ -19176,14 +19278,304 @@ function ICON(name, o){ if(typeof o === 'string') o = {c:o}; o = o || {}; var b 
 '#ruin span .icx{width:78%;height:78%;color:#8a6a58;filter:none}#ruin span.on .icx{color:#ffd0b0;filter:drop-shadow(0 0 3px #ff3b6a)}',
 '#curses div .icx,.curseList div .icx{width:1.15em;height:1.15em}',
 '.hb-ci .icx{width:13px;height:13px}',
-'.loK>span .icx{width:1.15em;height:1.15em;vertical-align:-.2em}'
+'.loK>span .icx{width:1.15em;height:1.15em;vertical-align:-.2em}',
+'#ofWrap .ofIc .icx{width:100%;height:100%}',
+'#status div .icx{width:1.35em;height:1.35em}',
+'.kc .icx{width:1.3em;height:1.3em;vertical-align:middle}',
+'.ptyCt i .icx{width:1.1em;height:1.1em}.PH_pl .wl .PH_gl .icx{width:1.1em;height:1.1em}',
+'.PH_pl .dn .icx,.ptyP .dt .icx{width:1.5em;height:1.5em}'
   ].join('\n'); document.head.appendChild(st); })();
 
 if(DEV){ window.__icons = {get:function(n, o){ return ICON(n, o); }, names:IC_names, tint:IC_tint}; }
+// 78-objectives.js — arena wave objectives (Crowd's Gift, Keep the Spire Aloft, Bloom Guard)
+/* ==========================================================================
+   Design: design/research/17-wave-objectives.md (owner picks 2026-10-10).
+   One shared CHARGE OBJECT (OC_*) built on the Attuned Pillars grammar (70-pillars.js: zone ring, 3 gems, PIL_stream, PIL_blast):
+     absorb its colour inside its zone to fill 3 gems (any hero: absorb runs with P = the hit hero); the object FEEDS that colour itself
+     (a slow coloured spark at a hero standing in its zone every OC_FEED s), so charging never waits on the foe mix; a wrong ward just takes
+     the spark (absorbable, coloured, never white). Optional spend: the controlled hero dashes INTO it (aimed, like a pillar shatter).
+   Rounds (G.round):
+     gift  · Act I 3 and 9 · THE CROWD'S GIFT: the crowd lobs coloured spears; catch one = absorb it (stand in its ring, matching ward).
+             Each catch bursts in its colour (dmg + 1 Mark). Win: N catches. Fail: 4 drops.
+     aloft · Act II 13 · KEEP THE SPIRE ALOFT: a sector beside a rod cracks in the rod's colour; charge the rod (3), dash into it to reforge.
+             A crack left 10 s falls (Act II's own fall code). Win: every crack resolved with ≤ 2 lost. Fail: 3 sectors lost.
+     bloom · Act III 22 · BLOOM GUARD: 3 seed beds (4 in a party); feed each its colour (3) and it blooms into a flower turret for the round.
+             Some imps (incl. Gloamlings) go for unbloomed seedlings; 8 bites wilt one. Win: 3 bloomed. Fail: 2 wilted.
+   Fail rule (all objectives, and the Altar): "TRIAL BROKEN": the round ends with no Glory and +1 Brand (addRuin; 7 Brands still fall).
+   Flawless objective (no drop / lost sector / wilted seedling): +25% Glory on that round.
+   Schedule: Stone Circles and Protect the Altar leave the main run (Daily Trial keeps them: DLY.run rounds pass through untouched).
+   Party AI: allies hold the controlled hero's ward (60-party syncs it), so an ally goes to the gift ring / rod / seed bed whose colour
+     matches the shared ward and stands in its zone (its absorbs charge it); in Bloom Guard an ally with no matching bed guards the bed
+     a nibbler is after. Only the controlled hero dashes to reforge a rod (same rule as pillars).
+   Wraps (each calls the original): roundType, startWave, updateRound, roundCleared, updateHud, absorb, enemyTarget, meleeHit,
+   altarDestroyed, PTY_think, clearWorld, newRun. Uses STEP_HOOKS / RENDER_HOOKS. Mutates A2_PLAN[13] and A3_PLAN[22] (types only + sub).
+   ========================================================================== */
+var OBJ = {on:false, kind:null, st:'', drops:0, lost:0, flawless:true, win:false, failing:false, g:null, a:null, b:null, hintQ:{}};
+var OBJ_OWN = {gift:1, aloft:1, bloom:1};
+var OBJ_FEED = 1.15, OBJ_FEED_DMG = 6;
+OBJS.gift  = {name:'THE CROWD\'S GIFT', sub:'Catch each gift with its matching ward'};
+OBJS.aloft = {name:'KEEP THE SPIRE ALOFT', sub:'Charge the rod with its colour, then dash into it'};
+OBJS.bloom = {name:'BLOOM GUARD', sub:'Feed each seedling its colour. Blooms fight for you.'};
+
+/* ---------- hints (one line, first time each objective appears; queued behind a showing hint) ---------- */
+function OBJ_dashKey(){ return G.touch ? 'tap 💨 to dash' : '<b class="kc">'+kl('Space')+'</b>-dash'; }
+function OBJ_wardKeys(){ return G.touch ? 'tap the matching ward' : 'switch ward <b class="kc">'+kl('Digit1')+'</b><b class="kc">'+kl('Digit2')+'</b><b class="kc">'+kl('Digit3')+'</b>'; }
+var OBJ_HINT_TXT = {
+  obj_gift:function(){ return '<b style="color:#ffd27a">The crowd throws gifts!</b> Stand in the coloured ring and '+OBJ_wardKeys()+' to match: you <b>catch</b> it. Four drops break the trial.'; },
+  obj_aloft:function(){ return 'A sector is cracking! Stand by the <b>rod in its colour</b> with that ward to charge it, then '+OBJ_dashKey()+' <b>into the rod</b> to reforge.'; },
+  obj_bloom:function(){ return 'Stand by a <b>seedling</b> with its colour to feed it. Full: it blooms and fights for you. Foes will try to eat them!'; },
+  obj_broken:function(){ return '<b style="color:#ff6b8a">Trial broken:</b> the round ends with no Glory and +1 Brand. Seven Brands and you fall.'; }
+};
+function OBJ_hint(id, delay){ var w = G.wave, a = G.act; after(delay||0, function(){ OBJ_hintTry(id, w, a, 0); }); }
+function OBJ_hintTry(id, w, a, k){ if(typeof HINTS!=='undefined' && !HINTS[id]) for(var hk in OBJ_HINT_TXT) HINTS[hk] = OBJ_HINT_TXT[hk]; if(!save.hints || save.hints[id] || G.state!=='play' || G.wave!==w || G.act!==a || !P) return;
+  if(hintT > 0.3 && k < 6){ after(hintT + 0.4, function(){ OBJ_hintTry(id, w, a, k+1); }); return; } hintOnce(id); }
+
+/* ---------- helpers ---------- */
+function OBJ_size(){ return (typeof PTY!=='undefined' && PTY.on && typeof HEROES!=='undefined') ? Math.max(1, HEROES.length) : 1; }
+function OBJ_heroes(){ var H = PTY_heroes(), o = []; for(var i=0;i<H.length;i++){ var s = H[i]; if(s && !s.dead && !s.downed) o.push(s); } return o; }
+function OBJ_nearHero(x, z, r){ var H = OBJ_heroes(), b = null, bd = r; for(var i=0;i<H.length;i++){ var d = Math.hypot(H[i].x-x, H[i].z-z); if(d < bd){ bd = d; b = H[i]; } } return b; }
+/* a colour whose arrival at t is on a free beat (the CMB scheduler's own rule, like Act II's rod colour) */
+function OBJ_freeEl(t, avoid){ var o = shuffle(EL.slice()); if(avoid){ o = o.filter(function(x){ return x!==avoid; }); o.push(avoid); }
+  try{ var L = CMB_threats(null); for(var k=0;k<o.length;k++) if(CMB_slot(t, o[k], L) <= t+0.001) return o[k]; }catch(e){} return o[0]; }
+function OBJ_markBlast(x, z, R, el, dmg, kb){ for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || e.spawnT>0 || e.invuln) continue; var dx = e.x-x, dz = e.z-z, d = Math.hypot(dx, dz); if(d > R + e.r) continue;
+    if(typeof RX_apply==='function' && typeof RX!=='undefined' && RX.on && typeof RX_okP==='function' && RX_okP()) RX_apply(e, el, 1, 0, 1, true);
+    if(!e.dead) hurtEnemy(e, dmg, dx/(d||1), dz/(d||1), {kb:kb||3, nocrit:true}); } }
+var OBJ_mats = {};
+function OBJ_bmat(col){ var k = 'b'+col; return OBJ_mats[k] || (OBJ_mats[k] = new THREE.MeshBasicMaterial({color:col})); }
+function OBJ_ringMat(col, op){ return new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:op, depthWrite:false, side:THREE.DoubleSide}); }
+var OBJ_ringG = new THREE.RingGeometry(0.86, 1, 48).rotateX(-Math.PI/2), OBJ_underG = new THREE.RingGeometry(0.8, 1.06, 48).rotateX(-Math.PI/2);
+
+/* =====================================================================================
+   CHARGE OBJECT (shared by the rod, the seed beds and any later objective: P2 captives, S3, G3 …)
+   ===================================================================================== */
+var OC = [];
+function OC_make(o){ var c = {x:o.x, z:o.z, el:o.el, n:0, need:o.need||3, zone:o.zone||3.4, gemY:o.gemY||3.2, r:o.r||0.6, dash:!!o.dash, on:true, pop:0,
+    feedT:0.6, tag:o.tag||'', onFull:o.onFull||null, onSpend:o.onSpend||null, vis:null};
+  var g = new THREE.Group(), under = new THREE.Mesh(OBJ_underG, OBJ_ringMat(0x14100c, 0.35)), ring = new THREE.Mesh(OBJ_ringG, OBJ_ringMat(ELC[c.el], 0.6));
+  under.position.y = 0.05; ring.position.y = 0.065; under.renderOrder = 6; ring.renderOrder = 7; g.add(under); g.add(ring);
+  var aura = new THREE.Mesh(PIL_auraGeo, addMat(ELC[c.el], 0.16)); aura.material.side = THREE.DoubleSide; aura.position.y = 1.9; aura.visible = false; aura.renderOrder = 7; g.add(aura);
+  var gems = []; for(var i=0;i<c.need;i++){ var m = new THREE.Mesh(PIL_gemGeo, new THREE.MeshBasicMaterial({color:0x2b2333})); g.add(m); gems.push(m); }
+  g.position.set(c.x, 0, c.z); scene.add(g); c.vis = {g:g, ring:ring, under:under, aura:aura, gems:gems}; OC.push(c); return c; }
+function OC_full(c){ return c.n >= c.need; }
+function OC_kill(c){ c.on = false; if(c.vis){ scene.remove(c.vis.g); c.vis.ring.material.dispose(); c.vis.under.material.dispose(); c.vis.aura.material.dispose(); c.vis.gems.forEach(function(m){ m.material.dispose(); }); c.vis = null; } var i = OC.indexOf(c); if(i>=0) OC.splice(i, 1); }
+function OC_clear(){ while(OC.length) OC_kill(OC[0]); }
+function OC_recolor(c, el){ c.el = el; c.n = 0; if(c.vis){ c.vis.ring.material.color.setHex(ELC[el]); c.vis.aura.material.color.setHex(ELC[el]); } }
+var OC_ab0 = absorb;
+absorb = function(el, src){ var r = OC_ab0.apply(this, arguments);
+  if(OC.length && P && !P.dead && G.waveActive){ for(var i=0;i<OC.length;i++){ var c = OC[i]; if(!c.on || c.el!==el || OC_full(c)) continue; if(Math.hypot(P.x-c.x, P.z-c.z) > c.zone) continue;
+      c.n++; c.pop = 1; PIL_stream(P.x, P.z, c, el); c.gemY0 = c.gemY;
+      if(OC_full(c)){ dmgText(c.x, c.gemY+1.0, c.z, c.dash ? 'CHARGED · DASH IN' : 'FULL', ELCSS[el], 17); if(c.onFull) c.onFull(c); }
+      break; } }
+  return r; };
+function OC_step(dt){ if(!OC.length || !G.waveActive || !P) return;
+  for(var i=OC.length-1;i>=0;i--){ var c = OC[i]; if(!c.on) continue; if(c.pop > 0) c.pop = Math.max(0, c.pop - dt*3);
+    if(!OC_full(c)){ c.feedT -= dt; var h = OBJ_nearHero(c.x, c.z, c.zone);
+      if(h && c.feedT <= 0){ c.feedT = OBJ_FEED; var dx = h.x-c.x, dz = h.z-c.z, d = Math.hypot(dx, dz)||1; var sx = c.x + dx/d*Math.min(0.9, d*0.5), sz = c.z + dz/d*Math.min(0.9, d*0.5);
+        spawnEProj(sx, sz, dx/d, dz/d, 6.5, c.el, OBJ_FEED_DMG, {quiet:true}); }
+      if(!h) c.feedT = Math.min(c.feedT, 0.5); }
+    else if(c.dash && c.onSpend && P.dashT > 0 && !P.dead){ var ex = c.x-P.x, ez = c.z-P.z, ed = Math.hypot(ex, ez);
+      if(ed < c.r + 0.9 && (ed < 0.05 || (ex*P.ddx + ez*P.ddz)/ed > 0.3)){ var fn = c.onSpend; c.onSpend = null; fn(c); } } } }
+function OC_render(){ var t = G.rt || 0; for(var i=0;i<OC.length;i++){ var c = OC[i], v = c.vis; if(!v) continue; var full = OC_full(c), pulse = 0.5+0.5*Math.sin(t*7), col = ELC[c.el];
+    var inZ = P && !P.dead && Math.hypot(P.x-c.x, P.z-c.z) < c.zone; v.ring.scale.set(c.zone, 1, c.zone); v.under.scale.set(c.zone, 1, c.zone);
+    v.ring.material.opacity = full ? 0.55 + 0.3*pulse : inZ ? 0.75 : 0.5; v.aura.visible = full && c.dash; if(v.aura.visible) v.aura.material.opacity = 0.12 + 0.12*pulse;
+    var spin = t*(full ? 3.2 : 0.9), N = v.gems.length;
+    for(var k=0;k<N;k++){ var m = v.gems[k], a = spin + k/N*TAU, lit = k < c.n; m.position.set(Math.cos(a)*0.6, c.gemY + (full ? 0.12*Math.sin(t*5+k) : 0), Math.sin(a)*0.6);
+      m.scale.setScalar(lit ? 1.1 + (k===c.n-1 ? c.pop*0.8 : 0) + (full ? 0.18*pulse : 0) : 0.8); m.rotation.y = a*2;
+      if(lit) m.material.color.setHex(col); else { PIL_tc.setHex(col).multiplyScalar(0.28).add(PIL_DIM); m.material.color.copy(PIL_tc); } } } }
+
+/* =====================================================================================
+   FAIL / WIN
+   ===================================================================================== */
+function OBJ_broken(why){ if(!G.waveActive || OBJ.failing) return; OBJ.st = 'fail'; OBJ.flawless = false;
+  if(P && !P.dead) addRuin(1); if(!P || P.dead || !G.waveActive){ OBJ_end(); return; }
+  var s0 = G.stake; OBJ.failing = true; try { roundCleared(false); } finally { OBJ.failing = false; }
+  if(G.stake > s0 || G.stake < s0) G.stake = s0; stakePop();
+  banner('TRIAL BROKEN', why+'  •  no Glory  •  +1 Brand', 2.4); SFX.curse(); crowdCheer = 0;
+  if(typeof PITW!=='undefined' && PITW.react) try{ PITW.react('scoff'); }catch(e){}
+  OBJ_hint('obj_broken', 2.6); }
+function OBJ_won(){ if(!G.waveActive) return; OBJ.st = 'win'; OBJ.win = true; try { roundCleared(false); } finally { OBJ.win = false; } }
+var OBJ_rc0 = roundCleared;
+roundCleared = function(boss){ var fl = OBJ.on && OBJ.win && OBJ.flawless && !boss, live = G.waveActive;
+  if(fl) G.mods.glory += 0.25; var r; try { r = OBJ_rc0.apply(this, arguments); } finally { if(fl) G.mods.glory -= 0.25; }
+  if(fl && P) after(0.45, function(){ if(P) dmgText(P.x, 3.1, P.z, 'FLAWLESS TRIAL +25% GLORY', '#ffd27a', 18); });
+  if(live && !G.waveActive) OBJ_end(); return r; };
+/* the Altar no longer ends the run: it breaks the trial (Daily Trial only now) */
+altarDestroyed = function(){ burst(0,1.5,0,50,0xffc94d,9,0.9,1.6); rocks(0,1,0,24,0x3a2a44,8); SFX.slam(); shake(0.8); G.hitstop = 0.2; altarM.visible = false; G.altarHp = 0;
+  OBJ_broken('The altar falls'); };
+
+/* =====================================================================================
+   SCHEDULE
+   ===================================================================================== */
+var OBJ_rt0 = roundType;
+roundType = function(n){ var r = OBJ_rt0.apply(this, arguments);
+  if(G.act===2 || G.act===3 || r==='boss') return r; if(typeof DLY!=='undefined' && DLY.run) return r;   /* Daily Trial keeps Circles + Altar */
+  if(!G.endless && n<=10){ if(n===3 || n===9) return 'gift'; if(n===4) return 'slay'; if(n===5) return 'survive'; }
+  if(r==='circles' || r==='altar'){ if(G.endless || n>10) return G.lastRound==='gift' ? 'slay' : 'gift'; return G.lastRound==='slay' ? 'survive' : 'slay'; }
+  return r; };
+if(typeof A2_PLAN!=='undefined' && A2_PLAN[13]){ var OBJ_p13 = A2_PLAN[13]; OBJ_p13.type = 'aloft'; OBJ_p13.rods = 0; OBJ_p13.gust = [16, 20]; OBJ_p13.alive = 8; OBJ_p13.sub = OBJS.aloft.sub; }
+if(typeof A3_PLAN!=='undefined' && A3_PLAN[22]){ A3_PLAN[22].type = 'bloom'; A3_PLAN[22].max = 8; }
+if(typeof CX_ACT1!=='undefined'){ try{ var OBJ_a0 = G.act; G.act = 1; for(var OBJ_m=1; OBJ_m<=10; OBJ_m++) if(OBJ_m<=5 || OBJ_m===9 || isBossRound(OBJ_m)) CX_ACT1[OBJ_m-1] = roundType(OBJ_m); G.act = OBJ_a0; }catch(e){} }
+
+var OBJ_sw0 = startWave;
+startWave = function(n){ OBJ_end(); var r = OBJ_sw0.apply(this, arguments); var rt = G.round; if(!OBJ_OWN[rt]) return r;
+  hideAltar(); OBJ.on = true; OBJ.kind = rt; OBJ.st = 'run'; OBJ.drops = 0; OBJ.lost = 0; OBJ.flawless = true; G.need = 999; $('objBox').hidden = false;
+  if(rt==='gift') OBJ_giftStart(n); else if(rt==='aloft') OBJ_aloftStart(n); else if(rt==='bloom') OBJ_bloomStart(n);
+  updateHudStatic(); return r; };
+function OBJ_end(){ if(OBJ.g){ OBJ.g.fly.forEach(function(f){ scene.remove(f.m); }); OBJ.g = null; }
+  if(OBJ.a){ var A = OBJ.a; if(A.ev && A.ev.band) scene.remove(A.ev.band); if(A.ev && typeof A2!=='undefined'){ var s = A2.sec[A.ev.s]; if(s && s.st==='crack') A2_setSec(A.ev.s, 'solid'); } OBJ.a = null;
+    if(typeof A2!=='undefined') for(var j=0;j<3;j++) if(A2.rods[j].st==='objective') A2.rods[j].st = 'idle'; }
+  if(OBJ.b){ OBJ.b.beds.forEach(function(b){ scene.remove(b.g); }); OBJ.b = null; }
+  OC_clear(); OBJ.on = false; OBJ.kind = null; }
+var OBJ_cw0 = clearWorld; clearWorld = function(){ OBJ_end(); return OBJ_cw0.apply(this, arguments); };
+var OBJ_nr0 = newRun; newRun = function(){ OBJ_end(); return OBJ_nr0.apply(this, arguments); };
+
+/* =====================================================================================
+   P1 · THE CROWD'S GIFT (Act I)
+   ===================================================================================== */
+var OBJ_shaftG = new THREE.CylinderGeometry(0.08, 0.08, 2.4, 6), OBJ_tipG = new THREE.ConeGeometry(0.24, 0.7, 6), OBJ_ribG = new THREE.BoxGeometry(0.6, 0.14, 0.05), OBJ_haloG = new THREE.SphereGeometry(0.9, 12, 8);
+var OBJ_brass = null;
+function OBJ_spear(el){ if(!OBJ_brass) OBJ_brass = phong(0xb08a4a, 0x2a1a08); var g = new THREE.Group(), s = new THREE.Mesh(OBJ_shaftG, OBJ_brass); g.add(s);
+  var tip = new THREE.Mesh(OBJ_tipG, OBJ_bmat(ELC[el])); tip.position.y = 1.55; g.add(tip); var rb = new THREE.Mesh(OBJ_ribG, OBJ_bmat(ELC[el])); rb.position.y = 0.95; g.add(rb);
+  var h = new THREE.Mesh(OBJ_haloG, addMat(ELC[el], 0.25)); h.position.y = 1.0; g.add(h); g.scale.setScalar(1.25); scene.add(g); return g; }
+function OBJ_giftStart(n){ var sz = OBJ_size(), late = n>=6; G.maxAlive = Math.max(4, G.maxAlive - 2);
+  OBJ.g = {need:Math.round((late ? 12 : 10)*[1, 1.2, 1.45][Math.min(3, sz)-1]), maxDrop:4, caught:0, every:(late ? 2.3 : 2.9)*(sz>1 ? 0.8 : 1), t:1.6, fly:[], last:null, maxFly:late ? 3 : 2, dur:late ? 1.55 : 1.7};
+  OBJ_hint('obj_gift', n===3 ? 7.4 : 1.2); }
+function OBJ_giftThrow(){ var g = OBJ.g, H = OBJ_heroes(); if(!H.length) return; var h = pick(H), R = AR(), tx = 0, tz = 0;
+  for(var k=0;k<8;k++){ var a = Math.random()*TAU, d = rnd(1.6, 3.8); tx = h.x + Math.cos(a)*d; tz = h.z + Math.sin(a)*d; var rr = Math.hypot(tx, tz); if(rr > R-1.6){ tx *= (R-1.6)/rr; tz *= (R-1.6)/rr; }
+    var ok = true; for(var p=0;p<pillars.length;p++){ var q = pillars[p]; if(!q.dead && Math.hypot(q.x-tx, q.z-tz) < q.r+1.6) ok = false; } for(var f=0;f<g.fly.length;f++) if(Math.hypot(g.fly[f].tx-tx, g.fly[f].tz-tz) < 3.2) ok = false; if(ok) break; }
+  var el = OBJ_freeEl(g.dur, g.last); g.last = el; try{ CMB_reserve(g.dur, el); }catch(e){}
+  var sa = Math.atan2(tz, tx) + rnd(-0.6, 0.6), sr = R + 5; var F = {el:el, sx:Math.cos(sa)*sr, sz:Math.sin(sa)*sr, tx:tx, tz:tz, t:0, dur:g.dur, m:OBJ_spear(el)};
+  F.tele = addTele(tx, tz, 1.45, g.dur, el); g.fly.push(F); SFX.tele(); if(Math.random()<0.4) crowdCheer = Math.max(crowdCheer, 0.35); }
+function OBJ_giftLand(F){ var g = OBJ.g, H = OBJ_heroes(), caught = null, inside = [];
+  for(var i=0;i<H.length;i++){ if(Math.hypot(H[i].x-F.tx, H[i].z-F.tz) < 1.55) inside.push(H[i]); }
+  for(var j=0;j<inside.length && !caught;j++){ if(inside[j].ward===F.el || (inside[j].prevT>0 && inside[j].prevWard===F.el)) caught = inside[j]; }
+  if(caught){ PTY_as(caught, function(){ hitPlayer(10, F.el, {x:F.tx, z:F.tz}, {noDodge:true}); }); g.caught++;
+    OBJ_markBlast(F.tx, F.tz, 3.4, F.el, 18 + 4*G.wave, 4); burst(F.tx, 1.2, F.tz, 26, ELC[F.el], 7, 0.6, 1.3); ringBurst(F.tx, F.tz, 3.4, 22, ELC[F.el], 0.5); if(typeof PIL_blast==='function') PIL_blast(F.tx, F.tz, F.el);
+    dmgText(F.tx, 2.8, F.tz, 'CAUGHT!', ELCSS[F.el], 21); SFX.pick(); crowdCheer = Math.max(crowdCheer, 0.75); if(g.caught===g.need-1 && typeof PITW!=='undefined' && PITW.react) try{ PITW.react('cheer'); }catch(e){} }
+  else { for(var q=0;q<inside.length;q++) PTY_as(inside[q], function(){ hitPlayer(8 + G.wave, F.el, {x:F.tx, z:F.tz}); });
+    OBJ.drops++; OBJ.flawless = false; burst(F.tx, 0.4, F.tz, 14, 0xb08a4a, 4, 0.5, 1); rocks(F.tx, 0.3, F.tz, 6, 0x6a5434, 4); dmgText(F.tx, 2.2, F.tz, 'DROPPED '+OBJ.drops+'/'+g.maxDrop, '#d8a878', 17); SFX.slam(); }
+  scene.remove(F.m); }
+function OBJ_giftStep(dt){ var g = OBJ.g; if(!g) return; g.t -= dt;
+  if(g.t <= 0 && g.fly.length < g.maxFly && g.caught + g.fly.length < g.need + 2){ g.t = g.every*rnd(0.85, 1.15); OBJ_giftThrow(); }
+  for(var i=g.fly.length-1;i>=0;i--){ var F = g.fly[i]; F.t += dt; var k = Math.min(1, F.t/F.dur), y = 7.5*(1-k) + 0.9*k + Math.sin(k*Math.PI)*5.5;
+    F.m.position.set(lerp(F.sx, F.tx, k), y, lerp(F.sz, F.tz, k)); F.m.rotation.set(0, Math.atan2(F.tx-F.sx, F.tz-F.sz), 0); F.m.rotateX(lerp(0.6, 2.4, k));
+    if(Math.random()<0.5) glowP.emit(F.m.position.x, F.m.position.y, F.m.position.z, 0, 0, 0, 0.25, 0.8, ELC[F.el], 0, 0);
+    if(k >= 1){ g.fly.splice(i, 1); OBJ_giftLand(F); if(!G.waveActive || !OBJ.g) return; } }
+  if(OBJ.drops >= g.maxDrop) OBJ_broken('Four gifts hit the sand');
+  else if(g.caught >= g.need) OBJ_won(); }
+
+/* =====================================================================================
+   S1 · KEEP THE SPIRE ALOFT (Act II)
+   ===================================================================================== */
+var OBJ_bandG = {};
+function OBJ_band(i){ var n = A2_nSec(), a1 = (i+1)*TAU/n, k = i+'/'+n; if(!OBJ_bandG[k]) OBJ_bandG[k] = new THREE.RingGeometry(A2_inR()+0.2, AR()-0.15, 16, 1, -a1, TAU/n).rotateX(-Math.PI/2); return OBJ_bandG[k]; }
+function OBJ_aloftStart(n){ var sz = OBJ_size(); OBJ.a = {events:5 + (sz>1 ? sz-1 : 0), done:0, saved:0, maxLost:3, limit:10.5, next:2.5, ev:null, rodK:Math.floor(Math.random()*3)};
+  OBJ_hint('obj_aloft', 3.2); }
+function OBJ_aloftNext(){ var A = OBJ.a, n = A2_nSec();
+  for(var t=0;t<3;t++){ var j = (A.rodK + t) % 3, R = A2.rods[j], c = [(R.sec+1)%n, (R.sec+n-1)%n].filter(function(s){ return A2.sec[s] && A2.sec[s].st==='solid'; });
+    if(!c.length) continue; A.rodK = (j+1)%3; var s = pick(c), el = OBJ_freeEl(1.0, null);
+    A2_setSec(s, 'crack'); var band = new THREE.Mesh(OBJ_band(s), addMat(ELC[el], 0.22)); band.position.y = 0.09; band.renderOrder = 6; scene.add(band);
+    var oc = OC_make({x:R.x, z:R.z, el:el, zone:3.4, gemY:3.4, r:0.5, dash:true, tag:'rod'}); R.st = 'objective';
+    A.ev = {s:s, j:j, el:el, t:0, band:band, oc:oc}; oc.onSpend = function(){ OBJ_aloftSave(); };
+    var a = (s+0.5)*TAU/n; rocks(Math.cos(a)*11.9*SPIRE_K, 0.3, Math.sin(a)*11.9*SPIRE_K, 10, 0x4a4a52, 4); SFX.slam(); shake(0.25); A2_call('crowd', 'gasp');
+    dmgText(R.x, 4.6, R.z, 'CHARGE '+({flame:'FLAME', frost:'FROST', storm:'STORM'})[el], ELCSS[el], 18); return true; }
+  return false; }
+function OBJ_aloftResolve(saved){ var A = OBJ.a, E = A.ev; if(!E) return; scene.remove(E.band); OC_kill(E.oc); var R = A2.rods[E.j]; if(R.st==='objective') R.st = 'idle'; A.ev = null; A.done++; A.next = 2.2;
+  if(saved){ A.saved++; A2_setSec(E.s, 'solid'); var n = A2_nSec(), a = (E.s+0.5)*TAU/n; ringBurst(Math.cos(a)*11.9*SPIRE_K, Math.sin(a)*11.9*SPIRE_K, 2.6, 18, ELC[E.el]); burst(R.x, 2.4, R.z, 30, ELC[E.el], 8, 0.6, 1.4);
+    if(typeof PIL_blast==='function') PIL_blast(R.x, R.z, E.el); OBJ_markBlast(R.x, R.z, 4.2, E.el, 26 + 4*G.wave, 5); SFX.slam(); if(SFX.absorb) SFX.absorb(E.el); shake(0.3);
+    dmgText(R.x, 4.4, R.z, 'REFORGED', ELCSS[E.el], 22); crowdCheer = Math.max(crowdCheer, 0.7); A2_call('crowd', 'cheer'); A2_fav(10, 'Sector saved'); }
+  else { var s = A2.sec[E.s]; if(s && s.st==='crack') s.t = 3.0; OBJ.lost++; OBJ.flawless = false; dmgText(R.x, 4.2, R.z, 'SECTOR LOST '+OBJ.lost+'/'+A.maxLost, '#d8a878', 18); } }
+function OBJ_aloftSave(){ OBJ_aloftResolve(true); }
+function OBJ_aloftStep(dt){ var A = OBJ.a; if(!A) return; var E = A.ev;
+  if(E){ E.t += dt; var s = A2.sec[E.s], k = Math.min(1, E.t/A.limit); if(s && s.st==='crack') s.t = Math.min(2.9, 2.9*k); E.band.material.opacity = 0.16 + 0.22*k*(0.6+0.4*Math.sin(G.rt*(6+k*10)));
+    if(!s || s.st!=='crack' || E.t >= A.limit) OBJ_aloftResolve(false); }
+  else if(A.done < A.events){ A.next -= dt; if(A.next <= 0){ if(!OBJ_aloftNext()) A.done = A.events; } }
+  if(OBJ.lost >= A.maxLost) OBJ_broken('Three sectors fell');
+  else if(A.done >= A.events && !A.ev) OBJ_won(); }
+
+/* =====================================================================================
+   G1 · BLOOM GUARD (Act III)
+   ===================================================================================== */
+var OBJ_soilG = new THREE.CylinderGeometry(1.2, 1.35, 0.34, 10), OBJ_rimG = new THREE.TorusGeometry(1.3, 0.11, 5, 16).rotateX(Math.PI/2), OBJ_stemG = new THREE.CylinderGeometry(0.09, 0.14, 1, 6),
+  OBJ_leafG = new THREE.ConeGeometry(0.22, 0.8, 4), OBJ_petalG = new THREE.SphereGeometry(0.42, 8, 6), OBJ_budG = new THREE.SphereGeometry(0.3, 8, 6), OBJ_coreG = new THREE.SphereGeometry(0.3, 10, 8);
+var OBJ_soilM = null, OBJ_stoneM = null, OBJ_leafM = null, OBJ_wiltM = null;
+function OBJ_bedMesh(b){ if(!OBJ_soilM){ OBJ_soilM = phong(0x5a4330, 0x120a04); OBJ_stoneM = phong(0x8e967a, 0x10120c); OBJ_leafM = phong(0x4f8a36, 0x0a1a06); OBJ_wiltM = phong(0x6a5a3a, 0x0a0806); }
+  var g = new THREE.Group(), soil = new THREE.Mesh(OBJ_soilG, OBJ_soilM); soil.position.y = 0.17; g.add(soil); var rim = new THREE.Mesh(OBJ_rimG, OBJ_stoneM); rim.position.y = 0.34; g.add(rim);
+  var stem = new THREE.Mesh(OBJ_stemG, OBJ_leafM); g.add(stem); var leaves = []; for(var l=0;l<4;l++){ var lf = new THREE.Mesh(OBJ_leafG, OBJ_leafM); lf.rotation.z = l%2 ? 1 : -1; lf.rotation.y = l*1.6; g.add(lf); leaves.push(lf); }
+  var bud = new THREE.Mesh(OBJ_budG, OBJ_bmat(ELC[b.el])); g.add(bud); var head = new THREE.Group(); for(var p=0;p<7;p++){ var pt = new THREE.Mesh(OBJ_petalG, OBJ_bmat(ELC[b.el])); pt.scale.set(1, 0.35, 0.6); var pa = p/7*TAU; pt.position.set(Math.cos(pa)*0.6, 0, Math.sin(pa)*0.6); pt.rotation.y = -pa; head.add(pt); }
+  head.add(new THREE.Mesh(OBJ_coreG, OBJ_bmat(0xf2d27a))); var hh = new THREE.Mesh(OBJ_haloG, addMat(ELC[b.el], 0.14)); hh.scale.setScalar(1.4); head.add(hh); head.visible = false; g.add(head);
+  g.position.set(b.x, 0, b.z); scene.add(g); b.g = g; b.stem = stem; b.leaves = leaves; b.bud = bud; b.head = head; OBJ_bedPose(b, 0); }
+function OBJ_bedPose(b, grow){ var h = b.st==='bloom' ? 2.7 : b.st==='wilt' ? 0.35 : 0.55 + 0.5*grow; b.stem.scale.set(1, h, 1); b.stem.position.y = 0.34 + h/2;
+  for(var l=0;l<b.leaves.length;l++){ var lf = b.leaves[l]; lf.visible = b.st!=='wilt' && (b.st==='bloom' || l < 2); lf.position.set(Math.cos(l*1.6)*0.28, 0.5 + l*0.4*(h/2.7) + 0.1, Math.sin(l*1.6)*0.28); }
+  b.bud.visible = b.st==='seed'; b.bud.position.y = 0.34 + h + 0.1; b.bud.scale.setScalar(0.8 + 0.6*grow); b.head.visible = b.st==='bloom'; b.head.position.y = 0.34 + h;
+  if(b.st==='wilt'){ b.stem.material = OBJ_wiltM; b.stem.rotation.z = 0.9; } }
+function OBJ_bloomStart(n){ var sz = OBJ_size(), nb = sz>1 ? 4 : 3, R = 9.0, a0 = sz>1 ? 0 : Math.PI/2, cols = shuffle(EL.slice()); if(nb>3) cols.push(pick(EL));
+  OBJ.b = {need:3, maxLost:2, bloomed:0, beds:[], dmg:10 + 2*n, every:0.85};
+  for(var i=0;i<nb;i++){ var a = a0 + i*TAU/nb, b = {x:Math.cos(a)*R, z:Math.sin(a)*R, el:cols[i], st:'seed', hp:8, max:8, fireT:0.5, flash:0};
+    b.tg = {x:b.x, z:b.z, r:1.2, isAltar:true, isSeed:true, seed:b, dead:false}; OBJ_bedMesh(b);
+    b.oc = OC_make({x:b.x, z:b.z, el:b.el, need:5, zone:3.2, gemY:2.6, r:1.2, tag:'seed', onFull:(function(bb){ return function(){ OBJ_bloomFull(bb); }; })(b)}); OBJ.b.beds.push(b); }
+  OBJ_hint('obj_bloom', 1.4); }
+function OBJ_bloomFull(b){ b.st = 'bloom'; b.tg.dead = true; OBJ.b.bloomed++; OC_kill(b.oc); b.oc = null; OBJ_bedPose(b, 1);
+  burst(b.x, 2.6, b.z, 30, ELC[b.el], 7, 0.7, 1.4); ringBurst(b.x, b.z, 3.2, 20, ELC[b.el], 0.5); dmgText(b.x, 3.6, b.z, 'BLOOMED!', ELCSS[b.el], 21); SFX.pick(); crowdCheer = Math.max(crowdCheer, 0.7);
+  if(typeof GARDEN!=='undefined' && GARDEN.horn) try{ GARDEN.horn(); }catch(e){} }
+function OBJ_bite(b, e){ if(b.st!=='seed') return; b.hp--; b.flash = 0.2; dmgText(b.x, 2.0, b.z, 'BITE '+b.hp+'/'+b.max, '#d8a878', 15); burst(b.x, 0.9, b.z, 6, 0x4f8a36, 3, 0.3, 1); SFX.hit(false);
+  if(b.hp <= 0){ b.st = 'wilt'; b.tg.dead = true; if(b.oc){ OC_kill(b.oc); b.oc = null; } OBJ.lost++; OBJ.flawless = false; OBJ_bedPose(b, 0); dmgText(b.x, 2.6, b.z, 'WILTED '+OBJ.lost+'/'+OBJ.b.maxLost, '#d8a878', 19); SFX.slam(); } }
+function OBJ_bloomStep(dt){ var B = OBJ.b; if(!B) return;
+  for(var i=0;i<B.beds.length;i++){ var b = B.beds[i]; if(b.flash > 0) b.flash -= dt;
+    if(b.st==='seed' && b.oc) OBJ_bedPose(b, b.oc.n/b.oc.need);
+    if(b.st==='bloom'){ b.head.rotation.y += dt*0.8; b.fireT -= dt; if(b.fireT <= 0){ b.fireT = B.every; var tg = null, td = 10;
+        for(var k=0;k<enemies.length;k++){ var e = enemies[k]; if(e.dead || e.spawnT>0 || e.invuln || e.nc) continue; var d = Math.hypot(e.x-b.x, e.z-b.z); if(d < td){ td = d; tg = e; } }
+        if(tg){ var dx = tg.x-b.x, dz = tg.z-b.z, dl = Math.hypot(dx, dz)||1, dm = B.dmg*(OBJ_size()>1 ? 0.6 : 1);
+          spawnPProj(b.x+dx/dl*0.9, b.z+dz/dl*0.9, dx/dl, dz/dl, 17, dm, 0, 'bolt', b.el, false); if(typeof RX_apply==='function' && typeof RX!=='undefined' && RX.on && typeof RX_okP==='function' && RX_okP() && Math.random()<0.5) RX_apply(tg, b.el, 1, 0, 1, true); } } } }
+  if(OBJ.lost >= B.maxLost) OBJ_broken('Two seedlings wilted');
+  else if(B.bloomed >= B.need) OBJ_won(); }
+function OBJ_seedFor(e){ var B = OBJ.b, best = null, bd = 11; if(!B) return null; for(var i=0;i<B.beds.length;i++){ var b = B.beds[i]; if(b.st!=='seed') continue; var d = Math.hypot(b.x-e.x, b.z-e.z); if(d < bd){ bd = d; best = b; } } return best; }
+var OBJ_et0 = enemyTarget;
+enemyTarget = function(e){ if(OBJ.b && G.round==='bloom' && G.waveActive && e && e.type==='imp' && !e.elite){ if(e.nib==null) e.nib = Math.random() < 0.55;
+    if(e.nib){ var b = OBJ_seedFor(e), h = OBJ_nearHero(e.x, e.z, 3.2); if(b && !h) return b.tg; } }
+  return OBJ_et0.apply(this, arguments); };
+var OBJ_mh0 = meleeHit;
+meleeHit = function(e, tg, dmg, el, o){ if(tg && tg.isSeed){ OBJ_bite(tg.seed, e); return 'altar'; } return OBJ_mh0.apply(this, arguments); };
+
+/* =====================================================================================
+   PARTY AI: go to the objective that matches the shared ward
+   ===================================================================================== */
+if(typeof PTY_think==='function'){ var OBJ_th0 = PTY_think;
+  PTY_think = function(h){ var out = OBJ_th0.apply(this, arguments); try{ OBJ_ally(h, out); }catch(err){ if(DEV) console.warn('obj ally', err); } return out; }; }
+function OBJ_ally(h, out){ if(!OBJ.on || !G.waveActive || !(out.state==='Engage' || out.state==='Anchor')) return; var me = h.st, goal = null, gd = 99, i, d;
+  if(OBJ.g){ for(i=0;i<OBJ.g.fly.length;i++){ var F = OBJ.g.fly[i]; if(F.el!==me.ward) continue; d = Math.hypot(F.tx-me.x, F.tz-me.z); var c = OBJ_nearHero(F.tx, F.tz, 1.2); if(c && c!==me) continue; if(d < 9 && d < gd){ gd = d; goal = {x:F.tx, z:F.tz, r:0.5}; } } }
+  for(i=0;i<OC.length;i++){ var o = OC[i]; if(!o.on || OC_full(o) || o.el!==me.ward) continue; d = Math.hypot(o.x-me.x, o.z-me.z); if(d < 15 && d < gd){ gd = d; var ux = (me.x-o.x)/(d||1), uz = (me.z-o.z)/(d||1); goal = {x:o.x+ux*1.9, z:o.z+uz*1.9, r:0.6}; } }
+  if(!goal && OBJ.b){ for(i=0;i<enemies.length;i++){ var e = enemies[i]; if(e.dead || !e.nib) continue; var b = OBJ_seedFor(e); if(!b) continue; d = Math.hypot(b.x-me.x, b.z-me.z); if(Math.hypot(e.x-b.x, e.z-b.z) < 5 && d < gd){ gd = d; goal = {x:b.x, z:b.z, r:2.2}; } } }
+  if(!goal) return; var mx = goal.x-me.x, mz = goal.z-me.z, l = Math.hypot(mx, mz);
+  if(G.act===2 && typeof A2_unsafe==='function' && l > 0.3 && A2_unsafe(me.x+mx/l*1.3, me.z+mz/l*1.3)) return;
+  if(l > goal.r){ out.mv.x = mx/l; out.mv.z = mz/l; } else { out.mv.x = 0; out.mv.z = 0; } out.state = 'Objective'; }
+
+/* =====================================================================================
+   STEP / HUD / RENDER
+   ===================================================================================== */
+STEP_HOOKS.push(function OBJ_step(dt){ if(!OBJ.on || !G.waveActive || !P || P.dead) return; OC_step(dt);
+  if(OBJ.kind==='gift') OBJ_giftStep(dt); else if(OBJ.kind==='aloft') OBJ_aloftStep(dt); else if(OBJ.kind==='bloom') OBJ_bloomStep(dt); });
+RENDER_HOOKS.push(function(){ if(OC.length) OC_render(); });
+var OBJ_uh0 = updateHud;
+updateHud = function(){ var rt = G.round; if(!OBJ_OWN[rt] || !P) return OBJ_uh0.apply(this, arguments); var r;
+  G.round = 'boss'; try { r = OBJ_uh0.apply(this, arguments); } finally { G.round = rt; }
+  if(G.waveActive && OBJ.on){ var f = 0, t = '';
+    if(OBJ.g){ f = OBJ.g.caught/OBJ.g.need; t = 'CAUGHT '+OBJ.g.caught+' / '+OBJ.g.need+'  ·  DROPS '+OBJ.drops+' / '+OBJ.g.maxDrop; }
+    else if(OBJ.a){ f = OBJ.a.done/OBJ.a.events; t = 'CRACKS '+OBJ.a.done+' / '+OBJ.a.events+'  ·  LOST '+OBJ.lost+' / '+OBJ.a.maxLost; }
+    else if(OBJ.b){ f = OBJ.b.bloomed/OBJ.b.need; t = 'BLOOMED '+OBJ.b.bloomed+' / '+OBJ.b.need+'  ·  WILTED '+OBJ.lost+' / '+OBJ.b.maxLost; }
+    $('objFill').style.width = (clamp(f,0,1)*100)+'%'; setTxt('objTxt', t); }
+  return r; };
+
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.obj = { OBJ:OBJ, OC:OC,
+  state:function(){ return {on:OBJ.on, kind:OBJ.kind, st:OBJ.st, drops:OBJ.drops, lost:OBJ.lost, flawless:OBJ.flawless, wave:G.wave, round:G.round, active:G.waveActive, ruin:P ? P.ruin : 0, stake:G.stake,
+    gift:OBJ.g ? {caught:OBJ.g.caught, need:OBJ.g.need, fly:OBJ.g.fly.map(function(f){ return {el:f.el, x:f.tx, z:f.tz, t:f.t, dur:f.dur}; })} : null,
+    aloft:OBJ.a ? {done:OBJ.a.done, events:OBJ.a.events, saved:OBJ.a.saved, ev:OBJ.a.ev ? {el:OBJ.a.ev.el, x:OBJ.a.ev.oc.x, z:OBJ.a.ev.oc.z, n:OBJ.a.ev.oc.n} : null} : null,
+    bloom:OBJ.b ? {bloomed:OBJ.b.bloomed, beds:OBJ.b.beds.map(function(b){ return {el:b.el, x:b.x, z:b.z, st:b.st, hp:b.hp, n:b.oc ? b.oc.n : 0}; })} : null}; },
+  broken:function(){ OBJ_broken('Test'); return OBJ.st; }, altar:function(){ G.round = 'altar'; showAltar(); var g0 = G.god; G.god = false; damageAltar(99999); G.god = g0; return {st:OBJ.st, dead:P.dead, ruin:P.ruin, active:G.waveActive}; }, win:function(){ OBJ_won(); return OBJ.st; } }; }
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
-  move:function(){ return G.touch ? 'Drag on the left to move. You attack automatically.' : '<b class="kc">'+kl('KeyW')+'</b><b class="kc">'+kl('KeyA')+'</b><b class="kc">'+kl('KeyS')+'</b><b class="kc">'+kl('KeyD')+'</b> move &nbsp;•&nbsp; hold <b class="kc">🖱</b> to attack'; },
+  move:function(){ return G.touch ? 'Drag on the left to move. You attack automatically.' : '<b class="kc">'+kl('KeyW')+'</b><b class="kc">'+kl('KeyA')+'</b><b class="kc">'+kl('KeyS')+'</b><b class="kc">'+kl('KeyD')+'</b> move &nbsp;•&nbsp; hold <b class="kc">'+ICON('mouse')+'</b> to attack'; },
   ward:function(){ return 'Your ward absorbs attacks of <b style="color:'+ELCSS.flame+'">its own color</b>. Absorbing charges Overload!'; },
   switch:function(){ return G.touch ? 'Tap the matching <b>ward</b> to absorb that color!' : 'Switch wards to match the color: <b class="kc">1</b>'+ICON('flame')+' <b class="kc">2</b>'+ICON('frost')+' <b class="kc">3</b>'+ICON('storm')+' (or mouse wheel)'; },
   pillar:function(){ return 'Pillars block bolts for a while, but enemies wear them down. Keep moving!'; },
@@ -19217,7 +19609,7 @@ function updateHudStatic(){ var c=$('curses'); c.innerHTML=''; var many=(G.curse
   var showRuin = CT('ruin')>0 || CT('stalk')>0 || (P&&P.ruin>0); $('ruin').hidden=!showRuin; updateRuinHud();
   if(G.round && G.round!=='boss'){ $('objName').textContent = OBJS[G.round].name; $('objBar').className = 'bar obj'+(G.round==='survive'?' timer':''); } }
 function updateRuinHud(){ var r=$('ruin'); if(!r.children.length){ for(var i=0;i<7;i++){ var s=document.createElement('span'); s.innerHTML=ICON('helm'); r.appendChild(s); } } var n=P?P.ruin:0; for(var j=0;j<7;j++) r.children[j].classList.toggle('on', j<n); if(P && P.ruin>0) r.hidden=false; }
-function refreshSkills(){ if(!P) return; for(var s=0;s<2;s++){ var el=$('sk'+s), sp=P.spells[s]; el.classList.toggle('empty',!sp); el.querySelector('.ico').textContent = sp?SPELLS[sp.id].icon:'＋'; } }
+function refreshSkills(){ if(!P) return; for(var s=0;s<2;s++){ var el=$('sk'+s), sp=P.spells[s]; el.classList.toggle('empty',!sp); el.querySelector('.ico').innerHTML = sp?SPELLS[sp.id].icon:'＋'; } }
 function fmtT(s){ s=Math.max(0,Math.ceil(s)); return s>=60 ? Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60) : s+'s'; }
 function updateHud(){ if(!P) return; $('hpFill').style.width = (P.hp/P.maxHp*100)+'%'; setTxt('hpTxt', Math.ceil(P.hp)+' / '+P.maxHp); $('ovFill').style.width = P.over+'%'; $('ovBar').classList.toggle('ready', P.over>=100); $('skR').classList.toggle('ready', P.over>=100);
   $('skR').querySelector('.cdv').style.height = (100-P.over)+'%';
@@ -19232,7 +19624,7 @@ function updateHud(){ if(!P) return; $('hpFill').style.width = (P.hp/P.maxHp*100
     $('objFill').style.width = (clamp(f,0,1)*100)+'%'; setTxt('objTxt', t); }
   for(var s=0;s<2;s++){ var sp=P.spells[s]; $('sk'+s).querySelector('.cdv').style.height = sp&&sp.cd>0 ? (sp.cd/spellCd(sp)*100)+'%' : '0%'; }
   $('skD').querySelector('.cdv').style.height = P.dashCh>0 ? '0%' : ((1-P.dashCd/(1.4*P.dashCdMul*G.mods.dashcd))*100)+'%'; setTxt('dashN', P.dashMax>1 ? 'x'+P.dashCh : '');
-  var st=''; if(P.bleed>0) st+='<div class="bad">🩸 BLEED</div>'; if(P.chill>0) st+='<div class="bad">❄ SLOWED</div>'; if(P.stun>0) st+='<div class="bad">💫 STUNNED</div>'; if(impotent()) st+='<div class="bad">🚫 NO DAMAGE</div>'; if(G.heart) st+='<div class="bad">⛓ TETHERED</div>'; if(G.timestop) st+='<div class="bad">⏱ TIME STOPPED</div>'; if(P.guard>0) st+='<div class="good">🛡 GUARD ×'+P.guard+'</div>'; if(P.prevT>0) st+='<div class="good">'+ELICO[P.prevWard]+' AFTERGLOW</div>'; if(G.escDmg>0) st+='<div class="bad">📈 +'+Math.round(G.escDmg*100)+'% DMG TAKEN</div>'; setHtml('status', st);
+  var st=''; if(P.bleed>0) st+='<div class="bad">'+ICON('bleed')+' BLEED</div>'; if(P.chill>0) st+='<div class="bad">'+ICON('frost')+' SLOWED</div>'; if(P.stun>0) st+='<div class="bad">'+ICON('stun')+' STUNNED</div>'; if(impotent()) st+='<div class="bad">'+ICON('nodmg')+' NO DAMAGE</div>'; if(G.heart) st+='<div class="bad">'+ICON('tether')+' TETHERED</div>'; if(G.timestop) st+='<div class="bad">'+ICON('timestop')+' TIME STOPPED</div>'; if(P.guard>0) st+='<div class="good">'+ICON('shield')+' GUARD ×'+P.guard+'</div>'; if(P.prevT>0) st+='<div class="good">'+ELICO[P.prevWard]+' AFTERGLOW</div>'; if(G.escDmg>0) st+='<div class="bad">'+ICON('rising')+' +'+Math.round(G.escDmg*100)+'% DMG TAKEN</div>'; setHtml('status', st);
   var low = P.hp < P.maxHp*0.3 && !P.dead; $('vig').style.boxShadow = P.hurtT>0 ? 'inset 0 0 140px rgba(255,0,30,.55)' : (low ? 'inset 0 0 '+(90+Math.sin(G.rt*6)*30)+'px rgba(255,0,30,.35)' : 'inset 0 0 120px rgba(0,0,0,.35)'); }
 
 /* ---------- input ---------- */
