@@ -10932,7 +10932,7 @@ var HX_CARDS = [
  /* 6 ---------- spells, auto-cast, Overload ---------- */
  { id:'spells', tag:'Skills & Overload', cap:'Fig. 6 · skill bar', title:'Skills, spells, Overload',
    text:function(){ var c = HX_cls(), u = CLASSES[c].ult, k = (typeof CSKILL!=='undefined' ? CSKILL.equipped(c) : []).map(function(id){ var d = CSKILL.def(id); return d ? '<b>'+d.name+'</b> ('+String(d.role).toLowerCase()+')' : ''; }).filter(Boolean).join(' and ');
-     return 'Every class has <b>two class skills</b>'+(k ? ': '+k : '')+'. Choose them in the Armoury. '+(G.touch ? 'Spells you win sit beside them; hold one to auto-cast. Absorbs fill <b style="color:'+HX_C.gold+'">Overload</b>: tap it for '+u+'.' : 'Spells you win go on <b>'+kl('KeyF')+'</b> / <b>'+kl('KeyT')+'</b>. Absorbs fill <b style="color:'+HX_C.gold+'">Overload</b>: <b>'+kl('KeyR')+'</b> unleashes '+u+'.'); },
+     return 'Every class has <b>two class skills</b>'+(k ? ': '+k : '')+'. Choose them in the Armoury. '+(G.touch ? 'Spells you win sit beside them. <b>Auto-cast</b> (pause menu) fires everything but movement when it makes sense; hold a slot to set it by hand. Absorbs fill <b style="color:'+HX_C.gold+'">Overload</b>: tap it for '+u+'.' : 'Spells you win go on <b>'+kl('KeyF')+'</b> / <b>'+kl('KeyT')+'</b>. <b>Auto-cast</b> (pause menu) fires everything but movement when it makes sense. Absorbs fill <b style="color:'+HX_C.gold+'">Overload</b>: <b>'+kl('KeyR')+'</b> unleashes '+u+'.'); },
    keys:function(){ return G.touch ? HX_krow(HX_slotK('meteor','#ff8a3d'), 'Hold a spell: auto-cast on or off')+HX_krow(HX_slotK('ult_'+HX_cls(),'#ffd27a'), 'Tap the full gauge: ultimate') :
      HX_krow(HX_kc(kl('KeyQ'))+HX_kc(kl('KeyE')), 'Class skills · hold or right-click: auto-cast')+HX_krow(HX_kc(kl('KeyF'))+HX_kc(kl('KeyT')), 'Spells you win in the run')+HX_krow(HX_kc(kl('KeyR')), 'Ultimate when Overload is full'); },
    spr:function(){ return ['hero_idle','hero_ult','ca_storm','imp_storm','b_storm']; },
@@ -15887,7 +15887,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:07',h:'5b16f72'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:22',h:'277a4cc'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -17798,6 +17798,154 @@ if(typeof HX_CARDS!=='undefined' && typeof PARTY!=='undefined') HX_CARDS.forEach
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.tut = {TUT:TUT, show:function(a){ return TUT_show(a||1); }, close:function(){ TUT_close(); return TUT.open; },
   seen:function(){ return JSON.parse(JSON.stringify(TUT_s())); }, reset:function(){ save.tut = {}; persist(); return save.tut; }, off:function(v){ window.__TUT_OFF = v!==false; return window.__TUT_OFF; } }; }
 // 73-garden.js — Thornwall Garden arena (Act III look), NPCs, hub gates
+/* ---------- 74 SMART AUTO-CAST (owned by the auto-cast agent). Prefix AC_. ----------
+   One master toggle (pause menu "Auto-cast: ON/OFF") lets the controlled hero cast every class skill (Q/E), every run spell (F/T) and the
+   Overload ultimate (R) by itself, but only when the moment makes sense (rules per tag below). Per-slot overrides stay: right-click / hold the key /
+   long-press a slot (R: right-click / long-press). An override is stored in the old per-slot keys (save.cos.auto.s0/s1, save.skills.auto.c0/c1, save.ac.u);
+   unset = follow the master. Clicking the master clears every override.
+   Save: save.ac = {on:1/0 (unset = ON), u:1/0 (ult override)}. Predeclared here, before loadSave runs.
+   Tags:  heal   - below 60% HP (Hearthmend also tops up hurt allies near you)
+          shield - a coloured bolt is about to hit you, or 2+ foes are in contact
+          guard  - Iron Vow: a pack of 3+ around you (or around an ally)
+          aoe    - 3+ foes (elites count double) in the blast, or a boss/elite in reach for the big ones
+          chain  - a boss/elite in reach or 3+ foes in reach
+          single - a boss/elite in range (aimed at it), else a line through 3+ foes
+          buff   - Ember Familiar: a boss/elite or 3+ foes near, and no sprite out yet
+          move   - Blink, Crowdbreaker and anything that moves the hero: never auto-cast
+          ult    - Overload full and a boss/elite or a pack of 5+ inside the ult's reach
+   The old 0.1 s loops in 34-visuals (spells) and 68-skills (class skills) are parked by AC_pre so only this one runs for the player.
+   AI allies are untouched: they keep CSKILL.aiWants / their party AI. Nothing is cast while paused, in menus, offerings, the loadout or the arena briefing. */
+if(!save.ac || typeof save.ac!=='object' || Array.isArray(save.ac)) save.ac = {};
+var AC_st = {t:0, gap:0, badgeT:0, log:{}, lp:null, lpId:null};
+var AC_TAG = {mend:'heal', kiln:'shield', mirror:'shield', attune:'shield', stone:'shield', vow:'guard', nova:'aoe', well:'aoe', shackles:'aoe', rime:'aoe', meteor:'aoe',
+  chain:'chain', lance:'single', longdraw:'single', familiar:'buff', blink:'move', vault:'move', dash:'move'};
+var AC_PRIO = {heal:0, shield:1, guard:2, ult:3, aoe:4, chain:5, single:6, buff:7};
+function AC_s(){ var s = save.ac; if(!s || typeof s!=='object' || Array.isArray(s)) s = save.ac = {}; return s; }
+function AC_master(){ var v = AC_s().on; return v==null ? true : !!v; }
+function AC_tagOf(id){ if(!id) return 'aoe'; if(AC_TAG[id]) return AC_TAG[id];
+  var D = typeof CSK_DEF!=='undefined' ? CSK_DEF[id] : null, role = (D && D.role) || (D && D.base && typeof VX_meta==='function' ? VX_meta(D.base).role : '') || (typeof VX_meta==='function' && SPELLS[id] ? VX_meta(id).role : '') || '';
+  if(D && D.base && AC_TAG[D.base]) return AC_TAG[D.base];
+  role = String(role).toUpperCase();
+  if(/MOBIL|LEAP|DASH|BLINK|TELEPORT|CHARGE|JUMP/.test(role)) return 'move';
+  if(/HEAL/.test(role)) return 'heal'; if(/SHIELD|DEFEN|GUARD|WARD/.test(role)) return 'shield';
+  if(/CONTROL|AREA|SLOW|ROOT/.test(role)) return 'aoe'; if(/SNIPE|DAMAGE/.test(role)) return 'single'; if(/BUFF|SUMMON/.test(role)) return 'buff';
+  return 'aoe'; }
+
+/* ---------- per-slot state: unset = master; movement never ---------- */
+function AC_skId(s){ try{ var k = P && typeof CSK_of==='function' ? CSK_of(P) : null; return k && k[s] ? k[s].id : null; }catch(e){ return null; } }
+function AC_spId(s){ return P && P.spells && P.spells[s] ? P.spells[s].id : null; }
+var AC_vOn0 = VX_autoOn;
+VX_autoOn = function(s){ var id = AC_spId(s); if(id && AC_tagOf(id)==='move') return false; var v = VX_auto()['s'+s]; return v==null ? AC_master() : !!v; };
+var AC_cOn0 = CSK_autoOn;
+CSK_autoOn = function(s){ var id = AC_skId(s); if(id && AC_tagOf(id)==='move') return false; var v = CSK_s().auto['c'+s]; return v==null ? AC_master() : !!v; };
+function AC_ultOn(){ var v = AC_s().u; return v==null ? AC_master() : !!v; }
+function AC_noMove(){ if(G.state==='play' && P && !P.dead) dmgText(P.x, 2.6, P.z, 'MOVEMENT: MANUAL ONLY', '#b9a79a', 16); SFX.click(); }
+var AC_cTog0 = CSK_toggleAuto;
+CSK_toggleAuto = function(s){ var id = AC_skId(s); if(id && AC_tagOf(id)==='move') return AC_noMove(); var r = AC_cTog0.apply(this, arguments); AC_ui(); return r; };
+var AC_vTog0 = VX_toggleAuto;
+VX_toggleAuto = function(s){ var held = typeof VX!=='undefined' && VX.kd && ((s===0 && VX.kd.KeyQ) || (s===1 && VX.kd.KeyE));
+  if(!held){ var id = AC_spId(s); if(id && AC_tagOf(id)==='move') return AC_noMove(); }
+  var r = AC_vTog0.apply(this, arguments); AC_ui(); return r; };
+function AC_toggleUlt(){ var on = !AC_ultOn(); AC_s().u = on ? 1 : 0; persist(); AC_ui(); if(G.state==='play' && P && !P.dead) dmgText(P.x, 2.6, P.z, 'AUTO-CAST '+kl('KeyR')+(on ? ' ON' : ' OFF'), on ? '#ffd27a' : '#b9a79a', 16); SFX.click(); }
+function AC_setMaster(on){ AC_s().on = on ? 1 : 0; delete AC_s().u; var a = VX_auto(); delete a.s0; delete a.s1; var c = CSK_s().auto; delete c.c0; delete c.c1; persist();
+  if(P) refreshSkills(); VX_autoUi(); AC_ui(); }
+
+/* ---------- targeting helpers (P is the controlled hero) ---------- */
+function AC_big(R){ var best = null, bd = R; for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(!VX_live(e) || !(e.type==='boss' || e.elite)) continue; var d = Math.hypot(e.x-P.x, e.z-P.z) - (e.r||0.5); if(d < bd){ bd = d; best = e; } } return best; }
+function AC_pt(t){ return t ? {x:t.x, z:t.z} : null; }
+function AC_me(){ return {x:P.x, z:P.z}; }
+function AC_line(R, w, minSc){ var best = null, bs = 0; for(var i=0;i<enemies.length;i++){ var e = enemies[i]; if(!VX_live(e)) continue; var d = Math.hypot(e.x-P.x, e.z-P.z); if(d > R || d < 0.6) continue;
+    var ux = (e.x-P.x)/d, uz = (e.z-P.z)/d, sc = 0; for(var j=0;j<enemies.length;j++){ var o = enemies[j]; if(!VX_live(o)) continue; if(segDist(o.x, o.z, P.x, P.z, P.x+ux*R, P.z+uz*R) < w+o.r) sc += (o.elite || o.type==='brute' || o.type==='boss') ? 2 : 1; }
+    if(sc > bs){ bs = sc; best = e; } } return best && bs >= minSc ? {x:best.x, z:best.z, n:bs} : null; }
+/* returns {x, z, why} or null */
+function AC_want(id, tag){ var b, c, n;
+  switch(tag){
+    case 'move': return null;
+    case 'heal': if(id==='mend'){ c = CSK_wantId(P, 'mend'); return c ? {x:c.x, z:c.z, why:P.hp < P.maxHp*0.6 ? 'hp<60%' : 'ally hurt'} : null; }
+      return P.hp < P.maxHp*0.6 ? {x:P.x, z:P.z, why:'hp<60%'} : null;
+    case 'shield':
+      if(id==='kiln'){ c = CSK_wantId(P, 'kiln'); return c ? {x:c.x, z:c.z, why:CSK_threat(P, 4.5) ? 'hit incoming' : 'foes close'} : null; }
+      if(id==='mirror' || id==='attune' || id==='stone'){ c = VX_target(id); return c ? {x:c.x, z:c.z, why:'hit incoming'} : null; }
+      if(CSK_threat(P, 4.5) >= 1) return {x:P.x, z:P.z, why:'hit incoming'}; return CSK_count(P.x, P.z, 2.6) >= 2 ? {x:P.x, z:P.z, why:'foes close'} : null;
+    case 'guard': c = CSK_wantId(P, id==='vow' ? 'vow' : id); if(c) return {x:c.x, z:c.z, why:'pack'}; return CSK_count(P.x, P.z, 6) >= 3 ? {x:P.x, z:P.z, why:'pack'} : null;
+    case 'aoe':
+      if(id==='nova'){ n = CSK_count(P.x, P.z, 4.2); if(n >= 3) return {x:P.x, z:P.z, why:'pack x'+n}; if(VX_incoming(3.8, 3) >= 3) return {x:P.x, z:P.z, why:'bolt swarm'}; return AC_big(3.6) ? {x:P.x, z:P.z, why:'elite close'} : null; }
+      if(id==='rime'){ c = CSK_cluster(P.x, P.z, 12, 4); if(c && c.n >= 3) return {x:c.x, z:c.z, why:'pack x'+c.n}; b = AC_big(11); return b ? {x:b.x, z:b.z, why:b.type==='boss' ? 'boss' : 'elite'} : null; }
+      if(id==='meteor'){ c = VX_cluster(10, 2.5, 3); if(c) return {x:c.x, z:c.z, why:'pack'}; b = AC_big(10); return b ? {x:b.x, z:b.z, why:b.type==='boss' ? 'boss' : 'elite'} : null; }
+      if(id==='well'){ c = VX_cluster(9, 3.5, 3); return c ? {x:c.x, z:c.z, why:'pack'} : null; }
+      if(id==='shackles'){ c = VX_cluster(9, 3, 3); return c ? {x:c.x, z:c.z, why:'pack'} : null; }
+      c = VX_cluster(9, 3, 3); return c ? {x:c.x, z:c.z, why:'pack'} : null;
+    case 'chain': b = AC_big(11); if(b) return {x:b.x, z:b.z, why:b.type==='boss' ? 'boss' : 'elite'}; n = CSK_count(P.x, P.z, 11); if(n >= 3){ c = nearestEnemy(P.x, P.z, 11); return c ? {x:c.x, z:c.z, why:'pack x'+n} : null; } return null;
+    case 'single': { var R = id==='longdraw' ? 24 : id==='lance' ? 12.5 : 12; b = AC_big(R - 0.5); if(b) return {x:b.x, z:b.z, why:b.type==='boss' ? 'boss' : 'elite'};
+      c = AC_line(R, id==='longdraw' ? 0.45 : 0.6, 3); return c ? {x:c.x, z:c.z, why:'line x'+c.n} : null; }
+    case 'buff': if(id==='familiar' && typeof SPL!=='undefined' && SPL.fam && SPL.fam.on) return null; b = AC_big(11); if(b) return {x:b.x, z:b.z, why:b.type==='boss' ? 'boss' : 'elite'};
+      n = CSK_count(P.x, P.z, 9); if(n >= 3){ c = nearestEnemy(P.x, P.z, 9); return c ? {x:c.x, z:c.z, why:'pack x'+n} : null; } return null;
+  } return null; }
+function AC_wantUlt(){ var cls = P.cls, b, c, n;
+  if(cls==='mage'){ n = CSK_count(P.x, P.z, 7.5); if(n >= 5) return {x:P.x, z:P.z, why:'pack x'+n}; b = AC_big(7); if(b) return {x:P.x, z:P.z, why:b.type==='boss' ? 'boss' : 'elite'}; return null; }
+  if(cls==='blade'){ n = CSK_count(P.x, P.z, 3.2); if(n >= 4) return {x:P.x, z:P.z, why:'pack x'+n}; b = AC_big(3); if(b) return {x:P.x, z:P.z, why:b.type==='boss' ? 'boss' : 'elite'}; return null; }
+  if(cls==='archer'){ c = CSK_cluster(P.x, P.z, 13, 3.6); if(c && c.n >= 5) return {x:c.x, z:c.z, why:'pack x'+c.n}; b = AC_big(12); return b ? {x:b.x, z:b.z, why:b.type==='boss' ? 'boss' : 'elite'} : null; }
+  n = CSK_count(P.x, P.z, 6); if(n >= 5){ c = nearestEnemy(P.x, P.z, 6); return c ? {x:c.x, z:c.z, why:'pack x'+n} : null; } b = AC_big(6); return b ? {x:b.x, z:b.z, why:b.type==='boss' ? 'boss' : 'elite'} : null; }
+
+/* ---------- may we cast at all right now? ---------- */
+function AC_ok(){ if(G.state!=='play' || G.paused || !G.waveActive || G.timestop || G.capture || G.dying > 0) return false;
+  if(typeof OF!=='undefined' && OF.on) return false; if(typeof TUT!=='undefined' && TUT.open) return false; if(typeof LO!=='undefined' && LO.on) return false;
+  if(!P || P.dead || P.stun > 0 || P.cskLeap || P.cskDraw) return false;
+  if(document.querySelector('.screen:not([hidden])')) return false; return true; }
+function AC_note(id, why){ var L = AC_st.log[id] || (AC_st.log[id] = {n:0, why:{}, wave:{}}); L.n++; L.why[why] = (L.why[why]||0) + 1; var w = G.wave|0; L.wave[w] = (L.wave[w]||0) + 1; }
+function AC_cast(kind, s, t){ var saved = VX.aimO; VX.aimO = {x:t.x, z:t.z}; var ok = false;
+  try{ if(kind==='c'){ ok = !!CSK_castP(s); } else if(kind==='s'){ var sp = P.spells[s]; castSpell(s); ok = !!(sp && sp.cd > 0 && P.spells[s]===sp); } else { var o0 = P.over; castUlt(); ok = P.over < o0; } }
+  finally { VX.aimO = saved; } return ok; }
+function AC_tick(){ var L = [], s, k = CSK_of(P), sp;
+  if(k) for(s=0;s<2;s++) if(k[s] && !(k[s].cd > 0) && CSK_autoOn(s)){ var tg = AC_tagOf(k[s].id); if(tg!=='move') L.push({kind:'c', s:s, id:k[s].id, tag:tg}); }
+  for(s=0;s<2;s++){ sp = P.spells && P.spells[s]; if(sp && !(sp.cd > 0) && VX_autoOn(s)){ var tg2 = AC_tagOf(sp.id); if(tg2!=='move') L.push({kind:'s', s:s, id:sp.id, tag:tg2}); } }
+  if(P.over >= 100 && AC_ultOn()) L.push({kind:'u', s:0, id:'ult_'+P.cls, tag:'ult'});
+  if(!L.length) return;
+  L.sort(function(a, b){ return AC_PRIO[a.tag] - AC_PRIO[b.tag]; });
+  for(var i=0;i<L.length;i++){ var E = L[i], t = E.kind==='u' ? AC_wantUlt() : AC_want(E.id, E.tag); if(!t) continue;
+    if(AC_cast(E.kind, E.s, t)){ AC_note(E.id, t.why); AC_st.gap = 0.35; return; } } }
+
+/* park the old per-system loops (34-visuals spells, 68-skills class skills) before they run: auto-fire in the VX hook still runs */
+STEP_HOOKS.unshift(function AC_pre(){ if(typeof VX!=='undefined') VX.autoGap = 1; CSK.autoT = 1; });
+STEP_HOOKS.push(function AC_step(dt){ if(AC_st.gap > 0) AC_st.gap -= dt; AC_st.t -= dt; if(AC_st.t > 0 || AC_st.gap > 0) return; AC_st.t = 0.1;
+  if(!AC_ok()) return; var C = CSK_ctl(); if(!C || C.dead) return; CSK_as(C, AC_tick); });
+
+/* ---------- UI: master toggle in the pause menu, badges on every slot (incl. R) ---------- */
+(function(){ var css = document.createElement('style'); css.id = 'acCss'; css.textContent =
+  '#vxAutoRow #vxA0,#vxAutoRow #vxA1,#vxAutoRow #cskA0,#vxAutoRow #cskA1{display:none!important}'+
+  '#skR .vx-au{top:-4px;left:-3px}';
+  document.head.appendChild(css); })();
+function AC_ui(){ var row = $('vxAutoRow');
+  if(row && !$('acM')){ var b = document.createElement('button'); b.id = 'acM'; b.addEventListener('click', function(){ AC_setMaster(!AC_master()); SFX.click(); }); row.insertBefore(b, row.firstChild); }
+  var m = $('acM'); if(m){ var on = AC_master(); m.textContent = 'Auto-cast: '+(on ? 'ON' : 'OFF'); m.classList.toggle('on', on);
+    m.title = 'Skills, spells and Overload cast themselves when it makes sense (heal when hurt, shields when hit, blasts on packs, nukes on bosses). Movement stays manual.'; }
+  var h = $('vxAH'); if(h) h.textContent = G.touch ? 'Smart auto-cast: movement stays manual. Long-press a slot to switch just that one.' : 'Smart auto-cast: movement stays manual. Right-click a slot or hold its key to switch just that one.';
+  var r = $('skR'); if(r && !r.querySelector('.vx-au')) r.insertAdjacentHTML('beforeend', '<span class="vx-au" title="Auto-cast">'+(typeof VX_icon==='function' ? VX_icon('auto') : '')+'</span>');
+  AC_badges(); }
+function AC_badges(){ if(!P) return; var i, el;
+  for(i=0;i<2;i++){ el = $('cs'+i); if(el) el.classList.toggle('vx-auto', !!AC_skId(i) && CSK_autoOn(i)); el = $('sk'+i); if(el) el.classList.toggle('vx-auto', !!AC_spId(i) && VX_autoOn(i)); }
+  el = $('skR'); if(el) el.classList.toggle('vx-auto', AC_ultOn()); }
+var AC_vau0 = VX_autoUi; VX_autoUi = function(){ var r = AC_vau0.apply(this, arguments); AC_ui(); return r; };
+var AC_rs0 = refreshSkills; refreshSkills = function(){ var r = AC_rs0.apply(this, arguments);
+  if(typeof HINTS!=='undefined' && HINTS.vxauto) HINTS.vxauto = function(){ return AC_master() ? (G.touch ? '<b style="color:#ffd27a">Auto-cast</b> fires your spells when it makes sense. Long-press one to switch it to manual.' : '<b style="color:#ffd27a">Auto-cast</b> fires your spells when it makes sense. Right-click one or hold its key to switch it to manual.')
+    : '<b style="color:#ffd27a">Auto-cast</b> is off. Turn it on in the pause menu to let spells cast themselves.'; };
+  AC_badges(); return r; };
+RENDER_HOOKS.push(function AC_render(){ var now = performance.now(); if(now - AC_st.badgeT < 400) return; AC_st.badgeT = now; if(G.state==='play') AC_badges(); });
+var AC_br0 = beginRun; beginRun = function(){ var r = AC_br0.apply(this, arguments); AC_st.t = 0.5; AC_st.gap = 0; AC_ui(); return r; };
+AC_ui();
+
+/* R slot: right-click / long-press toggles its own override */
+function AC_inR(x, y){ var el = $('skR'); if(!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && x >= r.left-4 && x <= r.right+4 && y >= r.top-8 && y <= r.bottom+4; }
+window.addEventListener('mousedown', function(e){ if(e.button!==2 || G.state!=='play' || G.paused || !P) return; if(!AC_inR(locked ? mouseX : e.clientX, locked ? mouseY : e.clientY)) return; e.stopPropagation(); e.preventDefault(); AC_toggleUlt(); }, true);
+window.addEventListener('pointerdown', function(e){ if(e.pointerType!=='touch' || !AC_inR(e.clientX, e.clientY)) return; clearTimeout(AC_st.lp); AC_st.lpId = e.pointerId; AC_st.lp = setTimeout(function(){ AC_st.lp = null; if(G.state==='play' && !G.paused) AC_toggleUlt(); }, 450); }, true);
+function AC_lpEnd(e){ if(AC_st.lp && e.pointerId===AC_st.lpId){ clearTimeout(AC_st.lp); AC_st.lp = null; } }
+window.addEventListener('pointerup', AC_lpEnd, true); window.addEventListener('pointercancel', AC_lpEnd, true);
+
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.ac = {
+  master:function(on){ if(on!=null) AC_setMaster(!!on); return AC_master(); },
+  log:function(){ return JSON.parse(JSON.stringify(AC_st.log)); }, clear:function(){ AC_st.log = {}; },
+  tag:AC_tagOf, ok:AC_ok, ult:AC_ultOn,
+  state:function(){ return {master:AC_master(), c:[CSK_autoOn(0), CSK_autoOn(1)], s:[VX_autoOn(0), VX_autoOn(1)], u:AC_ultOn(), sk:[AC_skId(0), AC_skId(1)], sp:[AC_spId(0), AC_spId(1)]}; } }; }
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
