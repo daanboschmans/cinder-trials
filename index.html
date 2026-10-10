@@ -2758,12 +2758,12 @@ function cl(x){ return x<0?0:x>1?1:x; }
 
 function buildHesk(R){ var G = G2;
   /* the head chain (head, jaw, crown halves and their fire) is authored small and baked ×HS so the face reads at play scale */
-  var HS = 1.3, LS = {head:HS, jaw:HS, crownL:HS, crownR:HS, fireL:HS, fireR:HS, arc:HS};
+  var HS = 1.3, LS = {head:HS, jaw:HS, eyes:HS, crownL:HS, crownR:HS, fireL:HS, fireR:HS, arc:HS};
   function A(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz,o){ var k = LS[l]||1; R.add(l,g,c,x*k,y*k,z*k,sx*k,sy*k,sz*k,rx||0,ry||0,rz||0,o); }
   function L(l,g,x,y,z,sx,sy,sz,rx,ry,rz,v){ var k = LS[l]||1; R.glow(l,g,x*k,y*k,z*k,sx*k,sy*k,sz*k,rx||0,ry||0,rz||0,{v:v==null?1:v, outline:false}); }
   function E(l,g,c,x,y,z,sx,sy,sz,rx,ry,rz){ var k = LS[l]||1; R.emit(l,g,c,x*k,y*k,z*k,sx*k,sy*k,sz*k,rx||0,ry||0,rz||0,NO); }
   function B(n,p,x,y,z){ var k = (p && LS[n] && LS[p]) ? LS[p] : 1; R.limb(n,p,x*k,y*k,z*k); }
-  R.limb('bed',null,0,0,0); R.limb('pelvis','bed',0,1.55,-0.2); R.limb('torso','pelvis',0,0.4,0); R.limb('head','torso',0,3.0,0.55); B('jaw','head',0,-0.32,0.5);
+  R.limb('bed',null,0,0,0); R.limb('pelvis','bed',0,1.55,-0.2); R.limb('torso','pelvis',0,0.4,0); R.limb('head','torso',0,3.0,0.55); B('jaw','head',0,-0.32,0.5); B('eyes','head',0,0,0);
   B('crownL','head',0.3,0.75,-0.2); B('crownR','head',-0.3,0.75,-0.2); B('fireL','crownL',0,0,0); B('fireR','crownR',0,0,0); B('arc','head',0,1.6,-0.2);
   R.limb('armL','torso',2.05,2.15,0.1); R.limb('foreL','armL',0,-1.75,0); R.limb('handL','foreL',0,-1.6,0);
   R.limb('armR','torso',-2.05,2.15,0.1); R.limb('foreR','armR',0,-1.75,0); R.limb('handR','foreR',0,-1.6,0);
@@ -2788,11 +2788,16 @@ function buildHesk(R){ var G = G2;
   rts.forEach(function(r, k){ var a = r[0], w = r[1];
     chain('bed', a, 0.7, 2.1, [[1.35, 1.7, 1.1*w, k%2?C.BRZ:C.BRZ3], [1.15, 2.3, 0.85*w, k%2?C.BRZ3:C.BRZ], [0.7, 2.7, 0.55*w, C.BRZ2]]);
     if(k%2===0) A('bed', G.ico0, C.HEDGE3, Math.sin(a)*1.6, 1.85, Math.cos(a)*1.35, 0.6, 0.35, 0.6, 0, a, 0); });
+  [0.2,0.95,1.75,2.55,3.4,4.15,4.95,5.75].forEach(function(a, k){ chain('bed', a, 2.3, 1.0, [[1.2, 1.75, 0.8, k%2?C.BRZ3:C.BARK], [1.3, 2.25, 0.62, C.BARK2], [1.6, 1.62, 0.45, k%2?C.BARK:C.BRZ3], [0.9, 1.58, 0.28, C.BARK2]]); });   // roots spill over the rim
   /* ---- pelvis: the root knot (bark + bronze) ---- */
   A('pelvis',G.dod,C.BARK,0,0,0,2.9,1.5,2.4); A('pelvis',G.dod,C.BRZ3,0,-0.3,0.3,2.4,1.1,2.1,0.3,0.5,0); A('pelvis',G.box,C.BRZ,0,0.25,1.05,1.6,0.18,0.25,0,0,0.08);
   /* ---- torso: clipped hedge mass over a bark frame; storm-violet seam up the chest; leaf shoulders ---- */
-  A('torso',G.sph8,C.HEDGE,0,0.9,0.05,3.2,2.0,2.5); A('torso',G.sph8,C.HEDGE2,0,1.85,0.15,3.9,1.9,2.6); A('torso',G.sph8,C.HEDGE,0,2.45,-0.15,3.0,1.0,2.0);
-  A('torso',G.sph8,C.HEDGE3,-0.75,1.95,1.05,1.5,1.1,0.7,0.2); A('torso',G.sph8,C.HEDGE3,0.75,1.95,1.05,1.5,1.1,0.7,0.2);       // pec masses (clipped)
+  var trunk = new THREE.CylinderGeometry(0.42,0.5,1,8);
+  A('torso',trunk,C.BARK,0,0.95,0.05,3.0,2.2,2.4); A('torso',trunk,C.BARK3,0,1.95,0.1,3.7,1.4,2.6,0,PI/8,0); A('torso',G.sph8,C.BARK,0,2.45,-0.15,3.0,1.0,2.0);
+  A('torso',G.dod,C.BARK3,-0.75,1.95,1.0,1.4,1.1,0.75,0.2); A('torso',G.dod,C.BARK3,0.75,1.95,1.0,1.4,1.1,0.75,0.2);       // burl pecs
+  for(var rd=0;rd<9;rd++){ var ra = -1.25 + rd*0.31; A('torso',G.box,rd%2?C.BARK2:C.CHAR,Math.sin(ra)*1.42,1.2,Math.cos(ra)*1.15+0.05,0.12,2.1,0.12,0.06,ra,(rd-4)*0.03,NO); }   // bark ridges
+  [[-1.1,0.6,0.85,0.9],[1.05,1.15,0.95,0.7],[-0.4,2.5,1.05,0.8],[0.9,0.35,0.7,0.6],[-1.3,1.7,0.3,0.7]].forEach(function(m,k){ A('torso',G.ico0,k%2?C.HEDGE3:C.HEDGE4,m[0],m[1],m[2],m[3],m[3]*0.5,m[3]*0.8,0.3,k,0); });   // moss
+  A('torso',G.cyl6,C.CHAR,-0.6,0.55,1.18,0.45,0.55,0.12,PI/2,0,0,NO);                                                      // knothole
   A('torso',G.box,C.BARK2,0,1.15,1.18,0.55,1.6,0.3,0.15,0,0); A('torso',G.box,C.BARK,-0.55,0.75,1.12,0.22,1.0,0.25,0.1,0,0.35); A('torso',G.box,C.BARK,0.6,0.8,1.12,0.22,0.9,0.25,0.1,0,-0.4);
   L('torso',G.box,0.05,1.45,1.34,0.07,0.75,0.05,0.15,0,0.35,1.1); L('torso',G.box,-0.08,0.85,1.33,0.07,0.7,0.05,0.12,0,-0.4,1.1); L('torso',G.box,0.08,0.3,1.3,0.06,0.55,0.05,0.1,0,0.45,1.0);
   for(var rb=0;rb<3;rb++) A('torso',G.box,C.BARK,0,0.55+rb*0.55,-1.1,2.6-rb*0.2,0.22,0.3,0,0,(rb-1)*0.1);                  // bark ribs on the back
@@ -2806,10 +2811,12 @@ function buildHesk(R){ var G = G2;
   A('head',G.box,C.BARK3,-0.3,0.55,0.66,0.66,0.24,0.38,0.3,0.28,-0.32); A('head',G.box,C.BARK3,0.3,0.55,0.66,0.66,0.24,0.38,0.3,-0.28,0.32);
   A('head',G.box,C.BARK2,-0.28,0.44,0.76,0.6,0.07,0.2,0.1,0.28,-0.32,NO); A('head',G.box,C.BARK2,0.28,0.44,0.76,0.6,0.07,0.2,0.1,-0.28,0.32,NO);
   A('head',G.box,C.VOID,-0.27,0.3,0.68,0.4,0.22,0.12,0,0,-0.15,NO); A('head',G.box,C.VOID,0.27,0.3,0.68,0.4,0.22,0.12,0,0,0.15,NO);
-  E('head',G.oct,C.EYE2,-0.27,0.3,0.74,0.3,0.15,0.06,0,0,-0.15); E('head',G.oct,C.EYE2,0.27,0.3,0.74,0.3,0.15,0.06,0,0,0.15);
-  E('head',G.oct,C.EYE,-0.25,0.3,0.77,0.15,0.08,0.04,0,0,-0.15); E('head',G.oct,C.EYE,0.25,0.3,0.77,0.15,0.08,0.04,0,0,0.15);
+  E('eyes',G.oct,C.EYE2,-0.27,0.3,0.74,0.3,0.15,0.06,0,0,-0.15); E('eyes',G.oct,C.EYE2,0.27,0.3,0.74,0.3,0.15,0.06,0,0,0.15);
+  E('eyes',G.oct,C.EYE,-0.25,0.3,0.77,0.15,0.08,0.04,0,0,-0.15); E('eyes',G.oct,C.EYE,0.25,0.3,0.77,0.15,0.08,0.04,0,0,0.15);
+  E('eyes',G.box,C.EYE2,0,-0.2,0.7,0.5,0.05,0.04); E('eyes',G.oct,C.EYE2,0,0.0,0.72,0.06,0.06,0.03);
   A('head',G.prism,C.BARK3,0,0.08,0.78,0.3,0.45,0.32,-0.25,PI,0); A('head',G.box,C.CHAR,0,-0.18,0.69,0.75,0.1,0.12,0,0,0.04,NO);
   L('head',G.box,0.02,0.8,0.6,0.07,0.55,0.05,0.25,0,0.3,1.15); L('head',G.box,-0.03,0.62,0.68,0.06,0.25,0.05,0.25,0,-0.4,1.15);                  // the scar runs down the brow
+  [[0,3.6,-0.3,2.4,C.LEAF2],[0.9,3.2,-0.8,1.8,C.LEAF],[-0.9,3.3,-0.7,1.8,C.LEAF3],[0,4.3,-0.9,2.0,C.HEDGE2]].forEach(function(m){ A('head',G.ico0,m[4],m[0],m[1],m[2],m[3],m[3]*0.7,m[3],0.2,m[0],0); });
   for(var k2=0;k2<5;k2++){ var fa = 1.4 + k2*0.85; A('head',G.box,C.BARK2,Math.sin(fa)*0.72,0.2,Math.cos(fa)*0.64-0.1,0.08,1.1,0.06,0,fa,0,NO); }
   A('jaw',G.box,C.BARK,0,-0.05,0,1.1,0.32,0.5); A('jaw',G.ico0,C.LEAF2,0,-0.4,0.05,1.2,0.75,0.55,0.3,0,0); A('jaw',G.ico0,C.HEDGE3,0,-0.75,0.05,0.7,0.6,0.4,0.6,0,0);
   for(var bd=0;bd<4;bd++) A('jaw',G.cone4,C.BRZ3,-0.36+bd*0.24,-0.75,0.1,0.13,0.75,0.13,PI,0,(bd-1.5)*0.15);
@@ -2820,11 +2827,13 @@ function buildHesk(R){ var G = G2;
     A(n,G.box,C.CHAR,-s*0.05,0.95,0,0.1,1.8,0.75,0,0,-s*0.38,NO); L(n,G.box,-s*0.1,1.0,0.1,0.08,1.6,0.08,0,0,-s*0.38,1.2); L(n,G.box,s*0.45,2.2,0.05,0.07,0.9,0.06,0,0,-s*0.5,1.0);
     A(n,G.taper,C.BARK,s*1.5,2.4,0.3,0.36,1.5,0.36,0.3,0,-s*1.15); A(n,G.taper,C.BARK,s*0.9,2.9,-0.45,0.32,1.3,0.32,-0.35,0,-s*0.35); A(n,G.taper,C.BARK3,s*0.55,2.2,0.55,0.26,1.0,0.26,0.6,0,s*0.2);
     A(n,G.cyl6,C.BRZ2,s*0.8,2.0,0,0.62,0.16,0.62,0,0,-s*0.48);                                                   // brass band: the storm-rod anchor
-    [[2.0,3.0,0.35,2.1],[1.15,3.7,-0.4,1.9],[2.5,2.45,-0.6,1.5],[0.7,3.25,0.8,1.35],[1.6,3.55,0.85,1.2],[2.75,3.2,0.4,1.1]].forEach(function(c, k){
-      A(n,G.ico0,[C.LEAF,C.LEAF2,C.LEAF3,C.HEDGE2,C.LEAF,C.LEAF3][k],s*c[0],c[1],c[2],c[3],c[3]*0.72,c[3],k*0.4,k*s,0); });
+    [[2.0,3.0,0.35,2.1],[1.15,3.7,-0.4,1.9],[2.5,2.45,-0.6,1.5],[0.7,3.25,0.8,1.35],[1.6,3.55,0.85,1.2],[2.75,3.2,0.4,1.1],
+     [3.3,2.7,-0.2,1.9],[2.6,4.0,-0.5,2.1],[1.0,4.5,0.1,2.0],[3.6,3.6,0.5,1.5],[2.0,4.6,0.9,1.5],[0.3,3.9,-1.0,1.6],[3.0,2.1,1.0,1.2],[1.7,2.5,-1.3,1.4]].forEach(function(c, k){
+      A(n,G.ico0,[C.LEAF,C.LEAF2,C.LEAF3,C.HEDGE2,C.LEAF,C.LEAF3,C.LEAF2,C.LEAF,C.LEAF3,C.HEDGE2,C.LEAF2,C.LEAF,C.LEAF3,C.HEDGE4][k],s*c[0],c[1],c[2],c[3],c[3]*0.72,c[3],k*0.4,k*s,0); });
+    for(var bl=0;bl<6;bl++){ var bx = 0.8 + (bl%3)*1.1, by = 3.0 + (bl>2 ? 1.1 : 0); A(n,G.oct,[0xe48aa2,0xf2d27a][bl%2],s*bx,by+0.9,0.9 - (bl%2)*1.6,0.28,0.22,0.28,0,bl,0,NO); }   // blossoms
     E(n,G.oct,C.FLAME,s*2.3,2.95,0.95,0.24,0.24,0.16); E(n,G.oct,C.FLAME2,s*1.0,3.75,0.4,0.2,0.2,0.14);
     /* canopy fire (P2): one upright flame per leaf mass (orange shell, gold heart, hot core) plus a side tongue */
-    [[2.0,3.0,0.35,2.1],[1.15,3.7,-0.4,1.9],[2.5,2.45,-0.6,1.5],[0.7,3.25,0.8,1.35]].forEach(function(c, k){ var x = s*c[0], y = c[1] + c[3]*0.25, z = c[2], q = c[3];
+    [[2.0,3.0,0.35,2.1],[1.15,3.7,-0.4,1.9],[2.5,2.45,-0.6,1.5],[0.7,3.25,0.8,1.35],[2.6,4.0,-0.5,2.1],[1.0,4.5,0.1,2.0],[3.3,2.7,-0.2,1.9]].forEach(function(c, k){ var x = s*c[0], y = c[1] + c[3]*0.25, z = c[2], q = c[3];
       E(fz,G.cone,C.FLAME,x,y + q*0.55,z,q*1.05,q*1.15,q*1.05,0,k,0); E(fz,G.cone,C.FLAME2,x,y + q*0.45,z + q*0.1,q*0.7,q*0.85,q*0.7,0,k+0.4,0);
       E(fz,G.oct,C.FCORE,x,y + q*0.3,z + q*0.16,q*0.4,q*0.45,q*0.4); E(fz,G.cone,C.FLAME,x + s*q*0.5,y + q*0.35,z - q*0.2,q*0.45,q*0.7,q*0.45,0,0,-s*0.35); }); });
   /* ---- storm arcs (P3): broken zig-zags between the crown halves and down to the rod bands ---- */
@@ -2832,7 +2841,7 @@ function buildHesk(R){ var G = G2;
     E('arc',G.box,C.STORM,z[0],z[1],z[2],0.11,z[3],0.08,0,0,z[4]); E('arc',G.box,C.STORM2,z[0],z[1],z[2]+0.03,0.05,z[3]*0.9,0.05,0,0,z[4]); });
   /* ---- arms: hedge-wrapped upper arms; bark forearms with thorn rows and flame-orange thorn blooms; root-claw hands ---- */
   [['armL','foreL','handL',1],['armR','foreR','handR',-1]].forEach(function(ar){ var a = ar[0], f = ar[1], h = ar[2], s = ar[3];
-    A(a,G.sph8,C.HEDGE2,0,-0.7,0,1.55,2.1,1.5); A(a,G.ico0,C.LEAF,s*0.1,-0.25,0.1,1.7,1.2,1.6,0.3,0,0); A(a,G.ico0,C.LEAF3,s*0.25,-1.1,0.35,1.0,0.9,0.9,0.5,1,0);
+    A(a,G.taper,C.BARK3,0,-0.8,0,1.35,2.2,1.3,PI,0,0); A(a,G.ico0,C.LEAF,s*0.1,-0.25,0.1,1.7,1.2,1.6,0.3,0,0); A(a,G.box,C.BARK2,s*0.45,-0.9,0.4,0.12,1.6,0.12,0,0,s*0.1,NO); A(a,G.ico0,C.LEAF3,s*0.25,-1.1,0.35,1.0,0.9,0.9,0.5,1,0);
     A(a,G.taper,C.BARK,0,-1.0,0,0.8,1.9,0.8,PI,0,0);
     A(f,G.taper,C.BARK,0,-0.8,0,1.15,1.8,1.05,0,0,0); A(f,G.taper,C.BARK3,s*0.15,-0.9,0.2,0.7,1.5,0.6,0,0,0); A(f,G.cyl6,C.BRZ,0,-0.2,0,1.2,0.25,1.15,0,0,0);
     L(f,G.box,s*0.32,-0.6,0.45,0.06,0.6,0.05,0.2,0,s*0.35,1.0); L(f,G.box,s*0.3,-1.15,0.4,0.06,0.55,0.05,0.2,0,-s*0.3,1.0);
@@ -2861,6 +2870,15 @@ var POSES = {
   fire:  PR({ torso:[-0.3,0,0], head:[-0.55,0,0], jaw:[0.45,0,0], armL:[-0.6,0,1.25], foreL:[-0.55,0,0.3], handL:[-0.3,0,0], armR:[-0.6,0,-1.25], foreR:[-0.55,0,-0.3], handR:[-0.3,0,0], crownL:[0,0,-0.12], crownR:[0,0,0.12] }),
   storm: PR({ torso:[-0.18,0,0], head:[-0.35,0,0], jaw:[0.3,0,0], armL:[-2.55,0,0.5], foreL:[-0.35,0,-0.1], handL:[0.2,0,0], armR:[-2.55,0,-0.5], foreR:[-0.35,0,0.1], handR:[0.2,0,0], crownL:[0,0,-0.32], crownR:[0,0,0.32] }),
   regrow:PR({ torso:[0.5,0,0], head:[0.35,0,0], armL:[-0.6,0,0.15], foreL:[-1.2,0,0.4], handL:[0.4,0,0], armR:[-0.6,0,-0.15], foreR:[-1.2,0,-0.4], handR:[0.4,0,0], crownL:[0,0,0.05], crownR:[0,0,-0.05] }),
+  plantR:PR({ pelvis:[0.05,-0.15,0], torso:[0.5,-0.2,0], head:[-0.2,0.15,0], jaw:[0.3,0,0], armL:[-0.1,0,0.55], foreL:[-0.5,0,0.2], handL:[0.3,0,0], armR:[-1.45,0.15,-0.25], foreR:[-0.2,0,0], handR:[0.9,0,0],
+          rootA:[0.25,0,-0.25], rootB:[0.1,0,0.15], crownL:[0,0,-0.05], crownR:[0,0,0.05] }),
+  plantL:PR({ pelvis:[0.05,0.15,0], torso:[0.5,0.2,0], head:[-0.2,-0.15,0], jaw:[0.3,0,0], armR:[-0.1,0,-0.55], foreR:[-0.5,0,-0.2], handR:[0.3,0,0], armL:[-1.45,-0.15,0.25], foreL:[-0.2,0,0], handL:[0.9,0,0],
+          rootA:[0.1,0,-0.15], rootB:[0.25,0,0.25], crownL:[0,0,-0.05], crownR:[0,0,0.05] }),
+  plant2:PR({ torso:[0.6,0,0], head:[-0.15,0,0], jaw:[0.35,0,0], armL:[-1.45,-0.1,0.35], foreL:[-0.2,0,0], handL:[0.9,0,0], armR:[-1.45,0.1,-0.35], foreR:[-0.2,0,0], handR:[0.9,0,0],
+          rootA:[0.3,0,-0.3], rootB:[0.3,0,0.3], crownL:[0,0,-0.08], crownR:[0,0,0.08] }),
+  stagger:PR({ torso:[0.78,0,0.14], head:[0.55,0.2,0.2], jaw:[0.5,0,0], armL:[0.1,0,0.45], foreL:[-0.2,0,0.1], handL:[0.8,0,0], armR:[0.2,0,-0.2], foreR:[-0.3,0,0], handR:[0.8,0,0], crownL:[0,0,-0.4], crownR:[0,0,0.4], gy:-0.2 }),
+  wake:  PR({ torso:[0.95,0,0], head:[0.8,0,0], jaw:[-0.05,0,0], armL:[0.15,0,0.2], foreL:[-0.2,0,0], handL:[1.0,0,0], armR:[0.15,0,-0.2], foreR:[-0.2,0,0], handR:[1.0,0,0], crownL:[0,0,0.12], crownR:[0,0,-0.12], gy:-0.7,
+          rootA:[0.2,0,-0.2], rootB:[0.2,0,0.2], rootC:[-0.3,0,-0.3], rootD:[-0.3,0,0.3] }),
   kneel: PR({ torso:[0.62,0,0], head:[0.45,0,0], armL:[-0.15,0,0.3], foreL:[-0.4,0,0], handL:[0.9,0,0], armR:[-0.15,0,-0.3], foreR:[-0.4,0,0], handR:[0.9,0,0], crownL:[0,0,0.08], crownR:[0,0,-0.08], gy:-0.35 })
 };
 var _T = new Float32Array(NCH);
@@ -2874,6 +2892,7 @@ function animHesk(R, e, t, dt){ var J = R.J, Cu = R.Cu, dead = e.state==='dead',
   /* breathing + canopy sway (additive); the free roots writhe slowly */
   var br = Math.sin(t*1.3)*0.03; _T[3] += br; _T[14] += Math.sin(t*0.7)*0.03; _T[17] -= Math.sin(t*0.7+0.6)*0.03;
   for(var r=0;r<4;r++){ var ri = (13+r)*3; _T[ri] += Math.sin(t*1.1 + r*1.7)*0.06; _T[ri+2] += Math.sin(t*0.8 + r)*0.05; }
+  if(e.hkYaw){ _T[4] += e.hkYaw*0.55; _T[1] += e.hkYaw*0.2; }
   if(!dead && e.hurtT>0){ var hk = e.hurtT/0.25; _T[3] -= 0.08*hk; _T[6] -= 0.08*hk; }
   var k = dt>0 ? 1-Math.exp(-7*dt) : 1; if(e.hkSnap) k = 1;
   for(var j=0;j<NCH;j++) Cu[j] += (_T[j]-Cu[j])*k;
@@ -2886,7 +2905,9 @@ function animHesk(R, e, t, dt){ var J = R.J, Cu = R.Cu, dead = e.state==='dead',
   var F = R.limbs.fireL.g, F2 = R.limbs.fireR.g, Ar = R.limbs.arc.g; F.visible = F2.visible = R.fireK > 0.02; Ar.visible = R.arcK > 0.02;
   F.scale.set(R.fireK, R.fireK*(1 + 0.12*Math.sin(t*13)), R.fireK); F2.scale.set(R.fireK, R.fireK*(1 + 0.12*Math.sin(t*13+1)), R.fireK); var fl = (Math.sin(t*31)*0.5+0.5) > 0.25 ? 1 : 0.8; Ar.scale.set(R.arcK*fl, R.arcK, R.arcK*fl);
   var gk = (e.wind ? 1.2 : 1)*(1 + 0.2*R.arcK); if(dead) gk = 0.3; var gh = ELGLOW[e.el]!=null ? ELGLOW[e.el] : ELGLOW.storm; R.u.uGlow.value.setHex(gh).multiplyScalar(gk);
-  R.u.uRim.value.setHex(gh).multiplyScalar(0.18); }
+  R.u.uRim.value.setHex(gh).multiplyScalar(0.18);
+  var ey = dead ? 0 : (e.hkEyes!=null ? e.hkEyes : 1); R.eyeK = R.eyeK==null ? ey : R.eyeK + (ey - R.eyeK)*(e.hkSnap ? 1 : Math.min(1, (dt||0)*3)); R.limbs.eyes.g.scale.set(1, Math.max(0.001, R.eyeK), 1);
+  var wd = e.hkWood || 0; if(wd > 0){ R.mats[0].color.setRGB(1 - 0.45*wd, 1 - 0.5*wd, 1 - 0.52*wd); R.u.uGlow.value.multiplyScalar(1 - wd); R.u.uRim.value.multiplyScalar(1 - wd); } else if(R.woodOn){ R.mats[0].color.setRGB(1, 1, 1); } R.woodOn = wd > 0; }
 
 CHARS.hesk = { name:'Hesk, the Thornwall Colossus', build:function(R){ buildHesk(R); R.J = HB.map(function(n){ return R.limbs[n].g; }); R.Cu = new Float32Array(NCH); R.init = false; },
   anim:animHesk, deathDur:90, rim:0.2, variant:function(){ return 'v1'; }, finish:{ outlineK:1.6, gradLo:0.6, gradHi:1.18, shininess:10, specular:0x1a1e14 }, POSES:POSES };
@@ -5902,7 +5923,7 @@ function wpStart(N){ var k = LB.cls; audioInit(); lbRelease(); beginRun(k); G.te
   after(2.2, function(){ showHint('<b style="color:#ffd27a">Wave picker</b>: wave '+N+(WP.boons?' · '+(N-1)+' random boons':'')+(WP.curses?' · random curses':'')+(WP.god?' · god mode':'')+'. Practice run, no Glory.', 4); }); }
 function wpRender(){ var g = $('wpGrid'); g.innerHTML = '';
   for(var n=1; n<=30; n++){ var b = document.createElement('button'); var boss = n===10, fin = n===20, um = n===30;
-    b.className = 'wpW'+(n>=21?' a3':n>=11?' a2':'')+(boss||fin||um?' boss':''); b.innerHTML = '<b>'+n+'</b><small>'+(boss?'Pitmaster':fin?'Finale':um?'Undermaw':(n>=21?'Deeps':n>=11?'Spire':'Pit'))+'</small>';
+    b.className = 'wpW'+(n>=21?' a3':n>=11?' a2':'')+(boss||fin||um?' boss':''); b.innerHTML = '<b>'+n+'</b><small>'+(boss?'Pitmaster':fin?'Finale':um?'Hesk':(n>=21?'Garden':n>=11?'Spire':'Pit'))+'</small>';
     b.addEventListener('click', (function(N){ return function(){ SFX.click(); wpStart(N); }; })(n)); g.appendChild(b); }
   ['boons','curses','god'].forEach(function(k){ $('wp_'+k).checked = WP[k]; });
   $('wpCls').textContent = CLASSES[LB.cls].name; $('wpGlCur').textContent = (save.glory|0).toLocaleString('en-US'); $('wpGlMsg').textContent = ''; }
@@ -11417,7 +11438,7 @@ var HX_CARDS = [
  /* 8 ---------- what's next ---------- */
  { id:'next', tag:'The long trial', cap:'', title:'Seventy rounds deep',
    text:function(){ return 'Banked Glory buys <b>armour</b>, <b>relics</b> and <b>skill mastery</b> in the Armoury. The trial runs <b>70 rounds deep</b>, with a boss every 10.'; },
-   keys:function(){ return HX_krow(HX_kc('I'), 'The Pit · rounds 1–10 · the Pitmaster')+HX_krow(HX_kc('II'), 'Storm Spire · 11–20 · gusts, falling edges · the Stormwright')+HX_krow(HX_kc('III'), 'Thornwall Garden · 21–30 · hedge gates, new foes · the Undermaw')+HX_krow(HX_kc('…'), 'Rounds 31–70: still sealed'); },
+   keys:function(){ return HX_krow(HX_kc('I'), 'The Pit · rounds 1–10 · the Pitmaster')+HX_krow(HX_kc('II'), 'Storm Spire · 11–20 · gusts, falling edges · the Stormwright')+HX_krow(HX_kc('III'), 'Thornwall Garden · 21–30 · hedge gates, new foes · Hesk')+HX_krow(HX_kc('…'), 'Rounds 31–70: still sealed'); },
    spr:function(){ return ['hero_front']; },
    art:function(){ var D = 6, o = '', T = [[16,'ARMOURY','Gear · relics','Spend Glory',0,'Gear, relics'],[170,'CODEX','Every foe, recorded','Learn the pit',1,'Foe records'],[324,'ACT II','The Storm Spire','Rounds 11–20',2,'Storm Spire']];
      T.forEach(function(t){ var x = t[0], w = 140; o += HX_plate(x, 16, w, 268, 7);
@@ -15743,7 +15764,7 @@ function OF_verb(){ var x = OF_sel(); if(!x) return '';
   return 'Take '+OF_gName(x); }
 function OF_foot(){ var x = OF_sel(), add = x ? x.glory : 0, kb = !document.body.classList.contains('touch'), pl = '';
   try{ if(OF_pon() && typeof PTY_label==='function') pl = ' · '+PTY_label()+' ×'+PTY_f(PARTY.glory)+' Glory'; }catch(e){}
-  var risk = OF.bossNext ? (G.act===3 ? 'Beat the Undermaw next round for 3×.' : G.act===2 ? 'Beat the Stormwright next round for 3×.' : 'Beat the Pitmaster next round for 2×.') : 'Lost if you fall.';
+  var risk = OF.bossNext ? (G.act===3 ? 'Beat Hesk next round for 3×.' : G.act===2 ? 'Beat the Stormwright next round for 3×.' : 'Beat the Pitmaster next round for 2×.') : 'Lost if you fall.';
   var cf = x ? '<button class="btn main ofGo" data-a="go">'+OF_verb()+(kb ? '<small>Enter</small>' : '')+'</button>' : '<div class="ofPick">Choose one card'+(kb ? ' <span>1–5</span>' : '')+'</div>';
   return '<div class="ofFoot"><div class="ofStk"><div class="ofSk"><span class="l">Your stake</span><b>⚜ '+G.stake+(x ? ' <i>→ ⚜ '+(G.stake+add)+'</i>' : '')+'</b><span class="s">'+risk+pl+'</span></div>'+
     '<button class="ofLeave" data-a="leave" title="Bank your stake and end the run">Leave now, bank ⚜ '+G.stake+'</button></div>'+cf+'</div>'; }
@@ -16258,7 +16279,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:24',h:'87c0382'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 14:43',h:'d2c79e3'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -17208,8 +17229,8 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.pillars = { PIL:PIL,
    2026-10-10: the owner replaced the dark "Cinderdark" look with the daylit Thornwall Garden (design/research/13-themes.md §3; the arena,
    NPCs and hub gates live in 73-garden.js). A3_DARK = false switches the darkness off: no dark quad, no lift pass, no eye-glints or
    lantern crowd, and every light rule that only made sense in the dark is neutral (Gloamlings and Ash Hollows play as their base foes,
-   wick-moths only hover around heroes, kindle / ember / gutter rounds became slay / survive). The light pool still runs on the CPU, because
-   the wave-30 Undermaw keeps its fight unchanged for now (P2 armour and P3 Gaze read lantern light; a warm floor glow shows that light).
+   wick-moths only hover around heroes, kindle / ember / gutter rounds became slay / survive). 2026-10-10: the wave-30 boss is Hesk, the
+   Thornwall Colossus (79-hesk.js, HK_start); the Undermaw code below is retired (unreachable) and its lantern floor glow is gone.
    The notes below describe the original dark design, kept behind A3_DARK.
    Design: design/ACT3.md (as built) and design/research/12-act3.md §4 (Concept A, owner-approved).
    Core rule: in the dark you see BODIES only inside light (your ward-lantern, sconces you kindle by dashing through them, burning / flame-marked foes,
@@ -17238,7 +17259,7 @@ var A3_PLAN = {
   27:{type:'slay',     amb:0.84, need:30, max:11, lit:6, burn:0,  mix:[['ashhollow',2],['gloam',4],['imp',3],['snuffw',2],['bomber',1]], hint:'a3_hollow'},
   28:{type:'slay',     amb:0.84, need:32, max:11, lit:6, burn:0,  mix:[['gloam',4],['wickmoth',3],['ashhollow',1],['snuffw',2],['imp',2]]},
   29:{type:'vigil',    amb:0.80, T:25,    max:6,  lit:6, burn:0,  mix:[['gloam',4],['wickmoth',2],['imp',2]], hint:'a3_vigil'},
-  30:{type:'undermaw', amb:0.80, lit:6, burn:0}
+  30:{type:'hesk', amb:0.80, lit:6, burn:0}
 };
 /* the Cinderdark plan (A3_DARK): 23 kindle 4, 25 ember 3, 26 gutter pulse, 28 kindle 5, sconces burning out */
 if(A3_DARK){ A3_PLAN[23] = {type:'kindle', amb:0.74, need:4, max:9, lit:2, burn:20, mix:A3_PLAN[23].mix, hint:'a3_kindle'}; A3_PLAN[25] = {type:'ember', amb:0.80, need:3, max:9, lit:3, burn:0, mix:A3_PLAN[25].mix, hint:'a3_ember'};
@@ -17246,7 +17267,8 @@ if(A3_DARK){ A3_PLAN[23] = {type:'kindle', amb:0.74, need:4, max:9, lit:2, burn:
 if(A3_DARK){ OBJS.kindle = {name:'KINDLE THE DEEP', sub:'Dash through sconces: keep enough lit at once'}; OBJS.ember = {name:'BEAR THE EMBER', sub:'Carry the ember-heart to an unlit sconce'}; }
 OBJS.vigil = {name:'THE VIGIL', sub:'A breather: hold on until the last round wakes'};
 OBJS.undermaw = {name:'THE UNDERMAW', sub:'Break the furnace idol to conquer the Garden'};
-var A3_OWN = {kindle:1, ember:1, vigil:1, undermaw:1};
+OBJS.hesk = {name:'HESK', sub:'Fell the Thornwall Colossus to conquer the Garden'};
+var A3_OWN = {kindle:1, ember:1, vigil:1, undermaw:1, hesk:1};
 /* the four Deeps foes (variants ride on a base type so the CMB scheduler, party AI and Codex keep working) */
 ETYPES.gloam = {hp:30, spd:3.4, r:0.45, dmg:9, h:1.1};
 ETYPES.wickmoth = {hp:8, spd:3.3, r:0.42, dmg:0, h:2.0};
@@ -17283,7 +17305,7 @@ var A3_HINT_TXT = {
   a3_ember:function(){ return 'Walk over the <b>ember-heart</b>, then carry it to an <b>unlit sconce</b>. Dashing drops it.'; },
   a3_gutter:function(){ return 'When the sconces <b>groan</b>, the Deep gutters: every light dims for a few seconds.'; },
   a3_hollow:function(){ return A3_DARK ? '<b>Ash Hollows</b> only take damage <b>in light</b> and only move in the dark. Hold one in your lantern.' : '<b>Ash Hollows</b> are slow, heavy brutes. Watch for the slam and the charge.'; },
-  a3_vigil:function(){ return 'A breather. Hold on: <b>the Undermaw wakes next round</b>.'; },
+  a3_vigil:function(){ return 'A breather. Hold on: <b>Hesk wakes next round</b>.'; },
   a3_um1:function(){ return 'Watch the <b>door that opens</b>: its light shows where the breath falls. Match its colour or step out of the cone.'; },
   a3_um2:function(){ return 'Its doors are shut. <b>Light 2 hedge lanterns</b> (dash through them) so their glow reaches the idol and its armour opens.'; },
   a3_um3:function(){ return 'The maw opens. <b>Standing in a lantern\'s glow</b> draws its gaze. Strike it from outside the glow.'; }
@@ -17370,9 +17392,6 @@ function A3_build(){ if(A3.built) return; A3.built = true; var N = LOWTIER ? A3T
   A3E.wings = A3_inst(new THREE.PlaneGeometry(0.62, 0.42), (function(){ var m = A3_addMatT(0xffffff, 0.8); m.side = THREE.DoubleSide; return m; })(), 2*14, 18.2); scene.add(A3E.wings);
   /* warm shafts from kindled sconces to the idol's chest (Undermaw phase 2) */
   A3E.beam = A3_inst(new THREE.BoxGeometry(1, 1, 1), A3_addMatT(0xffffff, 0.22), 6, 18.0); scene.add(A3E.beam);
-  /* Garden: the warm floor glow of each lit lantern during the Undermaw (its P2 armour and P3 Gaze read that light; nothing else shows it now) */
-  var gg = new THREE.CircleGeometry(1, 28); gg.rotateX(-Math.PI/2); A3E.glow = A3_inst(gg, A3_addMatT(0xffffff, 1), 6, 2.2); scene.add(A3E.glow);
-  var gr = new THREE.RingGeometry(0.94, 1.0, 40); gr.rotateX(-Math.PI/2); A3E.glowR = A3_inst(gr, A3_addMatT(0xffffff, 1), 6, 2.3); scene.add(A3E.glowR);
   /* the breath cone (Undermaw phase 1): a floor sector + a brighter rim */
   var cg = new THREE.CircleGeometry(1, 20, -0.38, 0.76); cg.rotateX(-Math.PI/2); cg.rotateY(Math.PI/2);
   A3E.cone = new THREE.Mesh(cg, (function(){ var m = A3_addMatT(0xff6a1f, 0.2); m.side = THREE.DoubleSide; return m; })()); A3E.cone.renderOrder = 18.8; A3E.cone.visible = false; A3E.cone.frustumCulled = false; A3E.cone.position.y = 0.07; scene.add(A3E.cone);
@@ -17382,14 +17401,14 @@ function A3_build(){ if(A3.built) return; A3.built = true; var N = LOWTIER ? A3T
   var hg = new THREE.Group(); var hc = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), A3_addMatT(0xff8a3d, 0.95)); hc.scale.set(1, 1.35, 1); hg.add(hc);
   var hi = new THREE.Mesh(new THREE.OctahedronGeometry(0.24, 0), A3_addMatT(0xffd27a, 0.9)); hg.add(hi); var hh = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), A3_addMatT(0xff7a2a, 0.16)); hh.scale.setScalar(1.3); hg.add(hh);
   hg.renderOrder = 18.5; hg.visible = false; scene.add(hg); A3E.heart = hg; A3E.heartC = hc; A3E.heartH = hh;
-  [A3E.flame, A3E.halo, A3E.ring, A3E.crowd, A3E.eyes, A3E.wings, A3E.beam, A3E.cone, A3E.coneR, A3E.heart, A3E.sbody, A3E.glow, A3E.glowR].forEach(function(o){ o.userData.a3own = 1; o.visible = false; }); }
+  [A3E.flame, A3E.halo, A3E.ring, A3E.crowd, A3E.eyes, A3E.wings, A3E.beam, A3E.cone, A3E.coneR, A3E.heart, A3E.sbody].forEach(function(o){ o.userData.a3own = 1; o.visible = false; }); }
 
 /* show / hide the Deeps: the Pit arena stays (its floor, walls and stands), its crowd, watcher, balcony and lava glow give way to the dark */
 var A3_SAVE = null;
 function A3_pw(){ return typeof PW!=='undefined' && PW && PW.built ? PW : null; }
 function A3_envShow(on){ A3_build(); if(on===A3.shown) return; A3.shown = on;
   if(!A3_DARK){ /* the Thornwall Garden (73-garden.js) replaces the Pit's arena; the lanterns, flames, kindle rings and boss shafts stay ours */
-    [A3E.sbody, A3E.flame, A3E.halo, A3E.ring, A3E.beam, A3E.glow, A3E.glowR].forEach(function(o){ o.visible = on; }); [A3E.seams, A3E.crowd, A3E.eyes, A3E.wings].forEach(function(o){ o.visible = false; });
+    [A3E.sbody, A3E.flame, A3E.halo, A3E.ring, A3E.beam].forEach(function(o){ o.visible = on; }); [A3E.seams, A3E.crowd, A3E.eyes, A3E.wings].forEach(function(o){ o.visible = false; });
     if(!A3.desc) A3E.dark.visible = false;
     if(on){ if(typeof GARDEN!=='undefined') GARDEN.enter(); A3_SAVE = {crowd:crowd && crowd.body ? crowd.body.visible : true}; if(crowd && crowd.body){ crowd.body.visible = false; crowd.head.visible = false; } A3.lastN = -1; A3.liftT = 0; }
     else { if(typeof GARDEN!=='undefined') GARDEN.exit(); if(A3_SAVE){ if(crowd && crowd.body){ crowd.body.visible = A3_SAVE.crowd; crowd.head.visible = A3_SAVE.crowd; } A3_SAVE = null; }
@@ -17457,16 +17476,7 @@ function A3_scRender(t){ var F = A3E.flame, Hh = A3E.halo, Rg = A3E.ring, showRi
     if(k > 0.02){ _a3M.compose(_a3V.set(S.x, 2.7, S.z), _a3Q, _a3S.set(2.0*kk, 2.0*kk, 2.0*kk)); Hh.setMatrixAt(i, _a3M); Hh.setColorAt(i, _a3C.setHex(0xff8a3a).multiplyScalar(0.13*kk)); } else Hh.setMatrixAt(i, _a3Zero);
     var rv = showRing && !S.lit ? 1 : 0; S.ring += (rv - S.ring)*0.12;
     if(S.ring > 0.02){ _a3E.set(0, t*0.4 + i, 0); _a3Q.setFromEuler(_a3E); var rs = 1 + 0.05*Math.sin(t*4 + i); _a3M.compose(_a3V.set(S.x, 0.06, S.z), _a3Q, _a3S.set(rs, 1, rs)); Rg.setMatrixAt(i, _a3M); Rg.setColorAt(i, _a3C.setHex(0xffa040).multiplyScalar(0.6*S.ring)); } else Rg.setMatrixAt(i, _a3Zero); }
-  _a3Q.identity(); F.instanceMatrix.needsUpdate = true; F.instanceColor.needsUpdate = true; Hh.instanceMatrix.needsUpdate = true; Hh.instanceColor.needsUpdate = true; Rg.instanceMatrix.needsUpdate = true; Rg.instanceColor.needsUpdate = true;
-  if(!A3_DARK && A3E.glow) A3_glowRender(t); }
-/* Garden, wave 30 only: each lit lantern's glow on the floor (radius = where the Gaze sees you, A3_litAt > 0.4), warm, never white, ramped with the lantern */
-var A3_GLOWR = 0.71;
-function A3_glowRender(t){ var Gm = A3E.glow, Gr = A3E.glowR, U = A3.um, on = !!(U && U.on && U.e && !U.dying);
-  for(var i=0;i<6;i++){ var S = A3.sc[i]; if(!S || !on || S.k < 0.02){ Gm.setMatrixAt(i, _a3Zero); Gr.setMatrixAt(i, _a3Zero); continue; }
-    var rr = A3T.sconceR*A3_GLOWR*(S.L && S.L.on ? S.L.r/A3T.sconceR : 1)*(0.985 + 0.015*Math.sin(t*2.2 + i)), k = S.k*(U.phase===3 ? 1.25 : 1);
-    _a3M.compose(_a3V.set(S.x, 0.035, S.z), _a3Q.identity(), _a3S.set(rr, 1, rr)); Gm.setMatrixAt(i, _a3M); Gm.setColorAt(i, _a3C.setHex(0xff7a1a).multiplyScalar(0.12*k));
-    Gr.setMatrixAt(i, _a3M); Gr.setColorAt(i, _a3C.setHex(0xff6a10).multiplyScalar(0.5*k)); }
-  Gm.instanceMatrix.needsUpdate = true; Gm.instanceColor.needsUpdate = true; Gr.instanceMatrix.needsUpdate = true; Gr.instanceColor.needsUpdate = true; }
+  _a3Q.identity(); F.instanceMatrix.needsUpdate = true; F.instanceColor.needsUpdate = true; Hh.instanceMatrix.needsUpdate = true; Hh.instanceColor.needsUpdate = true; Rg.instanceMatrix.needsUpdate = true; Rg.instanceColor.needsUpdate = true; }
 function A3_ringsOn(){ var rt = G.round; if(!A3_on()) return false; if(rt==='kindle') return true; if(rt==='ember') return !!(A3.em && A3.em.car); var U = A3.um; if(U && U.on && U.phase===2) return true; return rt==='slay' || rt==='survive' ? !!A3.ringHint : false; }
 
 /* =====================================================================================
@@ -17500,7 +17510,7 @@ function A3_spawn(type, el, at, opts){ var base = A3_BASE[type]; var e = spawnEn
   if(type==='wickmoth'){ e.y = 1.7; e.a3st = 'fly'; e.a3tg = null; e.a3sn = null; e.a3dk = 0; e.nc = false; }
   if(type==='snuffw'){ e.a3L = null; } return e; }
 function A3_pickType(pl){ var w = pl.mix, tot = 0; for(var i=0;i<w.length;i++) tot += w[i][1]; var r = Math.random()*tot; for(var j=0;j<w.length;j++){ r -= w[j][1]; if(r<=0) return w[j][0]; } return 'imp'; }
-function A3_spawner(dt){ if(!G.waveActive || !P || P.dead) return; var pl = A3.plan; if(!pl || pl.type==='undermaw') return;
+function A3_spawner(dt){ if(!G.waveActive || !P || P.dead) return; var pl = A3.plan; if(!pl || pl.type==='undermaw' || pl.type==='hesk') return;
   G.spawnT -= dt; var n = G.wave, alive = aliveCount(), cont = pl.type!=='slay';
   if(G.spawnT<=0 && alive<G.maxAlive && (cont || G.roundKills+alive < G.need)){ var tp = A3_pickType(pl);
     if(tp==='wickmoth'){ var nm = 0; for(var i=0;i<enemies.length;i++) if(!enemies[i].dead && enemies[i].a3==='wickmoth') nm++; if(nm >= (pl.type==='kindle' ? 3 : 2)) tp = 'gloam'; }
@@ -17739,10 +17749,10 @@ function A3_allyRing(dt){ if(typeof PTY==='undefined' || !PTY.on || typeof HEROE
 function A3_finale(){ if(!G.waveActive) return; G.waveActive = false; var n = G.wave; hideAltar(); clearCircles(); clearHazards(); clearFx(); $('objBox').hidden = true; G.escDmg = 0; if(typeof MOD_clearRound==='function') MOD_clearRound();
   var gain = Math.round((12+6*n)*(1+G.mods.glory)*(P.flawless?1.3:1)*P.greed) + 300; G.stake += gain; G.stake = Math.round(G.stake*3); stakePop();
   if(!G.testRun){ if(n > (save.best[P.cls]||0)) save.best[P.cls] = n; var ac = save.acts = (save.acts && typeof save.acts==='object') ? save.acts : {}; ac.cleared = ac.cleared || {}; A3.firstBoss = !ac.cleared[3]; ac.cleared[3] = 1; ac.title = ac.title || {}; ac.title.ashbreaker = 1; ac.a3best = 30; save.wins++; }
-  persist(); heal(P.maxHp*0.15); crowdCheer = 1; SFX.cheer(); after(0.8, function(){ banner('THE UNDERMAW COOLS', '+'+gain+' Glory'+(P.flawless?'  •  FLAWLESS ×1.3':'')+'  •  STAKE TRIPLED', 2.2); }); CG.happytime(); mus.int = 0;
+  persist(); heal(P.maxHp*0.15); crowdCheer = 1; SFX.cheer(); after(0.8, function(){ banner('HESK FALLS STILL', '+'+gain+' Glory'+(P.flawless?'  •  FLAWLESS ×1.3':'')+'  •  STAKE TRIPLED', 2.2); }); CG.happytime(); mus.int = 0;
   A3_bank0('victory'); after(4.0, A3_showVictory); }
 function A3_showVictory(){ if(!P) return; G.state = 'over'; CG.gameplayStop(); unlockPointer(); var C = CLASSES[P.cls]; $('oTitle').textContent = 'Ashbreaker';
-  $('oSub').innerHTML = 'The furnace idol cools. The Thornwall Garden is won, by the '+C.name+'.<div class="bigStake">+⚜ '+G.lastKept+' banked'+(G.testRun ? '<div class="sub">Garden trial: practice run, no Glory.</div>' : '<div class="sub">Three times the stake you carried into the Garden.</div>')+'</div><div class="sub" style="margin-top:6px;color:#ffc890">Beyond the Garden the ladder goes on. Act IV is still sealed.</div>';
+  $('oSub').innerHTML = 'The great oak falls still. The Thornwall Garden is won, by the '+C.name+'.<div class="bigStake">+⚜ '+G.lastKept+' banked'+(G.testRun ? '<div class="sub">Garden trial: practice run, no Glory.</div>' : '<div class="sub">Three times the stake you carried into the Garden.</div>')+'</div><div class="sub" style="margin-top:6px;color:#ffc890">Beyond the Garden the ladder goes on. Act IV is still sealed.</div>';
   $('oStats').innerHTML = statsHtml(); $('oNext').textContent = nextUnlockText(); var b = $('oBtns'); b.innerHTML = ''; addBtn(b, 'Fight again', 'main', function(){ beginRun(P.cls); }); addBtn(b, 'Camp', '', function(){ showMenu(); }); showScreen('over'); }
 
 /* =====================================================================================
@@ -17756,8 +17766,9 @@ function A3_roundPost(n){ var pl = A3.plan = A3_PLAN[n] || A3_PLAN[21], rt = G.r
   else if(rt==='survive' || rt==='vigil') G.need = pl.T;
   else if(rt==='kindle') G.need = pl.need;
   else if(rt==='ember'){ G.need = pl.need; A3_emberStart(pl.need); }
+  else if(rt==='hesk'){ if(typeof HK_start==='function') HK_start(); }
   else if(rt==='undermaw') A3_umStart();
-  if(rt!=='undermaw') $('objBox').hidden = false;
+  if(rt!=='undermaw' && rt!=='hesk') $('objBox').hidden = false;
   if(pl.heal && P){ heal(P.maxHp*0.25); }
   if(n===21){ A3_hint('a3_dark', 1.0); A3_hint('a3_gloam', 6.0); } else if(pl.hint) A3_hint(pl.hint, 2.2);
   recomputeMods(); updateHudStatic(); }
@@ -17833,7 +17844,7 @@ var A3_openBargain0 = openBargain;
 openBargain = function(){ if(G.act!==3) return A3_openBargain0.apply(this, arguments); var saved = CURSES; CURSES = saved.filter(function(c){ return A3_POOL.indexOf(c.id)>=0; });
   try { var r = A3_openBargain0.apply(this, arguments); } finally { CURSES = saved; }
   var nx = G.wave+1, bt = $('bgTitle'), bs = $('bgSub'); if(bt) bt.textContent = nx>=30 ? 'The Last Offering of the Garden' : 'The Garden Offering';
-  if(bs && nx>=30) bs.textContent = 'Round 30: the Undermaw itself. Break it to TRIPLE your stake, or take it now.'; else if(bs && bs.textContent.indexOf('Pitmaster')>=0) bs.textContent = bs.textContent.replace(/the Pitmaster/g, 'the Garden');
+  if(bs && nx>=30) bs.textContent = 'Round 30: Hesk, the Thornwall Colossus. Fell him to TRIPLE your stake, or take it now.'; else if(bs && bs.textContent.indexOf('Pitmaster')>=0) bs.textContent = bs.textContent.replace(/the Pitmaster/g, 'the Garden');
   return r; };
 var A3_showOver0 = showOver;
 showOver = function(){ var a3 = G.act===3 && P, rs = P && P.deathReason; var r = A3_showOver0.apply(this, arguments); if(!a3) return r;
@@ -17843,7 +17854,7 @@ showOver = function(){ var a3 = G.act===3 && P, rs = P && P.deathReason; var r =
 var A3_updateHud0 = updateHud;
 updateHud = function(){ if(G.act!==3 || !P) return A3_updateHud0.apply(this, arguments); var rt = G.round, own = !!A3_OWN[rt];
   if(own) G.round = 'boss'; try { A3_updateHud0.apply(this, arguments); } finally { G.round = rt; }
-  if(own && G.waveActive && rt!=='undermaw'){ var f = 0, t = '';
+  if(own && G.waveActive && rt!=='undermaw' && rt!=='hesk'){ var f = 0, t = '';
     if(rt==='kindle'){ var lc = A3_litCount(); f = lc/G.need; t = 'SCONCES LIT '+lc+' / '+G.need; }
     else if(rt==='ember'){ var em = A3.em; f = em ? em.n/em.need : 0; t = em ? (em.car ? 'CARRY IT TO AN UNLIT SCONCE · '+em.n+' / '+em.need : 'EMBERS BORNE '+em.n+' / '+em.need) : ''; }
     else if(rt==='vigil'){ f = 1-G.roundT/G.need; t = 'HOLD '+fmtT(G.need-G.roundT); }
@@ -18025,7 +18036,7 @@ if(typeof CX_FOE!=='undefined'){
 if(typeof CX_ROUND!=='undefined'){ if(A3_DARK) CX_ROUND.kindle = {g:'star', t:'Act III. Dash through unlit sconces to kindle them, and keep enough lit at the same time. They gutter out, and wick-moths snuff them.'};
   if(A3_DARK) CX_ROUND.ember = {g:'star', t:'Act III. Walk over the ember-heart in the centre and carry it to an unlit sconce. Your lantern grows while you carry it, but dashing drops it.'};
   CX_ROUND.vigil = {g:'survive', t:'Act III, the breather before the boss. A short, quiet round: hold on until the last round wakes.'};
-  CX_ROUND.undermaw = {g:'boss', t:'Act III, the last wave. The Undermaw, the furnace idol the Pit was dug to cage.'}; }
+  CX_ROUND.hesk = {g:'boss', t:'Act III, the last wave. Hesk, the Thornwall Colossus: the living oak of the Garden.'}; }
 if(typeof CX_BOSS!=='undefined'){ CX_BOSS.undermaw = {n:'The Undermaw', act:'Act III', el:'flame', pz:0.9, round:30, where:'the Thornwall Garden',
   lore:'The iron furnace idol the Pit was dug to cage. Its heat makes the lava above; every cheer is fuel. It broke out under the Thornwall Garden: its only glow comes from its doors.',
   moves:[['Doorlight breath','One furnace door opens and throws a cone of its colour across the floor. You can see inside the cone. A moment later the breath falls along it: match the door\'s colour or step out of the light.'],
@@ -18035,10 +18046,10 @@ if(typeof CX_BOSS!=='undefined'){ CX_BOSS.undermaw = {n:'The Undermaw', act:'Act
   phases:[['100–65%','Doorlight: light shows where its breath will fall. Gloamlings come through the hedges.'], ['65–30%','Smother: the doors shut. Its armour opens only while 2 lit hedge lanterns reach it (warm shafts reach its chest); otherwise it takes a third of the damage. Moths stream from its stacks to snuff them.'], ['Under 30%','The Gaze: stay out of the lanterns\' glow on the floor. Its slit takes extra damage.']],
   tips:'Every attack it has carries a colour and can be absorbed. Dash through a hedge lantern to light it; kill moths before they reach them.'}; }
 if(typeof CX_rounds==='function'){ var A3_cxr0 = CX_rounds; CX_rounds = function(){ var out = A3_cxr0.apply(this, arguments);
-    try{ for(var i=0;i<out.length;i++){ var id = out[i].id; if(id==='r_kindle' || id==='r_ember' || id==='r_vigil' || id==='r_undermaw'){ out[i].cat = 'Act III'; } }
+    try{ for(var i=0;i<out.length;i++){ var id = out[i].id; if(id==='r_kindle' || id==='r_ember' || id==='r_vigil' || id==='r_undermaw' || id==='r_hesk'){ out[i].cat = 'Act III'; } }
       out.push({id:'act3', grp:'Acts', g:'arch', cat:'Act', name:A3_DARK ? 'Act III · The Kindling Deeps' : 'Act III · The Thornwall Garden', sub:'Waves 21 to 30', known:!!(save.acts && save.acts.open && save.acts.open[3]), body:function(){
         var rows = []; for(var w in A3_PLAN){ var ty = A3_PLAN[w].type; rows.push(['Wave '+w, CX_tc(OBJS[ty] ? OBJS[ty].name : ty)]); }
-        return CX_p('Break the Stormwright in a normal run and you may enter the Thornwall Garden, the old pleasure garden the Pit was dug in, now walled with living hedge. Curses break, boons stay, and the stake stays at risk. The Undermaw waits at round 30.')+CX_tbl(rows)+CX_tbl([['Your best', save.acts && save.acts.a3best ? 'Wave '+save.acts.a3best : 'Not yet reached']]); }}); }catch(err){}
+        return CX_p('Break the Stormwright in a normal run and you may enter the Thornwall Garden, the old pleasure garden the Pit was dug in, now walled with living hedge. Curses break, boons stay, and the stake stays at risk. Hesk, the Thornwall Colossus, waits at round 30.')+CX_tbl(rows)+CX_tbl([['Your best', save.acts && save.acts.a3best ? 'Wave '+save.acts.a3best : 'Not yet reached']]); }}); }catch(err){}
     return out; }; }
 
 /* Deeps trial (dev, next to the Stormwright trial): wave 21 with 20 random boons, practice run */
@@ -18159,7 +18170,7 @@ function TUT_page(act){ var T = G.touch;
     TUT_r(TUT_ic(ICON('hedge')), 'A daylit garden arena: <b>hedge walls</b>, a canal and pools. New foes come through the <b>hedge gates</b>.')+
     TUT_r(TUT_dots(), '<b>Gloamlings</b> flank you in pairs and lunge low. Match the colour on their claws.')+
     TUT_r(TUT_ic(ICON('moth')), '<b>Wick-moths</b> never strike: one hit pops them into a few sparks of their colour.')+
-    TUT_r(TUT_ic(ICON('lantern')), 'The <b>Undermaw</b> waits at round 30. There, '+(T ? 'dash' : TUT_k('Space')+'-dash')+' through a <b>hedge lantern</b> to light it.')};
+    TUT_r(TUT_ic(ICON('hedge')), '<b>Hesk, the Thornwall Colossus</b> waits at round 30. Your ward is your shield <b>and</b> your hit colour: his thorn blooms only break to theirs.')};
   var w = T ? null : [kl('Digit1'), kl('Digit2'), kl('Digit3')];
   var basics = '<div class="tSec">The basics</div>'+
     (T ? TUT_r(TUT_ic(ICON('stick')), '<b>Left thumb: move.</b> You aim and attack on your own.') :
@@ -18226,8 +18237,8 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.tut = {TUT:TUT, show
      · arcade back wall r 24.4 (arches, ivy, rose trellis, pergola gate tunnels) · landmarks: the lightning-split great oak (A 150°, roots break the terraces)
        and the tiered fountain (A 315°), the herald's pavilion (A 225°, top centre) and the seedmonger's stall (gate 0°).
    People (CHARS.gnpc, visual only): Pell Greenhand blows his horn in the pavilion at every round start; Seedmonger Anwen's stall lamp lights while an
-   offering is due (reads OF_due / OF.on from 63-offerings.js, read-only). During the Undermaw (wave 30) the pavilion, Pell and the crowd behind it step
-   aside, because the idol rises there.
+   offering is due (reads OF_due / OF.on from 63-offerings.js, read-only). During Hesk's fight (wave 30, 79-hesk.js) the pavilion, Pell and the crowd behind it step
+   aside, because his planter bed stands there.
    Draw calls (all merged / instanced): static lit 1 (+1 shadow), pavilion 1 (+1 shadow), emissive 1, water 2, floor 1, tufts 1, crowd 2 (LOD), trees 1, lawn 1.
    Crowd LOD: ~700 figures as 2 instanced draws (a 4-sided body + an octahedron head; arms and hats are extra instances of the same two meshes).
    Palette (doc §3): floor sage stone, hedge #2f5a2a top / #6f9a4a faces, sky #7fbfd6, fog #c4dcb4, pools #8fd8ea, brass braziers. Nothing white.
@@ -18503,7 +18514,7 @@ function GDN_cast(){ GDN.npc = []; if(!CHARS.gnpc) return;
   var a = GDN_PAV, hx = Math.cos(a)*19.55, hz = Math.sin(a)*19.55; put('herald', hx, 1.2, hz, GDN_face(hx, hz), 'idle');
   var T = GDN_STALL, ta = T.a, tr = T.r + 0.95, tx = Math.cos(ta)*tr + Math.sin(ta)*T.x, tz = Math.sin(ta)*tr - Math.cos(ta)*T.x; put('seed', tx, 0, tz, GDN_face(tx, tz) - 0.25, 'idle'); }
 /* Pell blows the horn for ~2.4 s at each round start; Anwen holds a packet out while an offering is due */
-function GDN_offerDue(){ try{ if(typeof OF!=='undefined' && OF && OF.on) return true; if(typeof OF_due==='function' && G.waveActive && G.act===3 && !(A3.um && A3.um.on)) return !!OF_due(G.wave); }catch(err){} return false; }
+function GDN_offerDue(){ try{ if(typeof OF!=='undefined' && OF && OF.on) return true; if(typeof OF_due==='function' && G.waveActive && G.act===3 && !(A3.um && A3.um.on) && !(typeof HK!=='undefined' && HK.on)) return !!OF_due(G.wave); }catch(err){} return false; }
 function GDN_npcStep(t, dt){ var L = GDN.npc; if(!L) return; if(GDN.horn > 0) GDN.horn = Math.max(0, GDN.horn - dt); var due = GDN_offerDue();
   for(var i=0;i<L.length;i++){ var n = L[i]; n.e.npPose = n.v==='herald' ? (GDN.horn > 0 ? 'blow' : 'idle') : (due ? 'offer' : 'idle'); if(n.v==='herald') n.R.root.visible = !GDN.umHide;
     n.R.def.anim(n.R, n.e, t, dt); n.R.updateBones(); }
@@ -18554,7 +18565,7 @@ var GARDEN = {
 };
 var GDN_UP = new THREE.Vector3(-1, 2, -1).normalize(), GDN_CAM = [0.70, 4.2];   /* the Pit's landscape framing (39-pit-watch PW_EFF.cam), as in the approved mocks */
 RENDER_HOOKS.push(function(t, adt){ if(!GDN.on) return; GDN.ch = Math.max(GDN.ch, crowdCheer*0.8); GDN.ch = Math.max(0, GDN.ch - (adt||0)*0.4);
-  var um = !!(typeof A3!=='undefined' && A3.um && A3.um.on); if(um!==GDN.umHide){ GDN.umHide = um; if(GDN.pav) GDN.pav.visible = !um; }
+  var um = !!(typeof A3!=='undefined' && A3.um && A3.um.on) || !!(typeof HK!=='undefined' && HK && HK.on); if(um!==GDN.umHide){ GDN.umHide = um; if(GDN.pav) GDN.pav.visible = !um; }
   GDN_crowdPose(t, GDN.ch); GDN_colSync(); GDN_npcStep(t, adt||0);
   if(G.state==='play' && !G.camO && (camera.right - camera.left) > (camera.top - camera.bottom)){ if(camera.zoom!==GDN_CAM[0]){ camera.zoom = GDN_CAM[0]; camera.updateProjectionMatrix(); } camera.position.addScaledVector(GDN_UP, GDN_CAM[1]); camera.updateMatrixWorld(); } });
 
@@ -19572,6 +19583,430 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.obj = { OBJ:OBJ, OC:
     aloft:OBJ.a ? {done:OBJ.a.done, events:OBJ.a.events, saved:OBJ.a.saved, ev:OBJ.a.ev ? {el:OBJ.a.ev.el, x:OBJ.a.ev.oc.x, z:OBJ.a.ev.oc.z, n:OBJ.a.ev.oc.n} : null} : null,
     bloom:OBJ.b ? {bloomed:OBJ.b.bloomed, beds:OBJ.b.beds.map(function(b){ return {el:b.el, x:b.x, z:b.z, st:b.st, hp:b.hp, n:b.oc ? b.oc.n : 0}; })} : null}; },
   broken:function(){ OBJ_broken('Test'); return OBJ.st; }, altar:function(){ G.round = 'altar'; showAltar(); var g0 = G.god; G.god = false; damageAltar(99999); G.god = g0; return {st:OBJ.st, dead:P.dead, ruin:P.ruin, active:G.waveActive}; }, win:function(){ OBJ_won(); return OBJ.st; } }; }
+/* ---------- 79-hesk.js · HESK, THE THORNWALL COLOSSUS: the living-tree boss of the Thornwall Garden (wave 30). Prefix HK_. ----------
+   Spec: design/research/15-boss-mechanics.md §3 pillars + §5 "The Two-Handed Ward", re-tuned for wave 30 (it replaces the Undermaw there;
+   71-act3.js routes A3_PLAN[30] = 'hesk' to HK_start()). Model: src/chars/hesk.js (shown ×HK_SC: about 13 u tall), seated in his planter bed on the
+   north rim where the herald's pavilion stands (73-garden.js hides the pavilion, Pell and the crowd behind him while HK.on).
+   Verb: your ward is both your shield and your hit colour.
+     P1 Planted Arm (100-65%): a wedge in colour A fills 1.2 s, the arm slams and stays 5 s as terrain (blocks bodies, not shots) with 3 thorn
+        blooms in colour B (only hits in B hurt them). Burst all 3 = ARM BREAK (4 s stagger, x2). Root Lanes (A) while the arm is planted.
+        Unbroken blooms heal him 1% each at the next plant.
+     P2 Canopy Fire (65-30%): the crown burns; fire runs along the hedge rim (flame, absorbable ticks) and stops at the frost-pool firebreaks.
+        Root Bait every 8 s: a root lane at the Favourite; if its far end meets a burning hedge it BACKDRAFTS (5% HP, next arm grows 2 blooms).
+        A root that hits (not absorbed) BINDS for 1.5 s: dash breaks it; an ally standing close frees it in 0.6 s.
+     P3 Lightning Oak (30-0%): grounding rings on three topiary posts; Thunder Call every 10 s (2 s lock-on per body, storm). In a ring: grounded.
+        Under his crown holding storm: OVERCHARGE (4 s stagger, x2; in a party two bodies must stack). Wrong ward under the crown hurts.
+   Party (§5.4): split arms (Double Break 6 s), extra lanes, Bind protect, forked Thunder Call, stack/spread; AI jobs Anchor / Free / Stack / Ground.
+   Fairness: every hit is flame / frost / storm and absorbable (design/NO-WHITE.md); arrivals booked through CMB_reserve with other colours >= 0.5 s
+   apart; wind-ups >= 1.0 s; no white flashes (rim pulses and coloured particles only). Wraps updateBoss, bossDeath, hurtEnemy, killEnemy,
+   updateEnemies, updatePlayer, clearWorld, PTY_think (each calls the original). */
+var HK_HP = 2600, HK_HPK = 0.85, HK_SC = 1.85, HK_R = 6.5, HK_DOFF = 3.0;
+var HK_DMG = {slam:26, lane:20, fire:7, thunder:26, over:38};
+var HK_W = {half:35*Math.PI/180, reach:11.5, fill:1.2, stay:5.0, armLen:10.5, armR:1.0, laneW:1.6, laneT:1.0, baitT:1.2, bind:1.5, freeT:0.6, freeR:5.5,
+  breakT:4.0, dblT:6.0, mul:2.0, overT:4.0, back:0.05, heal:0.01, thT:2.0, thR:2.0, ringR:2.2, crownR:2.6, fireStep:0.6, fireBurn:9, fireWave:14, fireTick:0.6, band:2.0, enrT:180, enrStep:20};
+var HK_GAP = [0, 9, 12, 11];
+ETYPES.hesk = {hp:HK_HP, spd:0, r:HK_R, dmg:0, h:12, boss:true};
+ETYPES.hk_bloom = {hp:20, spd:0, r:0.8, dmg:0, h:1.6};
+var HK = {on:false, e:null, ent:null, dying:null, phase:1, arms:[], lanes:[], armT:3, baitT:6, thT:8, th:null, stag:0, stagMul:1, lastA:'', lastB:'', bloomsNext:3,
+  unbroken:0, brokeT:-99, fire:null, rings:[], t:0, enr:0, enrT:0, bx:0, bz:0, ax:0, az:0, cz:{x:0, z:0}, log:null, hinted:{}, pend:[]};
+var HK_ZERO = {x:0, z:0}, HK_ZM = [0, 0];
+
+/* ---------- the thorn bloom rig (one draw: petals on the element glow channel, so they show their ward colour) ---------- */
+CHARS.hk_bloom = { name:'Thorn bloom', rim:0.3, deathDur:0.3, variant:function(){ return 'v1'; }, finish:{shadow:false},
+  build:function(R){ R.limb('root', null, 0, 0, 0); R.limb('head', 'root', 0, 1.15, 0);
+    R.add('root', G2.taper, 0x3a2b20, 0, 0.55, 0, 0.32, 1.1, 0.32); R.add('root', G2.cone4, 0x5a4330, 0.22, 0.6, 0, 0.1, 0.4, 0.1, 0, 0, -1.0); R.add('root', G2.cone4, 0x5a4330, -0.2, 0.85, 0.05, 0.1, 0.4, 0.1, 0, 0, 1.0);
+    for(var i=0;i<5;i++){ var a = i/5*TAU; R.glow('head', G2.oct, Math.cos(a)*0.34, 0, Math.sin(a)*0.34, 0.5, 0.16, 0.32, 0, -a, 0.25, {v:1.0, outline:false}); }
+    R.glow('head', G2.oct, 0, 0.08, 0, 0.32, 0.36, 0.32, 0, 0, 0, {v:1.8, outline:false}); R.add('head', G2.ico0, 0x46702c, 0, -0.15, 0, 0.5, 0.2, 0.5); },
+  anim:function(R, e, t, dt){ var H = R.limbs.head.g, k = e.state==='dead' ? Math.max(0.01, 1 - (e.deadT||0)) : 1, p = 1 + 0.08*Math.sin(t*5 + (e.bob||0));
+    H.rotation.y = t*0.9; H.scale.set(k*p, k*p, k*p); if(e.hurtT>0) H.position.y = 1.15 - 0.1*e.hurtT; else H.position.y = 1.15; } };
+
+/* ---------- small helpers ---------- */
+function HK_live(){ var e = HK.e; return HK.on && e && !e.dead && !HK.dying ? e : null; }
+function HK_hpMax(){ var n = G.wave||30, vet = 1 + 0.08*(n-1) + (n>10 ? 0.05*(n-10)*(n-10)/4 : 0), pk = (typeof PTY!=='undefined' && PTY.on && typeof PTY_f==='function' && typeof PARTY!=='undefined') ? PTY_f(PARTY.bossHp) : 1;   /* x party boss HP, once (HK_spawn never reaches the spawnBoss wrapper) */
+  return Math.round(HK_HP*vet*HK_HPK*(G.mods ? G.mods.ehp : 1)*pk); }
+function HK_d(k){ return (HK_DMG[k] + 0.4*((G.wave||30)-1))*(1 + HK.enr); }
+function HK_n(){ return typeof PTY_size==='function' ? PTY_size() : 1; }
+function HK_bodies(){ var H = PTY_heroes(), o = []; for(var i=0;i<H.length;i++) if(H[i] && !H[i].dead) o.push(H[i]); return o; }
+function HK_ctl(){ return (typeof PTY!=='undefined' && PTY.on && PTY.ctl) ? PTY.ctl.st : P; }
+function HK_res(eta, el){ if(typeof CMB_reserve==='function' && eta > 0) CMB_reserve(eta, el); }
+function HK_delay(eta, el){ if(typeof CMB_slot!=='function' || !P || P.dead) return 0; return Math.max(0, CMB_slot(eta, el, CMB_threats(null)) - eta); }
+function HK_bestCol(eta, prefs){ var best = prefs[0], bd = 9; for(var i=0;i<prefs.length;i++){ var d = HK_delay(eta, prefs[i]); if(d < bd - 0.02){ bd = d; best = prefs[i]; } if(d <= 0.001) break; } return {el:best, d:bd}; }
+function HK_free(el, win){ if(typeof CMB_threats!=='function' || !P || P.dead) return true; var L = CMB_threats(null); for(var i=0;i<L.length;i++){ var x = L[i]; if(x.el!==el && Math.abs(x.t) < (win||0.5)) return false; } return true; }
+function HK_log(k, v){ if(HK.log) HK.log.push([+(G.t||0).toFixed(2), k, v==null ? '' : v]); }
+function HK_srcAt(x, z){ HK_SRC.x = x; HK_SRC.z = z; return HK_SRC; } var HK_SRC = {x:0, z:0};
+function HK_inR(){ return AR(); }
+var HK_HINT_TXT = {
+  hk_arm:function(){ return 'Hesk <b>plants an arm</b>. Absorb the slam in its colour, then switch to the <b>blooms\' colour</b>: only hits in that colour burst them. Burst all three: <b>Arm Break</b>.'; },
+  hk_lane:function(){ return '<b>Root Lanes</b> run along the floor in his bark colour. Match it, or sidestep.'; },
+  hk_fire:function(){ return '<b style="color:#ff8a3d">The canopy burns.</b> Fire runs along the hedge rim and stops at the frost pools. Lure a root into the burning hedge for a <b>Backdraft</b>.'; },
+  hk_bind:function(){ return 'A root <b>binds</b> you! '+(G.touch ? 'Dash' : '<b class="kc">Space</b>-dash')+' to break free.'; },
+  hk_thunder:function(){ return '<b style="color:#c06bff">Thunder Call</b>: stand in a <b>grounding ring</b> to ground it, or stand <b>under his crown</b> holding storm to <b>Overcharge</b> him.'; }
+};
+function HK_hint(id, dl){ if(typeof HINTS==='undefined' || typeof hintOnce!=='function' || HK.hinted[id]) return; HK.hinted[id] = 1; if(!HINTS[id]) for(var k in HK_HINT_TXT) HINTS[k] = HK_HINT_TXT[k];
+  if(dl) after(dl, function(){ if(HK.on) hintOnce(id); }); else hintOnce(id); }
+
+/* ---------- geometry of the fight: the bed on the north rim (the pavilion), the arm apexes, the crown zone ---------- */
+function HK_place(){ var A = (typeof GDN_PAV!=='undefined') ? GDN_PAV : Math.PI*1.25, R = AR(), D = R + HK_DOFF; HK.A = A;
+  HK.bx = Math.cos(A)*D; HK.bz = Math.sin(A)*D; HK.ax = Math.cos(A)*(R - 0.3); HK.az = Math.sin(A)*(R - 0.3);
+  HK.cz.x = Math.cos(A)*(R - 3.2); HK.cz.z = Math.sin(A)*(R - 3.2); HK.inA = Math.atan2(-HK.ax, -HK.az); }
+function HK_apex(s){ var a = HK.A + s*0.2, R = AR() - 0.4; return {x:Math.cos(a)*R, z:Math.sin(a)*R}; }
+function HK_clampAng(ax, az, ang){ var base = Math.atan2(-ax, -az), d = angDiff(base, ang), lim = 62*Math.PI/180; if(d > lim) d = lim; if(d < -lim) d = -lim; return base + d; }
+
+/* ---------- meshes (built once, hidden when idle) ---------- */
+var HK_M = null;
+function HK_tmat(c, o){ var m = new THREE.MeshBasicMaterial({color:c, transparent:true, opacity:o, depthWrite:false, side:THREE.DoubleSide}); return m; }
+function HK_mesh(){ if(HK_M) return HK_M; var M = HK_M = {}, h = HK_W.half;
+  var sec = new THREE.CircleGeometry(1, 24, -Math.PI/2 - h, 2*h); sec.rotateX(-Math.PI/2);
+  var rim = new THREE.RingGeometry(0.965, 1, 24, 1, -Math.PI/2 - h, 2*h); rim.rotateX(-Math.PI/2);
+  M.wedge = []; for(var i=0;i<2;i++){ var W = {under:new THREE.Mesh(sec, HK_tmat(0x2a1340, 0.45)), fill:new THREE.Mesh(sec, HK_tmat(0xc06bff, 0.3)), rim:new THREE.Mesh(rim, HK_tmat(0xc06bff, 0.85))};
+    W.under.position.y = 0.045; W.fill.position.y = 0.055; W.rim.position.y = 0.065; W.under.renderOrder = 2; W.fill.renderOrder = 3; W.rim.renderOrder = 3; M.wedge.push(W); }
+  /* the planted arm: a long bark limb along +Z (thorns, moss, bronze root-claw tip) + a stretched upper limb from his hand down to the rim */
+  var B = new GDN_B(), C = {BARK:0x5a4330, BARK2:0x3a2b20, BARK3:0x7a5c3e, BRZ:0x9a7240, BRZ3:0x6e5030, MOSS:0x55762f, LEAF:0x5a8434}, L = HK_W.armLen;
+  var lg = new THREE.CylinderGeometry(0.42, 0.5, 1, 7);
+  for(var s=0;s<6;s++){ var z0 = s/6*L, len = L/6*1.08, w = 1.25 - s*0.12; B.add(lg, 0, 0.45 + 0.25*Math.sin(s*1.3), z0 + len/2, w*1.3, len, w, Math.PI/2, 0, 0, s%2 ? C.BARK : C.BARK3); }
+  for(var t=0;t<10;t++){ var tz = 0.6 + t*0.95, sd = t%2 ? 1 : -1; B.add(G2.cone4, sd*0.55, 0.9, tz, 0.18, 0.7, 0.18, 0, 0, -sd*1.1, C.BARK2); B.add(G2.cone4, 0, 1.15, tz + 0.4, 0.15, 0.55, 0.15, -0.3, 0, 0, C.BARK2); }
+  for(var mo=0;mo<5;mo++) B.add(G2.ico0, (mo%2 ? 0.4 : -0.35), 0.95, 1.2 + mo*1.9, 0.9, 0.35, 0.8, 0, mo, 0, mo%2 ? C.MOSS : C.LEAF);
+  for(var f=0;f<4;f++){ var fa = (f-1.5)*0.45; B.add(G2.taper, Math.sin(fa)*0.6, 0.3, L + 0.3 + Math.cos(fa)*0.5, 0.35, 1.3, 0.35, 1.35, fa, 0, f%2 ? C.BRZ : C.BRZ3); }
+  var ag = B.geo(), am = new THREE.MeshPhongMaterial({vertexColors:true, flatShading:true, shininess:8, specular:0x1a1e14});
+  M.arm = []; for(var a=0;a<2;a++){ var m = new THREE.Mesh(ag, am); m.castShadow = true; m.receiveShadow = true; M.arm.push({m:m}); }
+  /* rim fire: flames on the hedge (instanced cones) + a burning floor band per segment; 3 frost firebreak sectors share the band mesh */
+  var N = HK.fireN = 36, fg = new THREE.ConeGeometry(0.5, 1, 6); M.flame = new THREE.InstancedMesh(fg, new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.92, depthWrite:false}), N*3);
+  M.flame.instanceMatrix.setUsage(THREE.DynamicDrawUsage); M.flame.renderOrder = 4; M.flame.setColorAt(0, new THREE.Color(0xff7a33));
+  var bandG = new THREE.RingGeometry(AR() - HK_W.band, AR() - 0.05, 4, 1, 0, TAU/N); bandG.rotateX(-Math.PI/2);
+  M.band = new THREE.InstancedMesh(bandG, HK_tmat(0xffffff, 0.42), N + 3); M.band.instanceMatrix.setUsage(THREE.DynamicDrawUsage); M.band.renderOrder = 2; M.band.setColorAt(0, new THREE.Color(0xff6a1f));
+  /* grounding rings (dashed, gold marker) on three posts + the crown zone (dashed ring + inward gold chevrons = stack) */
+  var dr = typeof A3_dashRing==='function' ? A3_dashRing(HK_W.ringR - 0.18, HK_W.ringR + 0.06, 22) : new THREE.RingGeometry(HK_W.ringR - 0.18, HK_W.ringR + 0.06, 40); if(typeof A3_dashRing!=='function') dr.rotateX(-Math.PI/2);
+  M.rings = []; for(var r=0;r<3;r++){ var rm = new THREE.Mesh(dr, HK_tmat(0xffd27a, 0.85)); rm.position.y = 0.07; rm.renderOrder = 3; M.rings.push(rm); }
+  var cr = typeof A3_dashRing==='function' ? A3_dashRing(HK_W.crownR - 0.15, HK_W.crownR + 0.08, 26) : new THREE.RingGeometry(HK_W.crownR - 0.15, HK_W.crownR + 0.08, 40); if(typeof A3_dashRing!=='function') cr.rotateX(-Math.PI/2);
+  M.crown = new THREE.Mesh(cr, HK_tmat(0xffd27a, 0.9)); M.crown.position.y = 0.07; M.crown.renderOrder = 3;
+  var chv = new GDN_B(); for(var c=0;c<6;c++){ var ca = c/6*TAU, rr = HK_W.crownR - 0.75, cx = Math.cos(ca)*rr, cz = Math.sin(ca)*rr, ix = -Math.cos(ca), iz = -Math.sin(ca), px = -iz, pz = ix;
+    chv.tri(cx + ix*0.55, 0.08, cz + iz*0.55, cx - ix*0.1 + px*0.45, 0.08, cz - iz*0.1 + pz*0.45, cx - ix*0.1 - px*0.45, 0.08, cz - iz*0.1 - pz*0.45, 0xffd27a); }
+  M.chev = new THREE.Mesh(chv.geo(), new THREE.MeshBasicMaterial({vertexColors:true, transparent:true, opacity:0.9, depthWrite:false, side:THREE.DoubleSide})); M.chev.renderOrder = 3;
+  /* bind coils (one per body) */
+  var bg = new THREE.TorusGeometry(0.75, 0.16, 4, 10); bg.rotateX(Math.PI/2); M.bind = []; for(var q=0;q<3;q++){ var bm = new THREE.Mesh(bg, new THREE.MeshPhongMaterial({color:0x6e5030, flatShading:true})); M.bind.push(bm); }
+  HK_all(M).forEach(function(o){ o.visible = false; o.frustumCulled = false; scene.add(o); }); return M; }
+function HK_all(M){ var a = [M.flame, M.band, M.crown, M.chev].concat(M.rings, M.bind); M.wedge.forEach(function(W){ a.push(W.under, W.fill, W.rim); }); M.arm.forEach(function(A){ a.push(A.m); }); return a; }
+function HK_hideAll(){ if(HK_M) HK_all(HK_M).forEach(function(o){ o.visible = false; }); }
+
+/* ---------- overlay: a rim pulse (never white), phase pips on the boss bar ---------- */
+var HK_el = null;
+function HK_dom(){ if(HK_el) return HK_el; var st = document.createElement('style'); st.textContent =
+  '#hkPulse{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;transition:opacity .5s}'+
+  '#hkPh{display:inline-flex;gap:5px;margin-left:8px;vertical-align:middle}#hkPh i{width:8px;height:8px;transform:rotate(45deg);border:1px solid #ffd27a;background:rgba(10,8,18,.6);display:block}#hkPh i.on{background:#ffd27a;box-shadow:0 0 6px rgba(255,210,122,.8)}'+
+  '.hkTick{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffd27a;box-shadow:0 0 4px #000;pointer-events:none}'+
+  '#hkStag{font:900 clamp(9px,1.5vh,11px)/1 Cinzel,serif;letter-spacing:.18em;color:#ffe2a8;text-shadow:0 1px 2px #000;margin-top:3px;min-height:1em}';
+  document.head.appendChild(st);
+  var p = document.createElement('div'); p.id = 'hkPulse'; document.body.appendChild(p);
+  var ph = document.createElement('span'); ph.id = 'hkPh'; ph.innerHTML = '<i></i><i></i><i></i>'; ph.hidden = true; var nm = $('bossName'); if(nm && nm.parentNode) nm.parentNode.insertBefore(ph, nm.nextSibling);
+  var bar = $('bossFill') && $('bossFill').parentNode, ticks = []; if(bar){ if(getComputedStyle(bar).position==='static') bar.style.position = 'relative'; [65, 30].forEach(function(v){ var t = document.createElement('b'); t.className = 'hkTick'; t.style.left = v+'%'; t.hidden = true; bar.appendChild(t); ticks.push(t); }); }
+  var sg = document.createElement('div'); sg.id = 'hkStag'; sg.hidden = true; var bb = $('bossBox'); if(bb) bb.appendChild(sg);
+  HK_el = {pulse:p, ph:ph, ticks:ticks, stag:sg, k:''}; return HK_el; }
+function HK_pulse(hex, o){ var d = HK_dom(), c = new THREE.Color(hex), r = Math.round(c.r*255), g = Math.round(c.g*255), b = Math.round(c.b*255);
+  d.pulse.style.background = 'radial-gradient(ellipse at 50% 50%,rgba('+r+','+g+','+b+',0) 55%,rgba('+r+','+g+','+b+',.3) 80%,rgba('+r+','+g+','+b+',.6))';
+  d.pulse.style.transition = 'none'; d.pulse.style.opacity = Math.min(0.6, o||0.45); void d.pulse.offsetWidth; d.pulse.style.transition = 'opacity .7s'; d.pulse.style.opacity = 0; }
+function HK_hud(){ var d = HK_el; if(!d) return; var on = HK.on && HK.e && !HK.ent && !HK.dying && G.state==='play';
+  d.ph.hidden = !on; d.ticks.forEach(function(t){ t.hidden = !on; }); d.stag.hidden = !on; if(!on) return;
+  var k = HK.phase + '|' + (HK.stag > 0 ? Math.ceil(HK.stag*10) : 0); if(k===d.k) return; d.k = k;
+  for(var i=0;i<3;i++) d.ph.children[i].className = i < HK.phase ? 'on' : '';
+  d.stag.textContent = HK.stag > 0 ? (HK.stagTxt || 'STAGGERED')+' · ×'+HK.stagMul.toFixed(1)+' · '+HK.stag.toFixed(1)+' s' : ''; }
+
+/* ---------- start / spawn / entrance ---------- */
+function HK_start(){ HK_cleanup(); HK_place(); HK_mesh(); HK_dom(); HK.on = true; HK.phase = 1; HK.t = 0; HK.enr = 0; HK.enrT = 0;
+  G.need = 9999; G.maxAlive = 0; $('objBox').hidden = true; mus.int = 2;
+  HK.ent = {t:0, eyes:false, tore:false, said:false}; banner('ROUND 30', 'The Garden falls silent…', 1.8); tone(55, 2.4, 'sawtooth', 0.06, 40); noise(2.2, 0.06, 240, 'lowpass');
+  HK_spawn(); return true; }
+function HK_spawn(){ var e = spawnEnemy('hesk', 'storm', {x:HK.bx, z:HK.bz, a:HK.A}); e.type = 'boss'; e.hk = true; e.spawnT = 0; e.r = HK_R; e.hp = e.maxHp = HK_hpMax(); HK.hp0 = e.hp;
+  e.face = Math.atan2(-HK.bx, -HK.bz); e.phase = 1; e.act = null; e.wind = 0; e.invuln = true; e.tier = 2; e.leap = null; e.y = 0; e.hkScale = HK_SC; e.hkPose = 'wake'; e.hkEyes = 0; e.hkSnap = true; e.hkYaw = 0;
+  e.M.hb.visible = false; e.M.hb = new THREE.Object3D(); e.M.hbf = new THREE.Mesh(); e.M.hbf.material = {color:{setHex:function(){}}, dispose:function(){}};
+  HK.e = e; G.bossRef = null; after(0.05, function(){ if(HK.e===e) e.hkSnap = false; }); return e; }
+function HK_stepEnter(dt){ var E = HK.ent, e = HK.e; if(!E || !e) return; E.t += dt; var t = E.t;
+  if(!E.eyes && t >= 1.0){ E.eyes = true; e.hkEyes = 1; SFX.tele(); tone(110, 1.0, 'triangle', 0.05, 220); if(e.M.rig) rigBurst(e.M.rig, 'head', 18, 0xb8f070, 3, 0.6, 1.2, 0, 0.3, 0.8); }
+  if(!E.tore && t >= 1.7){ E.tore = true; e.hkPose = 'root'; SFX.roar(); SFX.slam(); shake(0.6); G.hitstop = Math.max(G.hitstop, 0.06);
+    for(var i=0;i<10;i++){ var a = HK.A + rnd(-0.9, 0.9), r = AR() + rnd(-1.5, 3.5); rocks(Math.cos(a)*r, 0.4, Math.sin(a)*r, 8, 0x4a3626, 7); }
+    if(typeof GARDEN!=='undefined') GARDEN.cheer(1); crowdCheer = 1; SFX.cheer(); }
+  if(E.tore && t > 1.7 && t < 3.0 && Math.random() < dt*30){ var a2 = HK.A + rnd(-1, 1), r2 = AR() + rnd(-1, 4); rockP.emit(Math.cos(a2)*r2, rnd(0, 1), Math.sin(a2)*r2, rnd(-1,1), rnd(2,6), rnd(-1,1), rnd(0.8,1.4), rnd(0.8,1.6), 0x4a3626, 16, 0.5); }
+  if(t >= 2.6 && e.hkPose==='root') e.hkPose = 'idle';
+  if(!E.said && t >= 2.6){ E.said = true; bossSay('HESK, THE THORNWALL COLOSSUS', '"The Garden grows over every champion."', 2.8); $('bossName').textContent = 'HESK, THE THORNWALL COLOSSUS'; $('bossBox').hidden = false; G.bossRef = e; }
+  if(t >= 4.2){ HK.ent = null; e.invuln = false; HK.armT = 1.4; HK.baitT = 8; HK.thT = 6; HK_hint('hk_arm', 0.6); if(!G.testRun){ save.acts = save.acts||{}; save.acts.hkSeen = 1; persist(); } } }
+
+/* ---------- the director ---------- */
+function HK_step(dt){ var e = HK.e; if(!HK.on) return; HK_pin();
+  if(HK.ent){ HK_stepEnter(dt); return; } if(HK.dying){ HK_stepDying(dt); return; } if(!e || e.dead || !G.waveActive) return;
+  HK.t += dt; var hpF = e.hp/e.maxHp;
+  if(HK.t > HK_W.enrT){ HK.enrT -= dt; if(HK.enrT <= 0){ HK.enrT = HK_W.enrStep; if(HK.enr < 0.6){ HK.enr = Math.min(0.6, HK.enr + 0.15); var c = HK_ctl(); if(c) dmgText(c.x, 3, c.z, 'THE THORNWALL CLOSES IN', '#ffd27a', 18); } } }
+  if(HK.phase===1 && hpF <= 0.65){ HK_phase(2); return; } if(HK.phase===2 && hpF <= 0.30){ HK_phase(3); return; }
+  if(HK.phT > 0){ HK.phT -= dt; if(HK.phT <= 0){ e.invuln = false; e.hkPose = HK.phase===2 ? 'fire' : HK.phase===3 ? 'storm' : 'idle'; } return; }
+  if(HK.stag > 0){ HK.stag -= dt; e.hkPose = 'stagger'; if(HK.stag <= 0){ HK.stag = 0; HK.stagMul = 1; e.hkPose = HK.phase===3 ? 'storm' : 'idle'; e.hkArc = null; } }
+  var gk = 1 - 0.5*HK.enr;
+  if(HK.stag <= 0){ HK.armT -= dt; if(HK.armT <= 0 && !HK.th){ HK_plant(); HK.armT = HK_GAP[HK.phase]*gk; }
+    if(HK.phase===2){ HK.baitT -= dt; if(HK.baitT <= 0){ if(HK_bait()) HK.baitT = 8*gk; else HK.baitT = 0.3; } }
+    if(HK.phase===3){ HK.thT -= dt; if(HK.thT <= 0 && !HK.th){ if(HK_thunder()) HK.thT = 10*gk; else HK.thT = 0.3; } } }
+  /* he turns his trunk toward the Favourite */
+  var tg = PTY_aim(e) || P; if(tg){ var want = angDiff(e.face, Math.atan2(tg.x - HK.bx, tg.z - HK.bz)); e.hkYaw += (clamp(want, -0.9, 0.9) - e.hkYaw)*Math.min(1, dt*2); } }
+function HK_pin(){ var e = HK.e; if(!e) return; e.x = e.px = HK.bx; e.z = e.pz = HK.bz; e.face = Math.atan2(-HK.bx, -HK.bz); e.kx = e.kz = 0; }
+function HK_phase(n){ var e = HK.e; HK.phase = n; e.phase = n; e.invuln = true; HK.phT = 1.8; HK.stag = 0; HK.stagMul = 1; SFX.roar(); SFX.slam(); shake(0.6);
+  if(typeof GARDEN!=='undefined') GARDEN.cheer(0.8);
+  if(n===2){ e.hkPose = 'fire'; e.hkFire = 1; HK_pulse(0xff7a33, 0.45); bossSay('HESK', '"Burn, then. The Garden grows back."', 2.4); HK_fireStart(); HK.baitT = 4; HK.armT = Math.max(HK.armT, 6); HK_hint('hk_fire', 1.8); if(e.M.rig) rigBurst(e.M.rig, 'crownL', 30, 0xff7a33, 5, 0.8, 1.6, 0, 3, 0); }
+  else { e.hkPose = 'storm'; e.hkFire = 0; e.hkArc = 1; HK_pulse(0xc06bff, 0.45); bossSay('HESK', '"The oak remembers the lightning."', 2.4); HK_ringsOn(); HK.thT = 3.5; HK.armT = Math.max(HK.armT, 7); HK_hint('hk_thunder', 1.8); if(HK.fire) HK.fire.wave = 999; }
+  HK_log('phase', n); }
+function HK_stagger(dur, mul, txt){ var e = HK_live(); if(!e) return; if(HK.stag > 0 && HK.stag >= dur) return; HK.stag = dur; HK.stagMul = mul; HK.stagTxt = txt; e.hkPose = 'stagger'; SFX.slam(); SFX.roar(); shake(0.5);
+  dmgText(HK.cz.x, 7, HK.cz.z, txt, '#ffd27a', 26); if(typeof GARDEN!=='undefined') GARDEN.cheer(0.9); crowdCheer = Math.max(crowdCheer, 0.8); HK_log('stagger', txt); }
+
+/* ---------- P1+ The Planted Arm ---------- */
+function HK_plant(){ var e = HK.e, n = HK_n(), bodies = HK_bodies(); if(!bodies.length) return;
+  /* last arms: unbroken blooms heal him 1% each, the old arms are torn out */
+  var live = 0; for(var i=0;i<HK.arms.length;i++){ var A = HK.arms[i]; for(var k=0;k<A.blooms.length;k++) if(!A.blooms[k].dead) live++; HK_armEnd(A, false); } live += HK.unbroken; HK.unbroken = 0;
+  if(live > 0 && e && !e.dead){ var hv = Math.round(e.maxHp*HK_W.heal*live); e.hp = Math.min(e.maxHp, e.hp + hv); dmgText(HK.cz.x, 6.5, HK.cz.z, 'REGROWTH +'+hv, '#9fd860', 18); HK_log('regrow', live); }
+  HK.arms.length = 0;
+  var not = HK.phase===3 ? HK.lastA : '', prefs = shuffle(EL.slice()); if(not){ prefs.sort(function(x, y){ return (x===not) - (y===not); }); }
+  var c = HK_bestCol(HK_W.fill, prefs), A0 = c.el, Bs = EL.filter(function(x){ return x!==A0; }), B0 = Bs[Math.random() < 0.5 ? 0 : 1]; HK.lastA = A0; HK.lastB = B0;
+  var hold = Math.min(0.6, c.d), dur = HK_W.fill + hold, nb = HK.bloomsNext; HK.bloomsNext = 3;
+  var tg0 = PTY_aim(e) || bodies[0], arms = n >= 2 ? 2 : 1, side0 = ((tg0.x - HK.ax)*Math.cos(HK.A + Math.PI/2) + (tg0.z - HK.az)*Math.sin(HK.A + Math.PI/2)) > 0 ? 1 : -1;
+  for(var a=0;a<arms;a++){ var s = a===0 ? side0 : -side0, tg = a===0 ? tg0 : (typeof PTY_bodyAt==='function' ? PTY_bodyAt(1) : tg0), ap = HK_apex(s);
+    var ang = HK_clampAng(ap.x, ap.z, Math.atan2(tg.x - ap.x, tg.z - ap.z));
+    if(a===1){ var a0 = HK.arms[0].ang; if(Math.abs(angDiff(a0, ang)) < 1.0) ang = a0 + (angDiff(a0, ang) >= 0 ? 1 : -1)*1.0; ang = HK_clampAng(ap.x, ap.z, ang); }
+    HK.arms.push({i:a, s:s, x:ap.x, z:ap.z, ang:ang, el:A0, bel:B0, t:0, dur:dur, st:'tele', blooms:[], nb:nb, broke:false, M:HK_M.arm[a], W:HK_M.wedge[a], drop:0, ally:null}); }
+  HK_res(dur, A0); e.hkPose = arms===2 ? 'plant2' : (side0 > 0 ? 'plantL' : 'plantR'); e.wind = 1; SFX.tele(); tone(90, dur, 'sawtooth', 0.05, 180);
+  HK_log('arm', A0+'/'+B0+'x'+arms); }
+function HK_inWedge(A, x, z){ var dx = x - A.x, dz = z - A.z, d = Math.hypot(dx, dz); if(d > HK_W.reach + 0.4) return false; return Math.abs(angDiff(A.ang, Math.atan2(dx, dz))) < HK_W.half + 0.4/Math.max(1, d); }
+function HK_stepArms(dt){ var M = HK_M; if(!M) return;
+  for(var i=HK.arms.length-1;i>=0;i--){ var A = HK.arms[i]; A.t += dt; var W = A.W;
+    if(A.st==='tele'){ var k = Math.min(1, A.t/A.dur), col = ELC[A.el]; W.under.visible = W.fill.visible = W.rim.visible = true;
+      [W.under, W.fill, W.rim].forEach(function(m){ m.position.x = A.x; m.position.z = A.z; m.rotation.y = A.ang; });
+      W.under.scale.set(HK_W.reach, 1, HK_W.reach); W.rim.scale.set(HK_W.reach, 1, HK_W.reach); var fk = Math.max(0.02, k); W.fill.scale.set(HK_W.reach*fk, 1, HK_W.reach*fk);
+      W.fill.material.color.setHex(col); W.rim.material.color.setHex(col); W.under.material.color.setHex(typeof GDN_UND!=='undefined' && GDN_UND[A.el] ? GDN_UND[A.el][0] : 0x1a1420);
+      W.fill.material.opacity = 0.18 + 0.25*k; W.rim.material.opacity = 0.6 + 0.3*Math.abs(Math.sin(A.t*14));
+      if(A.t >= A.dur) HK_slam(A); }
+    else if(A.st==='planted'){ if(A.drop < 1){ A.drop = Math.min(1, A.drop + dt*7); } HK_armPose(A);
+      if(A.t >= HK_W.stay){ var lv = 0; for(var b=0;b<A.blooms.length;b++) if(!A.blooms[b].dead) lv++; HK.unbroken += lv; HK_armEnd(A, false); HK.arms.splice(i, 1); } }
+    else if(A.st==='out'){ HK.arms.splice(i, 1); } }
+  if(HK.e && !HK.e.dead && HK.e.wind && !HK.arms.some(function(A){ return A.st==='tele'; })) HK.e.wind = 0; }
+function HK_slam(A){ var e = HK.e, W = A.W; W.under.visible = W.fill.visible = W.rim.visible = false; A.st = 'planted'; A.t = 0; A.drop = 0;
+  var el = A.el; PTY_forHeroes(function(){ if(P && !P.dead && HK_inWedge(A, P.x, P.z)) hitPlayer(HK_d('slam'), el, HK_srcAt(A.x, A.z), {}); });
+  SFX.slam(); shake(0.6); G.hitstop = Math.max(G.hitstop, 0.05);
+  for(var s=0;s<14;s++){ var f = (s+0.5)/14*HK_W.armLen; var x = A.x + Math.sin(A.ang)*f, z = A.z + Math.cos(A.ang)*f; burst(x, 0.5, z, 3, ELC[el], 5, 0.5, 1.2); if(s%3===0) rocks(x, 0.3, z, 5, 0x4a3626, 6); }
+  for(var q=0;q<pillars.length;q++){ var pp = pillars[q]; if(!pp.dead && segDist(pp.x, pp.z, A.x, A.z, A.x + Math.sin(A.ang)*HK_W.armLen, A.z + Math.cos(A.ang)*HK_W.armLen) < pp.r + 0.9) damagePillar(pp, 140); }
+  /* thorn blooms in colour B along the arm */
+  var fr = A.nb===2 ? [0.42, 0.78] : [0.3, 0.58, 0.86];
+  for(var b=0;b<fr.length;b++){ var d = fr[b]*HK_W.armLen, off = (b%2 ? 1 : -1)*0.15, bx = A.x + Math.sin(A.ang)*d + Math.cos(A.ang)*off, bz = A.z + Math.cos(A.ang)*d - Math.sin(A.ang)*off;
+    var bl = spawnEnemy('hk_bloom', A.bel, {x:bx, z:bz, a:A.ang}); bl.nc = true; bl.spawnT = 0.35; bl.y = 0.75; bl.hp = bl.maxHp = Math.round(HK.e.maxHp*0.0055/HK_HPK); bl.hkArm = A; bl.hx = bx; bl.hz = bz; bl.face = A.ang; bl.bob = b*2;
+    A.blooms.push(bl); }
+  dmgText(A.x + Math.sin(A.ang)*5, 3.4, A.z + Math.cos(A.ang)*5, ELNAME[A.bel]+' BLOOMS', ELCSS[A.bel], 20);
+  /* root lanes in A while the arm is planted (P1 only; P2 has its Root Bait, P3 its Thunder Call) */
+  if(HK.phase===1 && A.i===0){ var nl = HK_n(); HK_laneAt(PTY_aim(e) || P, A.el, 0.5, HK_W.laneT, false); HK_laneAt(PTY_aim(e) || P, A.el, 1.3, HK_W.laneT, false); if(nl >= 2) HK_laneAt(PTY_bodyAt(1), A.el, 0.5, HK_W.laneT, false); if(nl >= 3) HK_laneAt(PTY_bodyAt(2), A.el, 1.3, HK_W.laneT, false); HK_hint('hk_lane', 2.5); }
+  HK_log('slam', el); }
+function HK_armPose(A){ var M = A.M, k = A.drop, e = HK.e; M.m.visible = k > 0.01;
+  M.m.position.set(A.x - Math.sin(A.ang)*(1-k)*2, (1-k)*3.5 - 0.05, A.z - Math.cos(A.ang)*(1-k)*2); M.m.rotation.set(-(1-k)*0.5, A.ang, 0); M.m.scale.set(1.5, 1.4, 1);
+}
+
+function HK_armEnd(A, torn){ var was = A.st==='planted'; A.st = 'out'; A.drop = 0; A.W.under.visible = A.W.fill.visible = A.W.rim.visible = false; A.M.m.visible = false;
+  if(was && !torn){ for(var s0=0;s0<6;s0++){ var f0 = s0/5*HK_W.armLen; rocks(A.x + Math.sin(A.ang)*f0, 0.5, A.z + Math.cos(A.ang)*f0, 3, 0x5a4330, 4); glowP.emit(A.x + Math.sin(A.ang)*f0, 1, A.z + Math.cos(A.ang)*f0, 0, 1.5, 0, 0.8, 1.0, 0x9fd860, 0, 0.6); } }
+  for(var b=0;b<A.blooms.length;b++){ var bl = A.blooms[b]; if(!bl.dead){ bl.noCorpse = true; killEnemy(bl, true); } }
+  if(torn){ for(var s=0;s<8;s++){ var f = s/7*HK_W.armLen; rocks(A.x + Math.sin(A.ang)*f, 0.5, A.z + Math.cos(A.ang)*f, 6, 0x4a3626, 7); } } }
+/* a bloom burst: when an arm loses its last bloom it is torn out (Arm Break; a second break within 5 s in a party = Double Break) */
+function HK_bloomDead(bl){ var A = bl.hkArm; if(!A || A.broke || A.st!=='planted') return; burst(bl.x, 1.4, bl.z, 18, ELC[bl.el], 6, 0.6, 1.4);
+  for(var b=0;b<A.blooms.length;b++) if(!A.blooms[b].dead) return;
+  A.broke = true; var dbl = HK_n() >= 2 && G.t - HK.brokeT < 5; HK.brokeT = G.t; HK_armEnd(A, true); SFX.shatter && SFX.shatter();
+  if(dbl) HK_stagger(HK_W.dblT, HK_W.mul, 'DOUBLE BREAK'); else HK_stagger(HK_W.breakT, HK_W.mul, 'ARM BREAK'); }
+/* planted arms block bodies (not shots) */
+function HK_collide(){ for(var i=0;i<HK.arms.length;i++){ var A = HK.arms[i]; if(A.st!=='planted' || A.drop < 0.6) continue; var ex = A.x + Math.sin(A.ang)*HK_W.armLen, ez = A.z + Math.cos(A.ang)*HK_W.armLen;
+    var H = HK_bodies(); for(var h=0;h<H.length;h++) HK_push(H[h], A.x, A.z, ex, ez); } }
+function HK_push(o, ax, az, bx, bz){ var vx = bx-ax, vz = bz-az, l2 = vx*vx + vz*vz, t = clamp(((o.x-ax)*vx + (o.z-az)*vz)/l2, 0, 1), cx = ax + vx*t, cz = az + vz*t, dx = o.x - cx, dz = o.z - cz, d = Math.hypot(dx, dz), m = HK_W.armR + 0.45;
+  if(d < m){ if(d < 0.001){ dx = -vz; dz = vx; d = Math.hypot(dx, dz); } o.x = cx + dx/d*m; o.z = cz + dz/d*m; } }
+
+/* ---------- root lanes (P1 filler, P2 Root Bait); a root that HITS in P2 binds ---------- */
+function HK_laneAt(tg, el, delay, tele, bait){ if(!tg) return; var x0 = HK.ax, z0 = HK.az, ang = HK_clampAng(x0, z0, Math.atan2(tg.x - x0, tg.z - z0)), dx = Math.sin(ang), dz = Math.cos(ang);
+  var adot = x0*dx + z0*dz, R = AR(), len = -adot + Math.sqrt(Math.max(0, adot*adot - (x0*x0 + z0*z0 - R*R))); len = Math.max(6, len);
+  var eta = delay + tele, hold = Math.min(0.5, HK_delay(eta, el)); eta += hold; HK_res(eta, el);
+  HK.lanes.push({x0:x0, z0:z0, ang:ang, len:len, el:el, at:eta, sh:delay, tele:tele + hold, shown:false, bait:!!bait, done:false}); }
+function HK_stepLanes(dt){ for(var i=HK.lanes.length-1;i>=0;i--){ var L = HK.lanes[i]; L.at -= dt; L.sh -= dt;
+    if(!L.shown && L.sh <= 0){ L.shown = true; var lt = addLineTele(L.x0, L.z0, L.ang, L.len, HK_W.laneW, L.tele, L.el); if(lt && lt.m) lt.m.rotation.z = L.ang; SFX.tele(); }   /* the core plane's yaw is mirrored (z flipped) for diagonal angles: +ang lays it along (sin, cos) */
+    if(L.at <= 0){ HK.lanes.splice(i, 1); HK_laneHit(L); } } }
+function HK_laneHit(L){ var x1 = L.x0 + Math.sin(L.ang)*L.len, z1 = L.z0 + Math.cos(L.ang)*L.len, bind = HK.phase===2;
+  PTY_forHeroes(function(){ if(!P || P.dead) return; if(segDist(P.x, P.z, L.x0, L.z0, x1, z1) < HK_W.laneW/2 + 0.4){ var r = hitPlayer(HK_d('lane'), L.el, HK_srcAt(P.x - Math.cos(L.ang)*0.2, P.z + Math.sin(L.ang)*0.2), {});
+      if(bind && r==='hit' && !(P.dashT > 0)){ P.hkBind = HK_W.bind; P.hkFree = 0; dmgText(P.x, 2.6, P.z, 'BOUND', '#c9a27a', 18); HK_hint('hk_bind'); } } });
+  for(var s=0;s<22;s++){ var f = s/21; glowP.emit(L.x0 + Math.sin(L.ang)*L.len*f, 0.4, L.z0 + Math.cos(L.ang)*L.len*f, rnd(-1,1), rnd(0.5,2), rnd(-1,1), 0.5, 1.1, ELC[L.el], 0, 1); }
+  rocks((L.x0+x1)/2, 0.3, (L.z0+z1)/2, 10, 0x4a3626, 5); SFX.slam(); shake(0.3);
+  if(L.bait && HK.fire){ var a = Math.atan2(z1, x1), si = HK_seg(a); var hot = false; for(var o=-2;o<=2;o++) if(HK.fire.seg[(si + o + HK.fireN) % HK.fireN] > 0) hot = true; if(hot) HK_backdraft(L); } }
+function HK_bait(){ var e = HK.e, tg = PTY_aim(e) || P; if(!tg) return false; var el = HK.lastA || 'flame'; if(!HK_free(el, 0.3)) return false;
+  HK_laneAt(tg, el, 0, HK_W.baitT, true); e.hkPose = 'fire'; return true; }
+function HK_backdraft(L){ var e = HK_live(); if(!e) return; var dmg = Math.round(e.maxHp*HK_W.back); e.hp = Math.max(e.maxHp*0.3 + 1, e.hp - dmg); HK.bloomsNext = 2;
+  var n = 30; for(var s=0;s<n;s++){ (function(f){ after(f*0.5, function(){ glowP.emit(L.x0 + Math.sin(L.ang)*L.len*(1-f), rnd(0.4, 1.6), L.z0 + Math.cos(L.ang)*L.len*(1-f), 0, rnd(1, 3), 0, 0.6, 1.6, 0xff7a33, 0, 1); }); })(s/n); }
+  after(0.5, function(){ if(!HK_live()) return; dmgText(HK.cz.x, 7, HK.cz.z, 'BACKDRAFT −'+dmg, '#ffb050', 24); HK_pulse(0xff7a33, 0.35); SFX.roar(); shake(0.5); if(HK.e.M.rig) rigBurst(HK.e.M.rig, 'torso', 30, 0xff7a33, 5, 0.7, 1.5, 0, 1, 0); });
+  HK_log('backdraft', dmg); }
+
+/* ---------- P2 Canopy Fire along the hedge rim; frost pools are the firebreaks ---------- */
+function HK_seg(a){ var N = HK.fireN||36, k = Math.floor(((a % TAU) + TAU) % TAU/(TAU/N)); return k % N; }
+function HK_fireStart(){ var N = HK.fireN; HK.fire = {seg:new Float32Array(N), brk:new Uint8Array(N), fronts:[], wave:0};
+  var P0 = typeof GDN_POOLS!=='undefined' ? GDN_POOLS : [[45], [135], [225], [315]];
+  for(var i=0;i<P0.length;i++){ var pa = P0[i][0]*Math.PI/180; if(Math.abs(angDiff(pa, HK.A)) < 0.5) continue; HK.fire.brk[HK_seg(pa)] = 1; } HK_fireWave(); }
+function HK_fireWave(){ var F = HK.fire, N = HK.fireN, s0 = HK_seg(HK.A); F.fronts.push({i:(s0+2)%N, d:1, t:0}, {i:(s0+N-2)%N, d:-1, t:0}); F.seg[(s0+2)%N] = HK_W.fireBurn; F.seg[(s0+N-2)%N] = HK_W.fireBurn; F.wave = HK_W.fireWave; }
+function HK_stepFire(dt){ var F = HK.fire; if(!F) return; var N = HK.fireN;
+  for(var i=0;i<N;i++) if(F.seg[i] > 0) F.seg[i] = Math.max(0, F.seg[i] - dt);
+  for(var f=F.fronts.length-1;f>=0;f--){ var R = F.fronts[f]; R.t += dt; if(R.t < HK_W.fireStep) continue; R.t = 0; var nx = (R.i + R.d + N) % N; if(F.brk[nx] || HK.phase!==2){ F.fronts.splice(f, 1); continue; } R.i = nx; F.seg[nx] = HK_W.fireBurn; }
+  if(HK.phase===2){ F.wave -= dt; if(F.wave <= 0) HK_fireWave(); }
+  /* ticks: standing in a burning band (r > AR - band) takes flame, absorbable, never within 0.5 s of another colour */
+  var any = false; for(var j=0;j<N;j++) if(F.seg[j] > 0) any = true; if(!any && HK.phase!==2){ HK.fire = null; return; }
+  PTY_forHeroes(function(){ if(!P || P.dead) return; P.hkFT = (P.hkFT||0) - dt; var r = Math.hypot(P.x, P.z); if(r < AR() - HK_W.band || P.hkFT > 0) return; var s = HK_seg(Math.atan2(P.z, P.x)); if(!(F.seg[s] > 0.3)) return;
+    if(!HK_free('flame', 0.5)){ P.hkFT = 0.12; return; } P.hkFT = HK_W.fireTick; hitPlayer(HK_d('fire'), 'flame', HK_srcAt(P.x*1.05, P.z*1.05), {}); }); }
+var _hkM = new THREE.Matrix4(), _hkQ = new THREE.Quaternion(), _hkS = new THREE.Vector3(), _hkP = new THREE.Vector3(), _hkC = new THREE.Color(), _hkZ0 = new THREE.Matrix4().makeScale(0,0,0), _hkE = new THREE.Euler();
+function HK_fireRender(t){ var M = HK_M; if(!M) return; var F = HK.fire; M.flame.visible = M.band.visible = !!F && HK.on; if(!F || !HK.on) return; var N = HK.fireN, R = AR();
+  for(var i=0;i<N;i++){ var k = F.seg[i] > 0 ? Math.min(1, F.seg[i]/1.5, (HK_W.fireBurn - F.seg[i])/0.4 + 0.2) : 0, a0 = i/N*TAU, ac = a0 + TAU/N*0.5;
+    for(var j=0;j<3;j++){ var idx = i*3 + j; if(k <= 0.01){ M.flame.setMatrixAt(idx, _hkZ0); continue; } var a = a0 + TAU/N*(j + 0.5)/3, rr = R + 0.7 + (j%2)*0.35, fl = 1 + 0.25*Math.sin(t*11 + idx*1.7), h = (1.4 + 0.5*(j===1))*k*fl;
+      _hkM.compose(_hkP.set(Math.cos(a)*rr, 1.2 + h*0.5, Math.sin(a)*rr), _hkQ.identity(), _hkS.set(0.9*k, h, 0.9*k)); M.flame.setMatrixAt(idx, _hkM); M.flame.setColorAt(idx, _hkC.setHex(j===1 ? 0xffb050 : 0xff6a1f)); }
+    _hkE.set(0, -a0, 0); _hkQ.setFromEuler(_hkE); if(k > 0.01){ _hkM.compose(_hkP.set(0, 0.05, 0), _hkQ, _hkS.set(1, 1, 1)); M.band.setMatrixAt(i, _hkM); M.band.setColorAt(i, _hkC.setHex(0xff6a1f).multiplyScalar(0.6 + 0.4*k)); } else M.band.setMatrixAt(i, _hkZ0); }
+  var nb = 0; for(var b=0;b<N && nb<3;b++){ if(!F.brk[b]) continue; _hkE.set(0, -b/N*TAU, 0); _hkQ.setFromEuler(_hkE); _hkM.compose(_hkP.set(0, 0.06, 0), _hkQ, _hkS.set(1, 1, 1)); M.band.setMatrixAt(N + nb, _hkM); M.band.setColorAt(N + nb, _hkC.setHex(0x8fd8ea).multiplyScalar(0.7 + 0.2*Math.sin(t*3 + b))); nb++; }
+  for(;nb<3;nb++) M.band.setMatrixAt(N + nb, _hkZ0);
+  M.flame.instanceMatrix.needsUpdate = true; M.flame.instanceColor.needsUpdate = true; M.band.instanceMatrix.needsUpdate = true; M.band.instanceColor.needsUpdate = true;
+  if(Math.random() < 0.5){ var s = (Math.random()*N)|0; if(F.seg[s] > 0){ var ea = (s + Math.random())/N*TAU; glowP.emit(Math.cos(ea)*(R+0.8), rnd(1.5, 3), Math.sin(ea)*(R+0.8), 0, rnd(1, 2.5), 0, 0.7, 1.0, 0xff8a3d, 0, 1); } } }
+
+/* ---------- P3 Lightning Oak: grounding rings on three posts, Thunder Call, Overcharge ---------- */
+function HK_ringsOn(){ var c = [], i; for(i=0;i<pillars.length;i++){ var p = pillars[i]; if(!p.dead && !p.temp) c.push(p); }
+  c.sort(function(a, b){ return Math.hypot(a.x - HK.cz.x, a.z - HK.cz.z) - Math.hypot(b.x - HK.cz.x, b.z - HK.cz.z); });
+  var pick3 = []; for(i=c.length-1;i>=0 && pick3.length<3;i--){ var ok = true; for(var j=0;j<pick3.length;j++) if(Math.hypot(pick3[j].x - c[i].x, pick3[j].z - c[i].z) < 7) ok = false; if(ok) pick3.push({x:c[i].x, z:c[i].z}); }
+  var fb = [[0.6, 8], [1.6, 9], [-0.45, 9]]; for(i=pick3.length;i<3;i++){ var a = HK.A + Math.PI + fb[i][0]; pick3.push({x:Math.cos(a)*fb[i][1], z:Math.sin(a)*fb[i][1]}); }
+  HK.rings = pick3; }
+function HK_ringOf(st, used){ for(var i=0;i<HK.rings.length;i++){ if(used && used[i]) continue; var R = HK.rings[i]; if(Math.hypot(st.x - R.x, st.z - R.z) < HK_W.ringR + 0.2) return i; } return -1; }
+function HK_inCrown(st){ return Math.hypot(st.x - HK.cz.x, st.z - HK.cz.z) < HK_W.crownR + 0.25; }
+function HK_thunder(){ var B = HK_bodies(); if(!B.length) return false; var eta = HK_W.thT; if(HK_delay(eta, 'storm') > 0.01) return false;
+  var T = HK.th = {t:0, dur:eta, tg:[]}; HK_res(eta, 'storm');
+  for(var i=0;i<B.length;i++){ var st = B[i], tl = addTele(st.x, st.z, HK_W.thR, eta, 'storm', null); tl.hostile = 1; tl.follow = st; T.tg.push({st:st, tl:tl}); }
+  HK.e.hkPose = 'storm'; HK.e.wind = 1; SFX.tele(); tone(220, eta, 'sawtooth', 0.04, 660); var c = HK_ctl(); if(c) dmgText(c.x, 2.9, c.z, 'THUNDER CALL', ELCSS.storm, 20);
+  HK_log('thunder', B.length); return true; }
+function HK_stepThunder(dt){ var T = HK.th; if(!T) return; T.t += dt;
+  if(T.t >= T.dur - 0.5) for(var i=0;i<T.tg.length;i++){ var g = T.tg[i]; if(g.tl.follow){ g.tl.follow = null; } }
+  if(Math.random() < dt*20 && HK.e && HK.e.M.rig) rigEmit(HK.e.M.rig, 'arc', rnd(-1,1), rnd(0,2), rnd(-1,1), 0.4, 1.2, 0xc06bff, rnd(-1,1), rnd(0,1.5), 0);
+  if(T.t < T.dur) return; HK.th = null; if(HK.e) HK.e.wind = 0;
+  var used = {}, crown = [], n = HK_n(), need = n >= 2 ? 2 : 1, dmg = HK_d('thunder');
+  for(var k=0;k<T.tg.length;k++){ var st = T.tg[k].st, x = T.tg[k].tl.x, z = T.tg[k].tl.z; if(st.dead) continue; HK_bolt(x, z);
+    var ri = HK_ringOf(st, used); if(ri >= 0 && Math.hypot(st.x - x, st.z - z) < HK_W.thR + 0.5){ used[ri] = 1; var R = HK.rings[ri]; burst(R.x, 3, R.z, 20, ELC.storm, 6, 0.6, 1.3); ringBurst(R.x, R.z, HK_W.ringR, 20, ELC.storm); dmgText(R.x, 3.4, R.z, 'GROUNDED', '#ffd27a', 18); continue; }
+    if(HK_inCrown(st)){ if(crown.indexOf(st) < 0) crown.push(st); continue; }
+    PTY_hitAt(x, z, HK_W.thR + 0.3, dmg, 'storm', HK_srcAt(x, z + 0.1), {}); }
+  if(crown.length){ var all = true, share = 1/crown.length;
+    for(var c=0;c<crown.length;c++){ var s2 = crown[c], res = typeof PTY_hit==='function' ? PTY_hit(s2, (s2.ward==='storm' ? dmg : HK_d('over'))*share, 'storm', HK_srcAt(HK.cz.x, HK.cz.z), {}) : hitPlayer(HK_d('over')*share, 'storm', HK_srcAt(HK.cz.x, HK.cz.z), {}); if(res!=='absorb' && res!=='none') all = false; }
+    if(all && crown.length >= need){ HK_overcharge(); } else if(all){ dmgText(HK.cz.x, 3.2, HK.cz.z, 'ABSORBED · STACK TWO TO OVERCHARGE', '#ffd27a', 16); } }
+  shake(0.45); SFX.zap(); HK.e && (HK.e.hkPose = 'storm'); }
+function HK_bolt(x, z){ for(var i=0;i<16;i++) glowP.emit(x + rnd(-0.3, 0.3), 9 - i*0.55, z + rnd(-0.3, 0.3), rnd(-0.5,0.5), -2, rnd(-0.5,0.5), 0.35, 1.5, i%3 ? 0xc06bff : 0xe0b8ff, 0, 0); burst(x, 0.6, z, 16, ELC.storm, 6, 0.5, 1.3); }
+function HK_overcharge(){ var e = HK_live(); if(!e) return; for(var i=0;i<24;i++){ var f = i/23; glowP.emit(lerp(HK.cz.x, HK.bx, f), lerp(0.8, 13, f), lerp(HK.cz.z, HK.bz, f), rnd(-1,1), rnd(0,1), rnd(-1,1), 0.6, 1.6, 0xc06bff, 0, 0); }
+  HK_pulse(0xc06bff, 0.4); e.hkArc = 1; if(e.M.rig) rigBurst(e.M.rig, 'arc', 30, 0xc06bff, 6, 0.7, 1.6, 0, 1, 0); HK_stagger(HK_W.overT, HK_W.mul, 'OVERCHARGE'); }
+
+/* ---------- Bind (P2): dash breaks it, an ally standing close cuts the vine in 0.6 s ---------- */
+function HK_stepBind(dt){ var H = PTY_heroes(), M = HK_M, n = 0;
+  for(var i=0;i<H.length;i++){ var st = H[i]; if(!st || !(st.hkBind > 0)) continue; if(st.dead || st.dashT > 0){ st.hkBind = 0; continue; }
+    var near = false; for(var j=0;j<H.length;j++){ var o = H[j]; if(o!==st && o && !o.dead && Math.hypot(o.x - st.x, o.z - st.z) < HK_W.freeR) near = true; }
+    if(near){ st.hkFree = (st.hkFree||0) + dt; if(st.hkFree >= HK_W.freeT){ st.hkBind = 0; dmgText(st.x, 2.6, st.z, 'FREED', '#ffd27a', 18); continue; } }
+    st.hkBind -= dt; if(M && n < 3){ var m = M.bind[n++]; m.visible = true; m.position.set(st.x, 0.5 + 0.15*Math.sin(G.t*9), st.z); m.rotation.y = G.t*2; } }
+  if(M) for(;n<3;n++) M.bind[n].visible = false; }
+
+/* ---------- death: he kneels, petals and embers fall, he turns to still wood ---------- */
+function HK_death(e){ if(HK.dying) return; HK.dying = {t:0}; G.hitstop = Math.max(G.hitstop, 0.12); shake(0.9); SFX.roar(); SFX.slam(); HK_pulse(0x9fd860, 0.35);
+  e.hkPose = 'kneel'; e.hkFire = 0; e.hkArc = 0; e.wind = 0; $('bossBox').hidden = true; $('hint').hidden = true; if(typeof hintT!=='undefined') hintT = 0; G.bossRef = null;
+  HK_clearFight(); for(var j=enemies.length-1;j>=0;j--){ var o = enemies[j]; if(!o.dead && o!==e){ o.dead = true; burst(o.x, 1, o.z, 10, ELC[o.el]||0x9fd860, 5, 0.5, 1); } } for(var k=eprojs.length-1;k>=0;k--) killEProj(k);
+  PTY_forHeroes(function(){ if(P) P.inv = Math.max(P.inv, 30); });
+  after(1.0, function(){ if(typeof GARDEN!=='undefined') GARDEN.cheer(1); crowdCheer = 1; SFX.cheer(); });
+  after(1.6, function(){ bossSay('HESK', '"Prune me, then. The Garden remembers."', 2.6); });
+  if(typeof A3_finale==='function') A3_finale(); }
+function HK_stepDying(dt){ var D = HK.dying, e = HK.e; if(!D || !e) return; D.t += dt; e.hkWood = Math.min(1, Math.max(0, (D.t - 0.6)/2.4)); e.hkEyes = 0;
+  if(D.t < 4.5 && Math.random() < dt*40){ var a = HK.A + rnd(-0.5, 0.5), r = AR() + HK_DOFF + rnd(-4, 3), pc = [0xe48aa2, 0xf2d27a, 0xff9a4a, 0x9fd860][(Math.random()*4)|0];
+    glowP.emit(Math.cos(a)*r, rnd(7, 14), Math.sin(a)*r, rnd(-0.8, 0.8), rnd(-2.2, -0.8), rnd(-0.8, 0.8), 1.6, 0.9, pc, 0, 0.4); }
+  if(D.t > 0.4 && D.t < 2 && Math.random() < dt*10) rocks(HK.bx*0.92 + rnd(-3, 3), 1, HK.bz*0.92 + rnd(-3, 3), 3, 0x5a4330, 4); }
+
+/* ---------- camera: shifted north, wider, following the hero partway (the crown may leave the frame in landscape) ---------- */
+var HK_CAM = null;
+function HK_camStep(dt){ if(!HK.on || !P || G.state!=='play'){ if(HK_CAM && G.camO===HK_CAM) G.camO = null; HK_CAM = null; return; }
+  var port = innerWidth < innerHeight, k = HK.ent ? A3_sm((HK.ent.t - 0.2)/1.4) : 1; if(HK.dying) k = Math.max(0.35, 1 - HK.dying.t/5); var c = HK_ctl() || P;
+  var nx = Math.cos(HK.A), nz = Math.sin(HK.A), push = port ? 5.0 : 8.0, hk = port ? 0.55 : 0.35, tx = nx*push + c.x*hk, tz = nz*push + c.z*hk, cf = c.x*(port ? 0.6 : 0.4), cz = c.z*(port ? 0.6 : 0.4), tzm = port ? 0.72 : 0.6;
+  if(!HK_CAM) HK_CAM = {x:cf, z:cz, zoom:camera.zoom||1, iso:null}; var O = HK_CAM, a = Math.min(1, dt*3);
+  O.x += (lerp(cf, tx, k) - O.x)*a; O.z += (lerp(cz, tz, k) - O.z)*a; O.zoom += (lerp(port ? 1 : 0.7, tzm, k) - O.zoom)*a; G.camO = O; }
+
+/* ---------- step + render hooks ---------- */
+function HK_clearFight(){ HK.arms.forEach(function(A){ HK_armEnd(A, false); }); HK.arms.length = 0; HK.lanes.length = 0; HK.th = null; HK.fire = null; HK.stag = 0; HK.stagMul = 1; HK.rings = [];
+  PTY_heroes().forEach(function(st){ if(st){ st.hkBind = 0; st.hkFT = 0; } }); if(typeof HEROES!=='undefined') HEROES.forEach(function(h){ h.st.hkBind = 0; });
+  if(HK_M){ HK_M.wedge.forEach(function(W){ W.under.visible = W.fill.visible = W.rim.visible = false; }); HK_M.flame.visible = HK_M.band.visible = HK_M.crown.visible = HK_M.chev.visible = false; HK_M.rings.forEach(function(r){ r.visible = false; }); HK_M.bind.forEach(function(b){ b.visible = false; }); } }
+function HK_cleanup(){ var was = HK.on; HK_clearFight(); HK_hideAll(); if(HK_CAM && G.camO===HK_CAM) G.camO = null; HK_CAM = null; HK.on = false; HK.e = null; HK.ent = null; HK.dying = null; HK.phase = 1; HK.unbroken = 0; HK.bloomsNext = 3; HK.lastA = HK.lastB = ''; HK.phT = 0; HK.hinted = {};
+  if(HK_el){ HK_el.ph.hidden = true; HK_el.stag.hidden = true; HK_el.ticks.forEach(function(t){ t.hidden = true; }); } if(was){ var n = $('bossName'); if(n) n.textContent = 'THE PITMASTER'; } }
+STEP_HOOKS.push(function(dt){ if(!HK.on || !P) return; HK_step(dt); if(HK.dying || HK.ent) return; HK_stepArms(dt); HK_stepLanes(dt); HK_stepFire(dt); HK_stepThunder(dt); HK_stepBind(dt); HK_collide(); });
+RENDER_HOOKS.push(function(t, adt){ if(!HK.on){ if(HK_el && !HK_el.ph.hidden) HK_hud(); return; } HK_camStep(adt||0); HK_fireRender(t); HK_hud();
+  var M = HK_M; if(!M) return; var p3 = HK.phase===3 && !HK.dying && !HK.ent;
+  for(var i=0;i<3;i++){ var r = M.rings[i], R = HK.rings[i]; r.visible = p3 && !!R; if(r.visible){ r.position.set(R.x, 0.07, R.z); r.rotation.y = t*0.3 + i; r.material.opacity = HK.th ? 0.8 + 0.2*Math.sin(t*8) : 0.7; } }
+  M.crown.visible = M.chev.visible = p3; if(p3){ M.crown.position.set(HK.cz.x, 0.07, HK.cz.z); M.chev.position.set(HK.cz.x, 0, HK.cz.z); M.crown.rotation.y = -t*0.4; var pk = HK.th ? 0.7 + 0.3*Math.abs(Math.sin(t*6)) : 0.6; M.crown.material.opacity = pk; M.chev.material.opacity = pk; var cs = HK.th ? 1 - 0.08*((t*2)%1) : 1; M.chev.scale.set(cs, 1, cs); }
+  for(var a=0;a<HK.arms.length;a++){ var A = HK.arms[a]; if(A.st==='planted' && A.drop > 0) HK_armPose(A); }
+  var e = HK.e; if(e && e.M && e.M.rig && !e.dead && HK.stag > 0 && Math.random() < 0.3) rigEmit(e.M.rig, 'head', rnd(-1,1), rnd(1,2), rnd(-1,1), 0.5, 1.0, 0xffd27a, 0, 1, 0);
+  if(e && e.M && e.M.rig && !e.dead && !HK.ent && Math.random() < 0.08){ var L = Math.random() < 0.5 ? 'crownL' : 'crownR'; rigEmit(e.M.rig, L, rnd(-0.6, 0.6), rnd(-1.4, -0.6), rnd(-0.6, 0.6), 1.4, 0.7, HK.phase===2 ? 0xff9a4a : 0x9fd860, rnd(-2, 2), rnd(2, 4), rnd(-1, 1)); } });   /* rustling leaves (embers in P2) */
+
+/* ---------- wrappers (each calls the original otherwise) ---------- */
+var HK_updateBoss0 = updateBoss;
+updateBoss = function(b){ if(b && b.hk) return HK_ZM; return HK_updateBoss0.apply(this, arguments); };
+var HK_bossDeath0 = bossDeath;
+bossDeath = function(b){ if(b && b.hk) return HK_death(b); return HK_bossDeath0.apply(this, arguments); };
+var HK_hurtEnemy0 = hurtEnemy;
+function HK_hitEl(o){ if(o && o.rx) return ''; if(o && o.src && o.src.rxEl) return o.src.rxEl; if(typeof RX!=='undefined' && RX.ctx && RX.ctx.el) return RX.ctx.el; return P ? P.ward : ''; }
+hurtEnemy = function(e, dmg, kx, kz, o){
+  if(e && !e.dead && e.type==='hk_bloom'){ var he = HK_hitEl(o); if(he!==e.el){ if(G.t - (e.hkWr||0) > 0.6){ e.hkWr = G.t; dmgText(e.x, 2.4, e.z, 'NEEDS '+ELNAME[e.el], ELCSS[e.el], 15); } return; } return HK_hurtEnemy0.apply(this, arguments); }
+  if(e && e.hk && !e.dead){ arguments[1] = dmg*(HK.stag > 0 ? HK.stagMul : 1); var r = HK_hurtEnemy0.apply(this, arguments);
+    if(!e.dead){ var fl = HK.phase===1 ? 0.64 : HK.phase===2 ? 0.29 : 0; if(e.hp < e.maxHp*fl) e.hp = Math.ceil(e.maxHp*fl); } return r; }
+  return HK_hurtEnemy0.apply(this, arguments); };
+var HK_killEnemy0 = killEnemy;
+killEnemy = function(e, quiet){ var bl = e && !e.dead && e.type==='hk_bloom', hk = e && !e.dead && e.hk;
+  if(hk && HK.phase < 3){ e.hp = Math.max(1, Math.ceil(e.maxHp*0.29)); return; }
+  var r = HK_killEnemy0.apply(this, arguments);
+  if(bl && e.dead && !quiet) HK_bloomDead(e);
+  if(hk && e.dead){ e.type = 'hesk'; try{ if(!quiet && !G.testRun && typeof CX_s==='function'){ var c = CX_s(); if(c.kt.boss>0) c.kt.boss--; c.kt.hesk = (c.kt.hesk||0)+1; } }catch(err){} }
+  return r; };
+var HK_updateEnemies0 = updateEnemies;
+updateEnemies = function(dt){ var r = HK_updateEnemies0.apply(this, arguments); if(HK.on){ HK_pin(); for(var i=0;i<HK.arms.length;i++){ var A = HK.arms[i]; for(var k=0;k<A.blooms.length;k++){ var bl = A.blooms[k]; if(bl.dead) continue; bl.x = bl.px = bl.hx; bl.z = bl.pz = bl.hz; bl.kx = bl.kz = 0; } } } return r; };
+var HK_updatePlayer0 = updatePlayer;
+updatePlayer = function(dt){ if(!HK.on || !P) return HK_updatePlayer0.apply(this, arguments);
+  if(HK.dying){ var mo = G.moveO; G.moveO = HK_ZERO; mouseDown = false; try { return HK_updatePlayer0.apply(this, arguments); } finally { G.moveO = mo; } }
+  /* bound bodies keep their spot (a dash still goes: dash is never blocked) */
+  var H = PTY_heroes(), keep = []; for(var i=0;i<H.length;i++){ var st = H[i]; if(st && st.hkBind > 0) keep.push([st, st.x, st.z]); }
+  var r = HK_updatePlayer0.apply(this, arguments);
+  for(var k=0;k<keep.length;k++){ var s = keep[k][0]; if(s.dashT > 0){ s.hkBind = 0; continue; } s.x = keep[k][1]; s.z = keep[k][2]; s.vx = s.vz = 0; }
+  return r; };
+var HK_clearWorld0 = clearWorld;
+clearWorld = function(){ HK_cleanup(); return HK_clearWorld0.apply(this, arguments); };
+
+/* ---------- party AI jobs (design/research/15 §5.4): Anchor arm, Free, Stack, Ground; stay out of the burning band ---------- */
+if(typeof PTY_think==='function'){ var HK_think0 = PTY_think; PTY_think = function(h){ var out = HK_think0.apply(this, arguments); if(HK.on && out && h) try{ HK_allyThink(h, out); }catch(err){ if(DEV) console.warn(err); } return out; }; }
+function HK_allyThink(h, out){ var me = h.st, mx = 0, mz = 0, go = false, st = out.state; if(st==='Revive' || HK.dying || HK.ent || me.dead) return;
+  var H = PTY_heroes(), idx = typeof HEROES!=='undefined' ? HEROES.indexOf(h) : 1, ally = 0; if(typeof HEROES!=='undefined') for(var q=0;q<HEROES.length;q++){ if(HEROES[q]===h) break; if(HEROES[q]!==PTY.ctl) ally++; }
+  var bound = null; for(var i=0;i<H.length;i++) if(H[i] && H[i]!==me && H[i].hkBind > 0) bound = H[i];
+  if(HK.th && HK.phase===3){ if(ally===0){ mx = HK.cz.x - me.x; mz = HK.cz.z - me.z; go = true; out.state = 'Stack'; }
+    else { var best = null, bd = 1e9; for(var r=0;r<HK.rings.length;r++){ var R = HK.rings[r], d = Math.hypot(R.x - me.x, R.z - me.z); if(d < bd){ bd = d; best = R; } } if(best){ mx = best.x - me.x; mz = best.z - me.z; go = true; out.state = 'Ground'; } } }
+  else if(bound){ var db = Math.hypot(bound.x - me.x, bound.z - me.z); if(db > HK_W.freeR - 1.5){ mx = bound.x - me.x; mz = bound.z - me.z; go = true; } out.state = 'Free'; }
+  else if(HK.arms.length >= 2){ var A = HK.arms[(ally + 1) % HK.arms.length], tb = null; if(A && A.st==='planted') for(var b=0;b<A.blooms.length;b++) if(!A.blooms[b].dead){ tb = A.blooms[b]; break; }
+    if(tb){ A.ally = me; var dt2 = Math.hypot(tb.x - me.x, tb.z - me.z); if(dt2 > 6){ mx = tb.x - me.x; mz = tb.z - me.z; go = true; } out.state = 'Anchor'; out.tgt = tb; out.fire = true; } }
+  if(HK.fire && Math.hypot(me.x, me.z) > AR() - HK_W.band - 0.3 && HK.fire.seg[HK_seg(Math.atan2(me.z, me.x))] > 0){ mx = -me.x; mz = -me.z; go = true; out.state = 'Evade'; }
+  if(go){ var l = Math.hypot(mx, mz); if(l > 0.25){ out.mv.x = mx/l; out.mv.z = mz/l; } else { out.mv.x = out.mv.z = 0; } } }
+
+/* ---------- Codex ---------- */
+if(typeof CX_BOSS!=='undefined'){ CX_BOSS.hesk = {n:'Hesk, the Thornwall Colossus', act:'Act III', el:'storm', pz:0.55, round:30, where:'the Thornwall Garden',
+  lore:'The lightning-split oak the Garden was planted around, woken by the crowd. He never leaves his planter bed: his arms and roots are the arena.',
+  moves:[['Planted Arm','A wedge in his bark colour fills, then an arm slams down and stays as a wall. Three thorn blooms open on it in a second colour: only hits in that colour burst them. Burst all three for an Arm Break (he staggers and takes double damage).'],
+    ['Root Lanes','Roots run along the floor in his bark colour. Match it, or sidestep.'],
+    ['Canopy Fire and Root Bait','His crown burns and fire runs along the hedge rim to the frost pools. Lure a root into a burning hedge and it burns back to him: a Backdraft. A root that hits you binds you until you dash.'],
+    ['Thunder Call','A storm lock-on follows you for two seconds. Stand in a grounding ring to ground it, or under his crown holding storm to Overcharge him.']],
+  phases:[['100–65%','Planted Arm: absorb the slam, then switch to the blooms\' colour.'], ['65–30%','Canopy Fire: the rim burns, the frost pools are firebreaks. Root Bait every few seconds.'], ['Under 30%','Lightning Oak: Thunder Call, grounding rings, Overcharge.']],
+  tips:'Your ward is your shield and your hit colour. Hold the colour that protects you, or the one that breaks him.'}; }
+if(typeof CX_ROUND!=='undefined') CX_ROUND.hesk = {g:'boss', t:'Act III, the last wave. Hesk, the Thornwall Colossus: the living oak of the Garden.'};
+
+/* ---------- DEV: window.__feat.hesk ---------- */
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.hesk = { HK:HK, W:HK_W,
+  go:function(cls){ window.__feat.act3.wave(30, cls); G.god = true; return HK.on; },
+  skip:function(){ if(HK.ent){ HK.ent.t = 4.19; HK_stepEnter(0.02); } return !HK.ent; },
+  phase:function(n){ var e = HK.e; if(!e) return 'no boss'; e.hp = e.maxHp*(n===2 ? 0.6 : n===3 ? 0.28 : 1); return n; },
+  plant:function(){ HK.armT = 0; return true; }, tl:function(){ return teles.map(function(t){ return {x:+t.x.toFixed(1), z:+t.z.toFixed(1), r:t.r, el:t.el, t:+t.t.toFixed(2), dur:t.dur, vis:t.v.g.visible}; }); }, lt:function(){ return lineTeles.filter(function(L){ return L.used; }).map(function(L){ var m = L.m; return {p:[+m.position.x.toFixed(1), +m.position.z.toFixed(1)], r:[+m.rotation.x.toFixed(2), +m.rotation.y.toFixed(2), +m.rotation.z.toFixed(2)], s:[+m.scale.x.toFixed(1), +m.scale.y.toFixed(1)], c:m.material.color.getHexString()}; }); }, kill:function(){ var e = HK.e; if(!e || e.dead) return false; HK.phase = 3; e.invuln = false; e.hp = 1; hurtEnemy(e, 99999, 0, 0, {nocrit:true}); return !!e.dead; }, thunder:function(){ HK.thT = 0; HK.th = null; return true; }, bait:function(){ HK.baitT = 0; return true; },
+  ward:function(el){ setWard(el, true); return P.ward; }, P:function(){ return P; }, log:function(on){ if(on) HK.log = []; return HK.log; },
+  state:function(){ var e = HK.e; return {on:HK.on, phase:HK.phase, hp:e ? Math.round(e.hp)+'/'+Math.round(e.maxHp) : null, dead:e ? !!e.dead : null, stag:+HK.stag.toFixed(2), arms:HK.arms.map(function(A){ return A.st+':'+A.el+'/'+A.bel+':'+A.blooms.filter(function(b){ return !b.dead; }).length; }),
+    lanes:HK.lanes.length, th:!!HK.th, fire:HK.fire ? Array.prototype.filter.call(HK.fire.seg, function(v){ return v > 0; }).length : 0, ent:!!HK.ent, dying:!!HK.dying, enr:HK.enr, t:+HK.t.toFixed(1), uncol:G.uncol||0}; },
+  calls:function(){ renderer.info.autoReset = false; renderer.info.reset(); render(1/60, 0); var o = {calls:renderer.info.render.calls, tris:renderer.info.render.triangles}; renderer.info.autoReset = true; return o; } }; }
+/* the Codex: the thorn bloom is part of Hesk (not a foe tile); the retired Undermaw leaves the boss list; Hesk's tile lists his attacks and phases */
+if(typeof CX_foes==='function'){ var HK_cxf0 = CX_foes; CX_foes = function(){ return HK_cxf0.apply(this, arguments).filter(function(x){ return x.id!=='hk_bloom'; }); }; }
+if(typeof CX_bosses==='function'){ var HK_cxb0 = CX_bosses; CX_bosses = function(){ var out = HK_cxb0.apply(this, arguments).filter(function(x){ return x.id!=='undermaw'; });
+  out.forEach(function(x){ if(x.id!=='hesk' || typeof CX_BOSS==='undefined') return; var B = CX_BOSS.hesk, b0 = x.body; x.hint = 'The living oak of the Thornwall Garden. Reach round 30 to meet him.';
+    x.body = function(){ var lad = function(lab, arr){ return CX_h(lab)+'<div class="cxLad">'+arr.map(function(m){ return '<div class="cxLr"><b>'+CX_esc(m[0])+'</b><span>'+CX_esc(m[1])+'</span></div>'; }).join('')+'</div>'; };
+      var h = b0.apply(this, arguments), tip = B.tips ? CX_tip(B.tips) : '', i = tip ? h.lastIndexOf(tip) : -1; var mid = lad('Attacks', B.moves) + lad('Phases', B.phases); return i >= 0 ? h.slice(0, i) + mid + tip : h + mid; }; });
+  return out; }; }
 /* ---------- 82-gardenlift.js · wave 20 -> 21: THE LIFT UP INTO THE THORNWALL GARDEN, with a glimpse of Hesk. Prefix GL_. ----------
    Owner request: "a transition like we have from wave 10 to 11, a lift going up with a teaser of the real final boss going to the garden".
    Replaces the old dark "descent" (71-act3.js §8: the dark quad rising around the hero's lantern) without editing 71-act3.js:
