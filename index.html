@@ -12756,8 +12756,8 @@ function SW_mesh(){ if(SW_M) return SW_M; var M = SW_M = {};
   M.warnMat = addMat(0x9a88ff, 0.0); M.warn = new THREE.Mesh(new THREE.RingGeometry(SW_EYE_R, 16, 64, 1), M.warnMat); M.warnMat.side = THREE.DoubleSide; M.warn.rotation.x = -Math.PI/2; M.warn.position.y = 0.08;
   M.eyeMat = addMat(0xffe6a8, 0.85); M.eye = new THREE.Mesh(new THREE.RingGeometry(SW_EYE_R-0.15, SW_EYE_R+0.05, 48), M.eyeMat); M.eyeMat.side = THREE.DoubleSide; M.eye.rotation.x = -Math.PI/2; M.eye.position.y = 0.1;
   M.eyeInMat = addMat(0xffd27a, 0.12); M.eyeIn = new THREE.Mesh(new THREE.CircleGeometry(SW_EYE_R-0.15, 40), M.eyeInMat); M.eyeIn.rotation.x = -Math.PI/2; M.eyeIn.position.y = 0.09;
-  M.colMat = addMat(0xc06bff, 0.0); M.col = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 44, 12, 1, true), M.colMat); M.colMat.side = THREE.DoubleSide; M.col.position.set(0, 22, -11.8);
-  M.colInMat = addMat(0xe0b8ff, 0.0); M.colIn = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 44, 8, 1, true), M.colInMat); M.colIn.position.copy(M.col.position);
+  M.colMat = addMat(0x9c4ee8, 0.0); M.col = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 44, 12, 1, true), M.colMat); M.colMat.side = THREE.DoubleSide; M.col.position.set(0, 22, -11.8);
+  M.colInMat = addMat(0x8a3ed8, 0.0); M.colIn = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 44, 8, 1, true), M.colInMat); M.colIn.position.copy(M.col.position);
   SW_all(M).forEach(function(m){ m.visible = false; m.frustumCulled = false; m.renderOrder = 3; scene.add(m); });
   return M; }
 function SW_all(M){ var a = [M.cone, M.warn, M.eye, M.eyeIn, M.col, M.colIn].concat(M.beams, M.rods); M.rg.forEach(function(r){ a.push(r.ring, r.rim); }); return a; }
@@ -16366,7 +16366,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 16:45',h:'b2c6869'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 23:52',h:'8a07db9'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -21533,6 +21533,486 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.duel = {DU:DU, T:DU_
   pick:function(i){ return DU_choose(i); }, swap:function(i){ return DU_tap(i); }, next:DU_next, tick:function(s){ var n = Math.round((s||0)/0.05); for(var k=0;k<n;k++) DU_tick(0.05); return DU.ph; },
   kill:function(){ if(!P || P.dead) return false; var g = G.god; G.god = false; P.inv = 0; P.dashT = 0; P.guard = 0; hitPlayer(99999, 'pure', null, {noDodge:true, noInv:true, noGuard:true}); G.god = g; return P.dead; },
   challenge:function(){ return DU_challenge(null); }, slot:function(i){ return DU_slot(DU.all[i]); }}; }
+// 85-epicboss.js — Epic Boss Wave kit (design/research/19-epic-boss-waves.md)
+/* ======================================================================================================================
+   EPIC BOSS KIT (EBK). Prefix EBK_. Stages the three boss waves without touching their hit logic:
+     Pit W10 "The Hypogeum Opens"   pillars sink through timber hatches · P2 a chained post rises on the chain line (the Pitmaster's
+                                    chain snaps on it; dash into it charged = the attuned-pillar blast) · P3 crimson grade, lava channels in
+                                    the outer band, the crowd throws torches (flame pickups: +Overload) · win: the empty throne is lowered
+     Spire W20 "Into the Eye"       chains pull the columns up into the storm · P2 the platform climbs (background only) · P3 night-storm
+                                    indigo sky, violet lightning on the rods (and far in the sky) · win: the clouds part, a cloud-hammer falls
+     Garden W30 "The Garden Turns"  pillars sink under the paving · P2 warm amber grade · P3 three lightning topiaries rise and carry Hesk's
+                                    grounding rings (HK_ringsOn wrapped), petal storm, storm-dusk grade · win: the petals settle, the sky clears
+   Shared: pillar clear + restore (p.temp helpers untouched: the Pitmaster's spear, the anvil, Raise Stone), the intro (letterbox, low camera,
+   hush then roar, title card with a kicker line, a procedural boss theme with one layer per phase), a colour grade per phase (light colours,
+   fog and background only: no new lights, no shader recompiles), a visible edge for each boss's existing soft enrage, and the victory moment
+   (brief slow motion, gold tokens thrown to the crowd, peak roar, a 2-bar cadence).
+   Intro: 2.5 s the first time a boss is met (save.acts.ebk_<kind>), 1.0 s after; skippable (click / Space / Enter, never Escape).
+   Duel (84-duel.js): DU.auto is turned off here; the sequence is intro -> DU_challenge(onDone) -> card + roar + theme -> fight.
+   Wraps (each calls the original): startWave, clearWorld, newRun, showMenu, bossDeath, damagePillar, banner, step, schedStep, I_STEP,
+   updateRigs, PM_toP2, PM_toP3, SW_phaseSlam, SW_rodGo, HK_phase, HK_ringsOn, PW_thUpd, A2_enterAct, A2_startAscent, A3_enterAct, A3_startDescent.
+   Public lookup for the boss files: EBK_snapPoints('pit') -> live chained posts [{x,z}], EBK_snapPoints('hesk') -> the topiary spots.
+   No white anywhere: dust is bronze-brown, chains iron, tokens UI gold, lightning storm violet (sky and rod tops only, never the floor).
+   ====================================================================================================================== */
+var EBK = {on:false, kind:null, t:0, L:2.5, first:true, intro:false, introEnd:false, skipped:false, du:0, duT:0, card:null, cardShown:false, themeOn:false,
+  ph:1, done:{}, won:false, saved:[], sinkAt:0.3, sinkDur:1.2, drum:false, slowT:0, sAcc:0, lrt:-1, rtq:[], peakT:0, chant:false, edgeN:0, rimP:0, lift:0,
+  musL:0, musP:null, musBar:0, posts:[], postEl:0, torches:[], torchT:-1, lavaK:0, lavaT:0, lavaR:-1, lavaArcs:false, topi:[], topiOn:false, petK:0, petCalm:false,
+  boltT:0, skyT:3, climbT:-1, climb0:null, hamT:-1, hamX:0, hamZ:0, hamHit:false, thDrop:0, thT:-1, toks:[], tokT:-1,
+  cam:{x:0, z:0, zoom:1, iso:null}, camK:0, vcamK:0, vcamT:-1, vx:0, vz:0, iso0:null, z0:1, isoV:new THREE.Vector3(), ownIso:null,
+  gOn:false, g0:null, gF:null, gT:null, gk:1, gDur:1, gMask:null, hemi:null, lcFix:false};
+var EBK_K = {
+  pit:{name:/PITMASTER/, place:'THE EMBER PIT', act:0, ent:function(){ return {x:0, z:-0.81*AR()}; }},
+  spire:{name:/STORMWRIGHT/, place:'THE STORM SPIRE', act:1, ent:function(){ return {x:0, z:-11.8}; }},
+  garden:{name:/HESK/, place:'THE THORNWALL GARDEN', act:2, ent:function(){ return (typeof HK!=='undefined') ? {x:HK.x, z:HK.z} : {x:0, z:-12}; }}};
+/* the per-phase grade (P1 = the act as it is). Only colours and intensities: bg, fog, hemi sky/ground (hs/hg/hi), sun (sc/si), rim light (lc, lm = x).
+   Readability guard (doc §2.3): no ward hue in the sky; the Spire night is indigo (violet stays for lightning and the rods). */
+var EBK_GR = {
+  pit:[null, {sc:0xffb080, lm:1.3}, {bg:0x1c0606, fog:0x2a0808, hs:0xff9a70, hg:0x3a0a10, hi:0.5, si:0.7, lc:0xff3a10, lm:1.6}],
+  spire:[null, {fog:0x26314c, sc:0xd8e4ff, si:1.05, hs:0x98aedc}, {tex:1, fog:0x15132a, hs:0xa8b0d8, hi:0.6, sc:0xc8ccf0, si:0.9}],
+  garden:[null, {bg:0xa8bcc0, fog:0xd8c49a, hs:0xffe4c4, hi:0.56, sc:0xffd0a0, si:0.8}, {bg:0x4a5878, fog:0x5a6478, hs:0xc0c8e0, hi:0.48, sc:0xd8d0ff, si:0.6}]};
+var EBK_LO = !!LOWTIER, EBK_UP = new THREE.Vector3(0, 1, 0);
+var _ebM = new THREE.Matrix4(), _ebV = new THREE.Vector3(), _ebV2 = new THREE.Vector3(), _ebQ = new THREE.Quaternion(), _ebE = new THREE.Euler(), _ebS = new THREE.Vector3(1, 1, 1), _ebC = new THREE.Color(), _ebZ = new THREE.Matrix4().makeScale(0, 0, 0);
+function EBK_sm(x){ x = x<0?0:x>1?1:x; return x*x*(3-2*x); }
+function EBK_m(x,y,z, rx,ry,rz, sx,sy,sz){ _ebE.set(rx||0, ry||0, rz||0); _ebQ.setFromEuler(_ebE); _ebV.set(x||0, y||0, z||0); _ebS.set(sx==null?1:sx, sy==null?1:sy, sz==null?1:sz); return new THREE.Matrix4().compose(_ebV, _ebQ, _ebS); }
+function EBK_cmp(x,y,z, rx,ry,rz, s){ _ebE.set(rx, ry, rz); _ebQ.setFromEuler(_ebE); _ebV.set(x, y, z); _ebS.set(s, s, s); return _ebM.compose(_ebV, _ebQ, _ebS); }
+/* merged static geometry with per-part vertex colours (build time only) */
+function EBK_geo(parts){ var pos = [], nor = [], col = [], v = new THREE.Vector3();
+  for(var k=0;k<parts.length;k++){ var q = parts[k], g = q[0].index ? q[0].toNonIndexed() : q[0], m = q[1], nm = new THREE.Matrix3().getNormalMatrix(m), P0 = g.attributes.position, N0 = g.attributes.normal; _ebC.setHex(q[2]);
+    for(var i=0;i<P0.count;i++){ v.fromBufferAttribute(P0, i).applyMatrix4(m); pos.push(v.x, v.y, v.z); v.fromBufferAttribute(N0, i).applyMatrix3(nm).normalize(); nor.push(v.x, v.y, v.z); col.push(_ebC.r, _ebC.g, _ebC.b); } }
+  var out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); return out; }
+function EBK_inst(geo, mat, n, shadow){ var m = new THREE.InstancedMesh(geo, mat, n); m.frustumCulled = false; m.count = 0; m.visible = false; if(shadow) m.receiveShadow = true; scene.add(m); return m; }
+function EBK_dashGeo(n, r0, r1){ var pos = [], S = 3; for(var i=0;i<n;i++){ var a0 = i/n*TAU, a1 = a0 + TAU/n*0.55;
+    for(var j=0;j<S;j++){ var u0 = a0+(a1-a0)*j/S, u1 = a0+(a1-a0)*(j+1)/S, c0 = Math.cos(u0), s0 = Math.sin(u0), c1 = Math.cos(u1), s1 = Math.sin(u1);
+      pos.push(c0*r0,0,s0*r0, c1*r1,0,s1*r1, c0*r1,0,s0*r1,  c0*r0,0,s0*r0, c1*r0,0,s1*r0, c1*r1,0,s1*r1); } }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g; }
+function EBK_basic(c, op, add){ return new THREE.MeshBasicMaterial({color:c, transparent:true, opacity:op, depthWrite:false, side:THREE.DoubleSide, blending:add ? THREE.AdditiveBlending : THREE.NormalBlending}); }
+
+/* ---------------------------------------------------------------- meshes (built on first use, pooled per fight) ---------------------------------------------------------------- */
+var EBK_M = {};
+function EBK_mesh(id){ if(EBK_M[id]) return EBK_M[id]; var B = new THREE.BoxGeometry(1, 1, 1), L = [], m, i;
+  if(id==='hatch'){   /* closed timber lid in an iron frame, bronze studs, no glow (a glowing hatch would read as flame) */
+    L.push([B, EBK_m(0, 0.03, 0, 0,0,0, 2.5, 0.08, 2.5), 0x2a2426]);
+    for(i=0;i<4;i++) L.push([B, EBK_m(-0.81 + i*0.54, 0.09, 0, 0,0,0, 0.5, 0.08, 2.2), i%2 ? 0x4e3826 : 0x5d432e]);
+    L.push([B, EBK_m(0, 0.15, -0.68, 0,0,0, 2.25, 0.05, 0.17), 0x2e2826]); L.push([B, EBK_m(0, 0.15, 0.68, 0,0,0, 2.25, 0.05, 0.17), 0x2e2826]);
+    L.push([B, EBK_m(1.2, 0.1, 0, 0,0,0, 0.12, 0.12, 2.5), 0x231e20]); L.push([B, EBK_m(-1.2, 0.1, 0, 0,0,0, 0.12, 0.12, 2.5), 0x231e20]); L.push([B, EBK_m(0, 0.1, 1.2, 0,0,0, 2.5, 0.12, 0.12), 0x231e20]); L.push([B, EBK_m(0, 0.1, -1.2, 0,0,0, 2.5, 0.12, 0.12), 0x231e20]);
+    for(i=0;i<8;i++){ var sx = (i%4 < 2 ? -1 : 1)*(i%2 ? 1.0 : 0.35), sz = i < 4 ? -0.68 : 0.68; L.push([B, EBK_m(sx, 0.19, sz, 0,0,0, 0.12, 0.06, 0.12), 0x9a6a36]); }
+    m = EBK_inst(EBK_geo(L), new THREE.MeshLambertMaterial({vertexColors:true}), 6, true); }
+  else if(id==='post'){   /* the chained post: dark timber, iron bands, a shackle ring, bronze cap */
+    L.push([B, EBK_m(0, 0.06, 0, 0,0,0, 1.1, 0.12, 1.1), 0x2a2426]); L.push([B, EBK_m(0, 1.6, 0, 0,0,0, 0.56, 3.2, 0.56), 0x5a3d26]);
+    for(i=0;i<3;i++) L.push([B, EBK_m(0, 0.5 + i*1.1, 0, 0,0,0, 0.66, 0.14, 0.66), 0x2a2426]);
+    L.push([new THREE.TorusGeometry(0.44, 0.07, 4, 10), EBK_m(0, 2.2, 0, Math.PI/2, 0, 0), 0x3c3638]); L.push([new THREE.ConeGeometry(0.5, 0.5, 4), EBK_m(0, 3.45, 0, 0, Math.PI/4, 0), 0x9a6a36]);
+    m = EBK_inst(EBK_geo(L), new THREE.MeshLambertMaterial({vertexColors:true}), 3); m.castShadow = true; }
+  else if(id==='pring'){ m = EBK_inst(EBK_dashGeo(18, 0.86, 1.0), EBK_basic(0xffc94d, 0.85), 3); m.renderOrder = 3; }   /* gold = marker, "snap here" */
+  else if(id==='torch'){
+    L.push([new THREE.CylinderGeometry(0.05, 0.065, 0.8, 5), EBK_m(0, 0.4, 0), 0x5a4130]); L.push([new THREE.CylinderGeometry(0.1, 0.08, 0.14, 6), EBK_m(0, 0.85, 0), 0x2a2426]);
+    L.push([new THREE.ConeGeometry(0.14, 0.36, 6), EBK_m(0, 1.08, 0), 0xff8a3d]); L.push([new THREE.ConeGeometry(0.07, 0.2, 5), EBK_m(0, 1.03, 0), 0xffc060]);
+    m = EBK_inst(EBK_geo(L), new THREE.MeshBasicMaterial({vertexColors:true}), 6); }
+  else if(id==='tring'){ m = EBK_inst(new THREE.RingGeometry(0.62, 0.9, 24).rotateX(-Math.PI/2), EBK_basic(0xff8a3d, 0.3), 6); m.renderOrder = 1; }
+  else if(id==='topi'){   /* lightning topiary: stone pot, two yew cones, brass rod, a small storm tip (it IS a storm device) */
+    L.push([new THREE.CylinderGeometry(0.55, 0.62, 0.45, 8), EBK_m(0, 0.22, 0), 0x8a7a5a]); L.push([new THREE.ConeGeometry(0.95, 2.2, 8), EBK_m(0, 1.5, 0), 0x2c5426]);
+    L.push([new THREE.ConeGeometry(0.7, 1.5, 8), EBK_m(0, 2.75, 0, 0, 0.4, 0), 0x356230]); L.push([new THREE.CylinderGeometry(0.12, 0.12, 0.1, 6), EBK_m(0, 3.45, 0), 0xb08a40]);
+    L.push([new THREE.CylinderGeometry(0.05, 0.05, 1.0, 5), EBK_m(0, 3.95, 0), 0xb08a40]); L.push([new THREE.OctahedronGeometry(0.17, 0), EBK_m(0, 4.5, 0), 0xc06bff]);
+    m = EBK_inst(EBK_geo(L), new THREE.MeshLambertMaterial({vertexColors:true}), 3); m.castShadow = true; }
+  else if(id==='petal'){ var N = EBK_LO ? 60 : 120; m = EBK_inst(new THREE.PlaneGeometry(0.2, 0.13), new THREE.MeshBasicMaterial({color:0xffffff, side:THREE.DoubleSide, transparent:true, opacity:0.9, depthWrite:false}), N);
+    var PS = m.ps = []; for(i=0;i<N;i++){ PS.push({a:Math.random()*TAU, r:rnd(3, 21), y:rnd(0.3, 9), w:rnd(0.6, 1.4), vy:rnd(0.5, 1.2), s:rnd(0, TAU), ss:rnd(1.5, 4)}); m.setColorAt(i, _ebC.setHex(i%3 ? 0xe48aa2 : 0xf2d27a)); m.setMatrixAt(i, _ebZ); } }
+  else if(id==='chain'){ var lg = new THREE.TorusGeometry(0.34, 0.09, 4, 8); lg.scale(1, 1.5, 1); m = EBK_inst(lg, new THREE.MeshLambertMaterial({color:0x3a3c48, emissive:0x0c111e}), 4*64); }
+  else if(id==='token'){ m = EBK_inst(new THREE.CylinderGeometry(0.17, 0.17, 0.05, 8), new THREE.MeshBasicMaterial({color:0xffc94d}), EBK_LO ? 24 : 48); }
+  else if(id==='hammer'){   /* a hammer of cloud: blue-grey, soft, never white */
+    L.push([B, EBK_m(0, 0, 0, 0,0,0, 3.6, 2.0, 2.0), 0x8a94b0]); L.push([B, EBK_m(1.9, 0, 0, 0,0,0, 0.4, 2.3, 2.3), 0x77809a]); L.push([B, EBK_m(-1.9, 0, 0, 0,0,0, 0.4, 2.3, 2.3), 0x77809a]);
+    L.push([new THREE.CylinderGeometry(0.32, 0.38, 6.5, 6), EBK_m(0, 4.2, 0), 0x6e7690]);
+    m = new THREE.Mesh(EBK_geo(L), new THREE.MeshLambertMaterial({vertexColors:true, emissive:0x182030, transparent:true, opacity:0.9})); m.visible = false; m.frustumCulled = false; scene.add(m); }
+  else if(id==='bolt'){ var NB = 12, g = new THREE.BufferGeometry(), idx = []; g.setAttribute('position', new THREE.BufferAttribute(new Float32Array((NB+1)*2*3), 3));
+    for(i=0;i<NB;i++){ var a = i*2; idx.push(a, a+1, a+2, a+1, a+3, a+2); } g.setIndex(idx); m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:ELC.storm, transparent:true, opacity:0, depthWrite:false, side:THREE.DoubleSide, blending:THREE.AdditiveBlending, fog:false}));
+    m.NB = NB; m.visible = false; m.frustumCulled = false; m.renderOrder = 4; scene.add(m); }
+  else if(id==='lava'){ m = {crust:new THREE.Mesh(new THREE.BufferGeometry(), EBK_basic(0x1c0805, 0.85)), glow:new THREE.Mesh(new THREE.BufferGeometry(), EBK_basic(0xc4521a, 0.75))};   /* ~70% of the flame colour: a telegraph stays the brightest orange */
+    [m.crust, m.glow].forEach(function(o, k){ o.visible = false; o.frustumCulled = false; o.position.y = 0.03 + k*0.006; o.renderOrder = -2 + k; scene.add(o); }); }
+  else if(id==='sky'){ var c = document.createElement('canvas'); c.width = 4; c.height = 256; var x = c.getContext('2d'), gr = x.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#07060f'); gr.addColorStop(0.55, '#15122a'); gr.addColorStop(1, '#2a2046'); x.fillStyle = gr; x.fillRect(0, 0, 4, 256); m = new THREE.CanvasTexture(c); }
+  EBK_M[id] = m; return m; }
+
+/* ---------------------------------------------------------------- DOM: letterbox, kicker line ---------------------------------------------------------------- */
+var EBK_el = null;
+function EBK_dom(){ if(EBK_el) return EBK_el; var st = document.createElement('style');
+  st.textContent = '#ebkLB{position:absolute;inset:0;pointer-events:none;overflow:hidden}#ebkLB i{position:absolute;left:0;right:0;height:11%;background:#08050a;transition:transform .45s ease;will-change:transform}' +
+    '#ebkLB .t{top:0;transform:translateY(-102%)}#ebkLB .b{bottom:0;transform:translateY(102%)}#ebkLB.on i{transform:translateY(0)}' +
+    '#ebkLB.on.pick .b{transform:translateY(102%)}@media (max-aspect-ratio:9/10){#ebkLB i{height:7%}}' +
+    '#hud.ebkDim>#hudTL,#hud.ebkDim>#hudTC,#hud.ebkDim>#hudTR,#hud.ebkDim>#hudB,#hud.ebkDim>#hint{opacity:.4!important;transition:opacity .4s}' +
+    '#ebkKick{display:none;font-weight:700;font-size:clamp(10px,1.7vh,13px);letter-spacing:.34em;color:#ffc94d;text-shadow:0 1px 0 #000,0 2px 10px rgba(0,0,0,.9);margin-bottom:6px}' +
+    '#banner.ebk #ebkKick{display:block}#banner.ebk .t:after{content:"";display:block;width:clamp(80px,14vw,150px);height:2px;margin:8px auto 2px;background:linear-gradient(90deg,transparent,#ffc94d,transparent)}';
+  document.head.appendChild(st); var hud = $('hud'), lb = document.createElement('div'); lb.id = 'ebkLB'; lb.innerHTML = '<i class="t"></i><i class="b"></i>'; if(hud) hud.insertBefore(lb, hud.firstChild);
+  var kk = document.createElement('div'); kk.id = 'ebkKick'; var ban = $('banner'); if(ban) ban.insertBefore(kk, ban.firstChild);
+  EBK_el = {lb:lb, kick:kk}; return EBK_el; }
+function EBK_lb(on, dim){ var d = EBK_dom(); d.lb.classList.toggle('on', !!on); d.lb.classList.remove('pick'); var hud = $('hud'); if(hud) hud.classList.toggle('ebkDim', !!on && dim!==false); EBK.lbOn = !!on; }
+function EBK_lbPick(){ var d = EBK_dom(); d.lb.classList.add('pick'); var hud = $('hud'); if(hud) hud.classList.remove('ebkDim'); }
+
+/* ---------------------------------------------------------------- helpers ---------------------------------------------------------------- */
+function EBK_envOk(k){ k = k || EBK.kind; var sp = typeof SPIRE!=='undefined' && SPIRE.active, gd = typeof GDN!=='undefined' && GDN.on;
+  return k==='spire' ? sp : k==='garden' ? gd : (!sp && !gd); }
+function EBK_boss(){ if(EBK.kind==='garden') return (typeof HK!=='undefined' && HK.e) ? HK.e : null; if(EBK.kind==='spire') return (typeof SW!=='undefined' && SW.b) ? SW.b : G.bossRef; return G.bossRef; }
+function EBK_rt(sec, fn){ EBK.rtq.push({t:sec, fn:fn}); }   /* real-time timers (they play through the victory slow motion) */
+function EBK_crowd(kind){ try{
+    if(EBK.kind==='pit' && typeof PW_crowd==='function') PW_crowd(kind);
+    else if(EBK.kind==='spire' && typeof A2_call==='function') A2_call('crowd', kind);
+    else if(EBK.kind==='garden' && typeof GARDEN!=='undefined' && (kind==='roar' || kind==='cheer')) GARDEN.cheer(1);
+  }catch(err){ if(DEV) console.warn('ebk crowd', err); }
+  if(kind==='roar'){ crowdCheer = 1; if(lim('ebkroar', 1.2)){ SFX.cheer(); SFX.roar(); } }
+  else if(kind==='cheer'){ crowdCheer = Math.max(crowdCheer, 0.7); if(lim('ebkcheer', 1)) SFX.cheer(); }
+  else if(kind==='gasp' && EBK.kind!=='pit' && lim('ebkgasp', 0.8)){ for(var i=0;i<4;i++) noise(0.45 + Math.random()*0.3, 0.045, 900 + Math.random()*500, 'bandpass', i*0.04, null, 450); } }
+function EBK_dust(x, z, spire){ if(spire){ for(var i=0;i<10;i++) glowP.emit(x + rnd(-0.6, 0.6), rnd(3, 5), z + rnd(-0.6, 0.6), rnd(-0.5, 0.5), rnd(1, 3), rnd(-0.5, 0.5), 0.5, 0.7, 0x8aa0d4, 0, 1); return; }
+  rocks(x, 0.3, z, 10, 0x5a4430, 6); for(var k=0;k<14;k++){ var a = k/14*TAU; glowP.emit(x + Math.cos(a)*1.1, 0.25, z + Math.sin(a)*1.1, Math.cos(a)*2.2, rnd(0.4, 1.2), Math.sin(a)*2.2, 0.9, 1.2, 0x8a6a48, 0, 2); } }
+
+/* ---------------------------------------------------------------- begin / end ---------------------------------------------------------------- */
+function EBK_detect(){ if(G.act===3) return (typeof HK!=='undefined' && HK.on && HK.ent) ? 'garden' : null;
+  if(G.act===2) return (typeof SW!=='undefined' && SW.on && SW.ent) ? 'spire' : null;
+  return G.round==='boss' ? 'pit' : null; }
+function EBK_begin(kind){ EBK_dom(); var a = save.acts = (save.acts && typeof save.acts==='object') ? save.acts : {};
+  EBK.on = true; EBK.kind = kind; EBK.t = 0; EBK.first = !a['ebk_'+kind]; EBK.L = EBK.first ? 2.5 : 1.0; EBK.sinkAt = EBK.first ? 0.3 : 0.1; EBK.sinkDur = EBK.first ? 1.2 : 0.8;
+  EBK.intro = true; EBK.introEnd = false; EBK.skipped = false; EBK.du = 0; EBK.duT = 0; EBK.duPick = false; EBK.lbOff = 0; EBK.thDust = false; EBK.hamHit = false; EBK.card = null; EBK.cardShown = false; EBK.themeOn = false; EBK.drum = false;
+  EBK.ph = 1; EBK.done = {}; EBK.won = false; EBK.chant = false; EBK.edgeN = 0; EBK.lift = 0; EBK.rimP = 0; EBK.peakT = 0; EBK.slowT = 0; EBK.sAcc = 0; EBK.rtq.length = 0;
+  EBK.posts.length = 0; EBK.torches.length = 0; EBK.torchT = -1; EBK.lavaK = 0; EBK.lavaT = 0; EBK.lavaR = -1; EBK.topi.length = 0; EBK.topiOn = false; EBK.petK = 0; EBK.petCalm = false;
+  EBK.boltT = 0; EBK.skyT = 3; EBK.climbT = -1; EBK.hamT = -1; EBK.thDrop = 0; EBK.thT = -1; EBK.toks.length = 0; EBK.tokT = -1; EBK.camK = 0; EBK.vcamK = 0; EBK.vcamT = -1; EBK.iso0 = null;
+  EBK.saved = []; for(var i=0;i<pillars.length;i++){ var p = pillars[i]; if(p.temp || p.dead || p===G.spear || p.ebkPost) continue; EBK.saved.push({p:p, hp:p.hp, x:p.x, z:p.z, go:false, sunk:false}); }
+  EBK_gCapture(); EBK.gOn = false;
+  if(kind==='spire' && typeof SP!=='undefined' && SP.cloud && !EBK.climb0) EBK.climb0 = {c:SP.cloud.position.y, f:SP.cfloor ? SP.cfloor.position.y : 0, p:SP.peaks ? SP.peaks.position.y : 0};
+  if(typeof HINTS!=='undefined' && HINTS.pmChain && !HINTS.pmChain.ebk){ HINTS.pmChain = function(){ return 'Chained! Stay inside the <b>dashed ring</b> or he yanks you. A <b>chained post</b> rises from a hatch: drag the chain across it for 1 s to snap it (or dash into it once charged), or hold the chain for bonus damage.'; }; HINTS.pmChain.ebk = 1; }
+  EBK_lb(true); EBK_crowd('silence'); EBK.musP = -1; }   /* the music cuts on the next bar */
+function EBK_end(){ if(!EBK.on) return; var k = EBK.kind, env = EBK_envOk(k);
+  for(var i=0;i<EBK.saved.length;i++){ var s = EBK.saved[i], p = s.p; if(pillars.indexOf(p) < 0 || !s.go) continue; p.dead = false; p.hp = Math.max(s.hp, p.max*0.6); p.g.visible = true; p.g.position.y = 0; p.rise = 0.4; }
+  EBK.saved = []; for(var j=0;j<EBK.posts.length;j++){ var q = EBK.posts[j]; if(q.p && !q.p.dead){ q.p.temp = true; q.p.dead = true; q.p.g.visible = false; } } EBK.posts.length = 0;
+  if(EBK.gOn && env) EBK_gWrite(EBK.g0); EBK.gOn = false; if(EBK.lcFix && env){ lavaLight.color.copy(EBK.g0.lc); } EBK.lcFix = false;
+  if(EBK.climb0 && typeof SP!=='undefined' && SP.cloud){ SP.cloud.position.y = EBK.climb0.c; if(SP.cfloor) SP.cfloor.position.y = EBK.climb0.f; if(SP.peaks) SP.peaks.position.y = EBK.climb0.p; } EBK.climb0 = null;
+  if(G.camO===EBK.cam) G.camO = null; if(EBK.ownIso && EBK.ownIso.iso===EBK.isoV) EBK.ownIso.iso = null; EBK.ownIso = null;
+  EBK.on = false; EBK.kind = null; EBK.intro = false; EBK.musL = 0; EBK.musP = null; EBK.slowT = 0; EBK.thDrop = 0; EBK.rtq.length = 0; EBK.torches.length = 0; EBK.toks.length = 0; EBK.topi.length = 0;
+  var b = $('banner'); if(b) b.classList.remove('ebk'); EBK_lb(false); EBK_hideAll(); }
+function EBK_hideAll(){ for(var id in EBK_M){ var m = EBK_M[id]; if(!m) continue; if(m.isObject3D) m.visible = false; else if(m.crust){ m.crust.visible = m.glow.visible = false; } } }
+
+/* ---------------------------------------------------------------- intro: card, theme, duel ---------------------------------------------------------------- */
+function EBK_duel(){ return typeof DU_challenge==='function'; }
+function EBK_duArmed(){ return EBK_duel() && typeof DU_armed==='function' && DU_armed(); }
+function EBK_entDone(){ var k = EBK.kind; if(k==='garden') return typeof HK!=='undefined' && HK.e && !HK.ent; if(k==='spire') return typeof SW!=='undefined' && SW.b && !SW.ent;
+  var b = G.bossRef; return !!(b && !(b.spawnT > 0) && !G.bossPending); }
+function EBK_introFinish(){ if(EBK.introEnd) return; EBK.introEnd = true; EBK.intro = false;
+  if(!G.testRun && EBK.kind){ save.acts = save.acts || {}; if(!save.acts['ebk_'+EBK.kind]){ save.acts['ebk_'+EBK.kind] = 1; persist(); } }
+  if(!EBK_duel()){ EBK.du = 2; EBK_lb(false); return; }
+  if(EBK_duArmed()){ EBK.du = 0.5; EBK_lbPick(); return; }   /* party duel: the pick comes once the boss has made his entrance (the HUD and the bottom of the screen are the pick's) */
+  EBK.du = 1; try{ DU_challenge(EBK_duDone, {quiet:true}); }catch(err){ if(DEV) console.warn('ebk duel', err); EBK_duDone(); } }
+function EBK_duDone(){ if(!EBK.on || EBK.du===2) return; var armed = EBK.du===1 && EBK.duPick; EBK.du = 2;
+  if(EBK.card){ var c = EBK.card; EBK.card = null; EBK_showCard(c[0], c[1], c[2]); } else if(armed && !EBK.themeOn) EBK_theme();
+  if(armed) EBK.lbOff = EBK.t + 1.2; else EBK_lb(false); }
+function EBK_theme(){ if(EBK.themeOn) return; EBK.themeOn = true; EBK_crowd('roar'); EBK.peakT = 1.5; EBK.musP = Math.max(1, Math.min(3, EBK.ph)); }
+var EBK_ban0 = banner;
+banner = function(t, s, d){ if(EBK.on && !EBK.cardShown && !EBK.won && EBK.kind && EBK_K[EBK.kind].name.test(String(t||''))){
+    if(EBK.du!==2 && EBK_duArmed()){ EBK.card = [t, s, d]; return; }   /* the title card lands after the pick */
+    return EBK_showCard(t, s, d); }
+  return EBK_ban0.apply(this, arguments); };
+function EBK_showCard(t, s, d){ EBK.cardShown = true; var el = EBK_dom(), K = EBK_K[EBK.kind], b = $('banner'); d = Math.max(d||2, 2.8);
+  el.kick.textContent = 'ROUND '+(G.wave||'')+' · '+K.place; if(b){ b.classList.add('ebk', 'boss'); } var r = EBK_ban0.call(this, t, s, d);
+  clearTimeout(EBK_showCard._t); EBK_showCard._t = setTimeout(function(){ if(b) b.classList.remove('ebk'); }, d*1000 + 400); EBK_theme(); return r; }
+function EBK_skip(){ if(!EBK.intro || EBK.introEnd) return; EBK.skipped = true; EBK.t = Math.max(EBK.t, EBK.L); EBK_introFinish(); }
+document.addEventListener('keydown', function(e){ if(!EBK.intro || EBK.introEnd || G.state!=='play' || G.paused) return; var c = e.code;
+  if(c==='Space' || c==='Enter' || c==='NumpadEnter'){ if(EBK.t < 0.15) return; e.preventDefault(); e.stopPropagation(); EBK_skip(); } }, true);   /* never Escape */
+window.addEventListener('pointerdown', function(e){ if(!EBK.intro || EBK.introEnd || G.state!=='play' || G.paused || EBK.t < 0.25) return; if(e.target && e.target.closest && e.target.closest('button')) return; EBK_skip(); }, true);
+
+/* ---------------------------------------------------------------- phases, edge, victory ---------------------------------------------------------------- */
+function EBK_phase(n){ if(!EBK.on || EBK.won || !(n > EBK.ph)) return; var from = EBK.ph; EBK.ph = n;
+  var spec = EBK_GR[EBK.kind] && EBK_GR[EBK.kind][Math.min(2, n-1)]; if(spec) EBK_gTo(spec, 1.0);
+  for(var lv=from+1; lv<=n; lv++) EBK_scene(lv);
+  EBK_crowd('roar'); EBK.peakT = 1.5; if(EBK.themeOn) EBK.musP = Math.min(3, n); }
+function EBK_scene(lv){ if(EBK.done[lv]) return; EBK.done[lv] = 1; var k = EBK.kind;
+  if(k==='pit' && lv===3){ EBK.lavaT = 0.001; EBK.torchT = 1.5; }
+  else if(k==='spire' && lv===2){ EBK.climbT = 0; }
+  else if(k==='spire' && lv===3){ EBK.skyT = 1.2; }
+  else if(k==='garden' && lv===3){ EBK_topiRise(); EBK.petK = 0.001; } }
+function EBK_win(b){ if(!EBK.on || EBK.won) return; EBK.won = true; EBK.slowT = 0.6; EBK.sAcc = 0; EBK.vcamT = 0; EBK.vx = b.x; EBK.vz = b.z; EBK.intro = false;
+  var k = EBK.kind, low = P && !P.dead && P.hp < P.maxHp*0.3;
+  if(k==='spire'){ EBK.hamX = b.x; EBK.hamZ = b.z; EBK_rt(0.25, function(){ EBK.hamT = 0; EBK.hamHit = false; }); }
+  if(k==='garden'){ EBK.petCalm = true; EBK_rt(0.6, function(){ for(var i=0;i<EBK.topi.length;i++){ var T = EBK.topi[i]; for(var j=0;j<14;j++) glowP.emit(T.x + rnd(-0.8, 0.8), rnd(1, 3.4), T.z + rnd(-0.8, 0.8), 0, rnd(0.4, 1.4), 0, 1.4, 0.9, j%2 ? 0xe48aa2 : 0xf2d27a, 0, 0.6); } }); }
+  if(k==='pit'){ EBK_rt(0.4, function(){ EBK.thT = 0; noise(1.8, 0.05, 1800, 'bandpass', 0, null, 700); }); }
+  EBK_rt(0.6, EBK_sparsio);
+  EBK_rt(0.8, function(){ EBK_crowd('roar'); EBK.peakT = low ? 2.4 : 1.6; if(EBK.themeOn || EBK.musL > 0) EBK.musP = 4; });
+  EBK_rt(1.2, function(){ EBK_gTo(null, 1.2); }); }
+/* the arena-edge transformation: each soft-enrage stack is seen and heard (crowd gasp, a shake, a rim-light pulse, +1 semitone up to 2) */
+function EBK_edgeN(){ var b = EBK_boss(), k = EBK.kind; if(k==='pit') return b && b.pm ? b.pm.enr||0 : 0; if(k==='spire') return typeof SW2!=='undefined' ? SW2.stk||0 : 0; return typeof HK!=='undefined' ? HK.stk||0 : 0; }
+
+/* ---------------------------------------------------------------- step (sim time) ---------------------------------------------------------------- */
+function EBK_step(dt){ if(!EBK.on || !P) return; EBK.t += dt; var t = EBK.t;
+  if(!EBK.introEnd){ if(EBK.first && !EBK.drum && t >= 0.6){ EBK.drum = true; tone(55, 0.5, 'sine', 0.3, 40); noise(0.3, 0.1, 200, 'lowpass'); } if(t >= EBK.L) EBK_introFinish(); }
+  if(EBK.du===0.5 && EBK_entDone()){ EBK.du = 1; EBK.duPick = true; try{ if(!DU_challenge(EBK_duDone)) EBK_duDone(); }catch(err){ if(DEV) console.warn('ebk duel', err); EBK_duDone(); } }
+  if(EBK.du===1){ EBK.duT += dt; if(EBK.duT > 10) EBK_duDone(); }   /* safety: never wait forever */
+  if(EBK.lbOff > 0 && t >= EBK.lbOff){ EBK.lbOff = 0; EBK_lb(false); }   /* after the pick: card, roar, then play (sim time) */
+  if(EBK.introEnd && EBK.du===2 && !EBK.themeOn && t > EBK.L + 3) EBK_theme();
+  var b = EBK_boss();
+  if(b && !b.dead && !EBK.won && b.maxHp){ if(!EBK.chant && b.hp < b.maxHp*0.2 && EBK.ph >= 3){ EBK.chant = true; EBK_crowd('chant'); }
+    var n = EBK_edgeN(); if(n > EBK.edgeN){ EBK.edgeN = n; EBK_crowd('gasp'); shake(0.2); EBK.rimP = 1; EBK.lift = Math.min(2, n); } }
+  if(EBK.kind==='pit'){ EBK_postStep(dt); EBK_torchStep(dt); }
+  if(EBK.kind==='spire' && EBK.ph >= 3 && !EBK.won){ EBK.skyT -= dt; if(EBK.skyT <= 0){ EBK.skyT = rnd(3.5, 6.5); var a = Math.random()*TAU, r = rnd(30, 44); EBK_strike(Math.cos(a)*r, 30, Math.sin(a)*r, Math.cos(a)*r + rnd(-3, 3), -14, Math.sin(a)*r + rnd(-3, 3), 0.75); } } }
+
+/* ---------------------------------------------------------------- Pit P2: the chained post ---------------------------------------------------------------- */
+function EBK_postSpot(b, st){ var best = null, bd = 1e9, mx = (b.x+st.x)/2, mz = (b.z+st.z)/2, i;
+  for(i=0;i<EBK.saved.length;i++){ var s = EBK.saved[i], used = false; for(var j=0;j<EBK.posts.length;j++) if(EBK.posts[j].st==='up' && Math.hypot(EBK.posts[j].x-s.x, EBK.posts[j].z-s.z) < 1) used = true; if(used) continue;
+    if(segDist(s.x, s.z, b.x, b.z, st.x, st.z) > 2.0 || Math.hypot(s.x-st.x, s.z-st.z) < 2.0 || Math.hypot(s.x-b.x, s.z-b.z) < 2.6) continue;
+    var dm = Math.hypot(s.x-mx, s.z-mz); if(dm < bd){ bd = dm; best = {x:s.x, z:s.z}; } }
+  if(best) return best;   /* a hatch already near the chain line: the post rises there */
+  var dx = st.x-b.x, dz = st.z-b.z, L = Math.hypot(dx, dz)||1, px = -dz/L, pz = dx/L, ox = b.x + dx*0.55, oz = b.z + dz*0.55, side = (px*(-ox) + pz*(-oz)) >= 0 ? 1 : -1;
+  var o = {x:ox + px*1.5*side, z:oz + pz*1.5*side}; clampArena(o, 1.4);
+  if(Math.hypot(o.x-st.x, o.z-st.z) < 1.7){ o.x = ox - px*1.5*side; o.z = oz - pz*1.5*side; clampArena(o, 1.4); }
+  return o; }
+function EBK_postAdd(c, x, z){ var p = makePillar(x, z, 1000, false); p.ebkPost = true; p.r = 0.75; p.max = p.hp = 1000; for(var i=0;i<p.g.children.length;i++) p.g.children[i].visible = false;
+  p.pcEl = EL[EBK.postEl++ % 3]; p.pcN = 0; c.ebkP = p; EBK.posts.push({p:p, c:c, x:x, z:z, k:0, t:0, st:'up'});
+  rocks(x, 0.3, z, 12, 0x5a4430, 6); burst(x, 0.4, z, 12, 0x8a6a48, 4, 0.5, 1.1); tone(70, 0.5, 'sawtooth', 0.05, 45); noise(0.5, 0.06, 500, 'lowpass'); shake(0.15); }
+function EBK_postStep(dt){ var b = G.bossRef, pm = b && b.pm && !b.dead ? b.pm : null, Q = EBK.posts, i;
+  if(pm && typeof PM_endChain==='function') for(i=0;i<pm.chains.length;i++){ var c = pm.chains[i]; if(c.ebkP || !c.st || c.st.dead) continue; var o = EBK_postSpot(b, c.st); EBK_postAdd(c, o.x, o.z); }
+  for(i=Q.length-1;i>=0;i--){ var q = Q[i];
+    if(q.st==='up'){ q.k = Math.min(1, q.k + dt/0.6); var p = q.p, live = pm && pm.chains.indexOf(q.c) >= 0;
+      if(p.dead){ q.st = 'broke'; q.t = 0; p.temp = true; rocks(q.x, 1.6, q.z, 16, 0x4e3826, 8); burst(q.x, 1.6, q.z, 16, 0xffc060, 6, 0.5, 1.2); shake(0.3);
+        if(live){ pm.log.snap++; PM_endChain(b, q.c, 'snap'); } continue; }   /* dashed into it charged: the blast also snaps the chain */
+      p.hp = p.max; if(!live){ p.temp = true; p.dead = true; p.g.visible = false; q.st = 'down'; q.t = 0; } }
+    else { q.t += dt; if(q.t > 0.7) Q.splice(i, 1); } } }
+/* a post only falls to the chain (or the dash blast): wedges, shockwaves and bolts never take it down by accident */
+var EBK_dp0 = damagePillar;
+damagePillar = function(p, dmg){ if(p && p.ebkPost && !p.dead){ if(!(dmg >= 5000)){ p.flash = 0.06; return; } p.temp = true; } return EBK_dp0.apply(this, arguments); };
+function EBK_snapPoints(kind){ var o = [], i; if(kind==='hesk' || kind==='garden'){ for(i=0;i<EBK.topi.length;i++) o.push({x:EBK.topi[i].x, z:EBK.topi[i].z}); return o; }
+  for(i=0;i<EBK.posts.length;i++){ var q = EBK.posts[i]; if(q.st==='up' && !q.p.dead) o.push({x:q.x, z:q.z}); } return o; }
+
+/* ---------------------------------------------------------------- Pit P3: torches thrown by the crowd (flame pickups: +Overload) ---------------------------------------------------------------- */
+function EBK_torchVolley(n){ var R = AR(); for(var i=0;i<n;i++){ var a = Math.random()*TAU, la = a + rnd(-0.25, 0.25), lr = R - rnd(1.1, 2.8), r0 = R + 6;
+    EBK.torches.push({sx:Math.cos(a)*r0, sy:6, sz:Math.sin(a)*r0, x:Math.cos(la)*lr, z:Math.sin(la)*lr, t:-i*0.18, dur:rnd(0.8, 1.1), st:'fly', yaw:rnd(0, TAU), life:28}); }
+  EBK_crowd('cheer'); }
+function EBK_torchStep(dt){ if(EBK.torchT > 0 && !EBK.won){ EBK.torchT -= dt; if(EBK.torchT <= 0){ EBK_torchVolley(EBK_LO ? 3 : 4); EBK.torchT = 22; } }
+  var T = EBK.torches; for(var i=T.length-1;i>=0;i--){ var o = T[i]; o.t += dt;
+    if(o.st==='fly'){ if(o.t >= o.dur){ o.st = 'lie'; o.t = 0; rocks(o.x, 0.2, o.z, 4, 0x4a3426, 4); burst(o.x, 0.3, o.z, 8, 0xff8a3d, 4, 0.4, 0.9); } continue; }
+    if(o.t > o.life || EBK.won){ T.splice(i, 1); continue; }
+    if(P && !P.dead && Math.hypot(P.x-o.x, P.z-o.z) < 1.1){ P.over = Math.min(100, (P.over||0) + 18); dmgText(P.x, 2.6, P.z, '+OVERLOAD', '#ff9a4a', 17); SFX.pick(); burst(o.x, 0.5, o.z, 14, 0xff8a3d, 5, 0.5, 1.1); T.splice(i, 1); continue; }
+    if(Math.random() < dt*3) glowP.emit(o.x + rnd(-0.2, 0.2), 0.3, o.z + rnd(-0.2, 0.2), 0, rnd(0.8, 1.6), 0, 0.5, 0.6, 0xff9a4a, 0, 1); } }
+
+/* ---------------------------------------------------------------- Pit: lava channels (P3 decor) + the closing pit (enrage edge) ---------------------------------------------------------------- */
+function EBK_lavaGeo(arcs, R, outer, pad){ var pos = [], N = 8, seg = 10, i, j;
+  function quad(a0, a1, r0a, r0b, r1){ var c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+    pos.push(c0*r0a,0,s0*r0a, c1*r1,0,s1*r1, c0*r1,0,s0*r1,  c0*r0a,0,s0*r0a, c1*r0b,0,s1*r0b, c1*r1,0,s1*r1); }
+  if(arcs) for(i=0;i<N;i++){ var a0 = i/N*TAU + 0.12, span = TAU/N*0.62, rin = R - 1.6 - pad, rout = R - 0.1 + pad;
+    for(j=0;j<seg;j++){ var u0 = j/seg, u1 = (j+1)/seg, taper = function(u){ return Math.sin(u*Math.PI); }, jag = function(u){ return 0.35*Math.sin(u*17 + i*3.1) + 0.2*Math.sin(u*41 + i); };
+      quad(a0 + span*u0, a0 + span*u1, rout - (rout - rin)*taper(u0)*(0.75 + 0.25*jag(u0)), rout - (rout - rin)*taper(u1)*(0.75 + 0.25*jag(u1)), rout); } }
+  if(outer > R + 0.05){ for(j=0;j<64;j++) quad(j/64*TAU, (j+1)/64*TAU, R - pad, R - pad, outer + 0.4); }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g; }
+function EBK_lavaUpd(t, rdt){ var M = EBK_mesh('lava'), R = AR(), arcs = EBK.lavaT > 0, closed = R < ARENA_R - 0.05, on = EBK.on && EBK.kind==='pit' && EBK_envOk('pit') && (arcs || closed) && G.state!=='menu';
+  if(!on){ M.crust.visible = M.glow.visible = false; return; }
+  if(arcs && !EBK.won) EBK.lavaK = Math.min(1, EBK.lavaK + rdt/1.2); else if(EBK.won) EBK.lavaK = Math.max(0.15, EBK.lavaK - rdt/1.2);   /* the win: the channels dim to crust */
+  var key = R.toFixed(2) + (arcs ? 'a' : '');
+  if(key !== EBK.lavaR){ EBK.lavaR = key; M.crust.geometry.dispose(); M.glow.geometry.dispose(); M.crust.geometry = EBK_lavaGeo(arcs, R, ARENA_R, 0.14); M.glow.geometry = EBK_lavaGeo(arcs, R, ARENA_R, -0.06); }
+  var k = arcs ? EBK.lavaK : 1; M.crust.visible = M.glow.visible = true; M.crust.material.opacity = 0.85*Math.max(k, 0.6); M.glow.material.opacity = Math.min(0.92, (0.72 + 0.1*Math.sin(t*2.3) + 0.2*EBK.rimP)*k);
+  if(Math.random() < rdt*6*k){ var a = Math.random()*TAU, r = arcs ? R - rnd(0.2, 1.4) : R + rnd(0.2, 1.4); glowP.emit(Math.cos(a)*r, 0.15, Math.sin(a)*r, 0, rnd(0.6, 1.6), 0, 0.7, 0.6, 0xff7a2a, 0, 1); } }
+
+/* ---------------------------------------------------------------- Spire: chains, climb, lightning, cloud hammer ---------------------------------------------------------------- */
+var EBK_camR = new THREE.Vector3();
+function EBK_strike(x0, y0, z0, x1, y1, z1, op){ var m = EBK_mesh('bolt'), A = m.geometry.attributes.position.array, N = m.NB; camera.matrixWorld.extractBasis(EBK_camR, _ebV2, _ebV); EBK_camR.y = 0; EBK_camR.normalize();
+  for(var i=0;i<=N;i++){ var f = i/N, j = i===0 || i===N ? 0 : Math.sin(f*Math.PI), x = x0 + (x1-x0)*f + rnd(-1, 1)*0.9*j, y = y0 + (y1-y0)*f, z = z0 + (z1-z0)*f + rnd(-1, 1)*0.9*j, w = 0.24*(1 - f*0.5);
+    A[i*6] = x - EBK_camR.x*w; A[i*6+1] = y; A[i*6+2] = z - EBK_camR.z*w; A[i*6+3] = x + EBK_camR.x*w; A[i*6+4] = y; A[i*6+5] = z + EBK_camR.z*w; }
+  m.geometry.attributes.position.needsUpdate = true; m.geometry.computeBoundingSphere(); EBK.boltT = 0.42; EBK.boltOp = op||1; m.visible = true;
+  noise(0.9, 0.08, 260, 'lowpass', 0.05, null, 60); if(lim('ebkzap', 0.3)) SFX.zap(); }
+function EBK_rodStrike(i){ var R = (typeof A2!=='undefined' && A2.rods && A2.rods[i]) ? A2.rods[i] : (typeof SPIRE!=='undefined' ? SPIRE.rods[i] : null); if(!R) return;
+  EBK_strike(R.x + rnd(-4, 4), 34, R.z + rnd(-4, 4), R.x, 5.6, R.z, 1); for(var k=0;k<10;k++) glowP.emit(R.x + rnd(-0.3, 0.3), rnd(4.6, 5.8), R.z + rnd(-0.3, 0.3), rnd(-1, 1), rnd(0.5, 2), rnd(-1, 1), 0.4, 0.8, ELC.storm, 0, 1); }
+function EBK_spireUpd(t, rdt){ var on = EBK.on && EBK.kind==='spire' && EBK_envOk('spire');
+  /* the four columns are pulled up into the storm on chains (intro) */
+  var CH = EBK_M.chain; if(on && EBK.saved.length && EBK.t < EBK.sinkAt + EBK.sinkDur + 0.1 && EBK.t >= EBK.sinkAt - 0.35){ CH = EBK_mesh('chain'); var n = 0, top = 46;
+    for(var i=0;i<EBK.saved.length;i++){ var s = EBK.saved[i], p = s.p; if(s.sunk) continue; var k = Math.max(0, (EBK.t - (EBK.sinkAt - 0.35))/(EBK.sinkDur + 0.35)), drop = EBK_sm(k/0.3),
+        ct = (p.g.position.y || 0) + 4.4, end = top + (ct - top)*drop;
+      for(var y=end; y<top && n < CH.instanceMatrix.count; y+=0.62){ _ebQ.setFromAxisAngle(EBK_UP, (n%2)*Math.PI/2); _ebV.set(s.x + Math.sin(t*3 + i)*0.05*(1-drop), y, s.z); _ebS.set(1, 1, 1); _ebM.compose(_ebV, _ebQ, _ebS); CH.setMatrixAt(n++, _ebM); } }
+    CH.count = n; CH.visible = n > 0; CH.instanceMatrix.needsUpdate = true; }
+  else if(CH) CH.visible = false;
+  /* P2: the platform climbs (only the background moves: cloud sea, cloud floor, peaks drift down 6 u over 3 s) */
+  if(on && EBK.climbT >= 0 && EBK.climb0 && typeof SP!=='undefined' && SP.cloud){ if(EBK.climbT < 3){ EBK.climbT += rdt;
+      if(Math.random() < rdt*30){ var a = Math.random()*TAU, r = rnd(17, 26); glowP.emit(Math.cos(a)*r, rnd(-8, -2), Math.sin(a)*r, 0, rnd(9, 14), 0, 0.7, 0.35, 0x8a98bc, 0, 0); } }
+    var off = -6*EBK_sm(EBK.climbT/3); SP.cloud.position.y = EBK.climb0.c + off; if(SP.cfloor) SP.cfloor.position.y = EBK.climb0.f + off; if(SP.peaks) SP.peaks.position.y = EBK.climb0.p + off; }
+  /* lightning bolt (pooled, one draw) */
+  var BM = EBK_M.bolt; if(BM){ if(EBK.boltT > 0 && on){ EBK.boltT -= rdt; var u = EBK.boltT/0.42; BM.material.opacity = EBK.boltOp*Math.max(0, u)*(u > 0.7 ? 1 : 0.55 + 0.45*Math.abs(Math.sin(EBK.boltT*60))); BM.visible = true; } else BM.visible = false; }
+  /* the win: a hammer of cloud falls on the kneeling Stormwright */
+  var HM = EBK_M.hammer; if(on && EBK.hamT >= 0 && EBK.hamT < 2){ HM = EBK_mesh('hammer'); EBK.hamT += rdt; var f = Math.min(1, EBK.hamT/0.7), y = 44 + (2.6 - 44)*f*f;
+    if(f >= 1 && !EBK.hamHit){ EBK.hamHit = true; shake(0.6); SFX.slam(); tone(48, 1.2, 'sine', 0.3, 30); ringBurst(EBK.hamX, EBK.hamZ, 4.5, 36, 0xffc94d); burst(EBK.hamX, 1.2, EBK.hamZ, 40, 0x9aa6c8, 9, 0.8, 1.6); rocks(EBK.hamX, 0.5, EBK.hamZ, 20, 0x4a4a52, 8); }
+    var fade = EBK.hamT > 0.8 ? Math.max(0, 1 - (EBK.hamT - 0.8)/1.0) : 1; HM.visible = fade > 0.01; HM.position.set(EBK.hamX - 1.2, y + (EBK.hamHit ? -(EBK.hamT - 0.7)*1.2 : 0), EBK.hamZ - 1.2);
+    HM.rotation.set(0, Math.PI/4, -0.9*(1 - f)); HM.material.opacity = 0.9*fade; HM.scale.setScalar(1 + (1 - fade)*0.15); }
+  else if(HM) HM.visible = false; }
+
+/* ---------------------------------------------------------------- Garden: topiaries, petals ---------------------------------------------------------------- */
+function EBK_topiRise(){ var R = Math.min(8.6, AR() - 3.2), A = [45, 165, 285], rot = [0, 40, -40, 80, -80, 120], out = [];
+  for(var i=0;i<3;i++){ var ok = null; for(var q=0;q<rot.length && !ok;q++){ var a = (A[i] + rot[q])*Math.PI/180, x = Math.cos(a)*R, z = Math.sin(a)*R, good = true;
+      if(typeof HK!=='undefined' && Math.hypot(x - HK.x, z - HK.z) < HK_R + 5.2) good = false; for(var j=0;j<out.length;j++) if(Math.hypot(out[j].x - x, out[j].z - z) < 6) good = false; if(good) ok = {x:x, z:z}; }
+    if(!ok){ var a2 = A[i]*Math.PI/180; ok = {x:Math.cos(a2)*R, z:Math.sin(a2)*R}; } out.push(ok); }
+  EBK.topi.length = 0; for(var k=0;k<out.length;k++){ EBK.topi.push({x:out[k].x, z:out[k].z, k:0}); rocks(out[k].x, 0.3, out[k].z, 12, 0x4a3626, 6); }
+  EBK.topiOn = true; tone(60, 0.8, 'sine', 0.2, 35); noise(0.9, 0.08, 280, 'lowpass'); shake(0.25); }
+function EBK_gardenUpd(t, rdt, adt){ var on = EBK.on && EBK.kind==='garden' && EBK_envOk('garden') && G.state!=='menu';
+  var TM = EBK_M.topi; if(on && EBK.topiOn && EBK.topi.length){ TM = EBK_mesh('topi'); for(var i=0;i<EBK.topi.length;i++){ var T = EBK.topi[i]; T.k = Math.min(1, T.k + rdt/0.8); var y = -4.8*(1 - EBK_sm(T.k));
+      if(T.k < 1 && Math.random() < rdt*20) glowP.emit(T.x + rnd(-1, 1), 0.2, T.z + rnd(-1, 1), rnd(-1, 1), rnd(0.5, 2), rnd(-1, 1), 0.6, 0.9, 0x6e5030, 4, 1);
+      if(typeof HK!=='undefined' && HK.th && Math.random() < rdt*8) glowP.emit(T.x + rnd(-0.15, 0.15), 4.5, T.z + rnd(-0.15, 0.15), rnd(-1, 1), rnd(0.5, 1.5), rnd(-1, 1), 0.3, 0.6, ELC.storm, 0, 1);
+      TM.setMatrixAt(i, EBK_cmp(T.x, y, T.z, 0, i*1.3, 0, 1)); } TM.count = EBK.topi.length; TM.visible = true; TM.instanceMatrix.needsUpdate = true; }
+  else if(TM) TM.visible = false;
+  /* the petal storm: rose / butter, small and low-saturation (bigger petals start to read as pickups) */
+  var PM0 = EBK_M.petal; if(on && EBK.petK > 0){ PM0 = EBK_mesh('petal'); var PS = PM0.ps, d = adt||0, calm = EBK.petCalm, R = AR() + 6;
+    EBK.petK = calm ? Math.max(0, EBK.petK - rdt/6) : Math.min(1, EBK.petK + rdt/1.5); var n = Math.floor(PS.length*Math.min(1, EBK.petK*1.4));
+    for(var j=0;j<n;j++){ var p = PS[j]; p.a += d*(calm ? 0.12 : 0.55)*p.w; p.y -= d*p.vy*(calm ? 1.4 : 1); p.s += d*p.ss; if(p.y < 0.15){ if(calm){ p.y = 0.12; } else { p.y = rnd(7, 10); p.r = rnd(3, R); } }
+      PM0.setMatrixAt(j, EBK_cmp(Math.cos(p.a)*p.r, p.y, Math.sin(p.a)*p.r, p.s, p.s*0.7, p.s*0.3, 1)); }
+    PM0.count = n; PM0.visible = n > 0; PM0.instanceMatrix.needsUpdate = true; }
+  else if(PM0) PM0.visible = false; }
+
+/* ---------------------------------------------------------------- Pit visuals: hatches, posts, torches, throne ---------------------------------------------------------------- */
+function EBK_pitUpd(t, rdt){ var on = EBK.on && EBK.kind==='pit' && EBK_envOk('pit') && G.state!=='menu', i, n = 0;
+  var HM = EBK_M.hatch; if(on && EBK.saved.length){ HM = EBK_mesh('hatch'); var k = Math.max(0, (EBK.t - EBK.sinkAt)/EBK.sinkDur);
+    for(i=0;i<EBK.saved.length;i++){ var s = EBK.saved[i]; if(!s.go) continue; var c = EBK_sm((k - 0.6)/0.35); if(c <= 0) continue; _ebS.set(c, 1, c); _ebE.set(0, Math.atan2(s.x, s.z), 0); _ebQ.setFromEuler(_ebE); _ebV.set(s.x, 0.005, s.z); HM.setMatrixAt(n++, _ebM.compose(_ebV, _ebQ, _ebS)); }
+    HM.count = n; HM.visible = n > 0; HM.instanceMatrix.needsUpdate = true; } else if(HM) HM.visible = false;
+  var PO = EBK_M.post, PR = EBK_M.pring; if(on && EBK.posts.length){ PO = EBK_mesh('post'); PR = EBK_mesh('pring'); n = 0; var nr = 0, b = G.bossRef, snapT = typeof PM_T!=='undefined' ? PM_T.snapT : 1;
+    for(i=0;i<EBK.posts.length && n<3;i++){ var q = EBK.posts[i]; if(q.st==='broke') continue; var y = q.st==='up' ? -3.6*(1 - EBK_sm(q.k)) : -3.6*EBK_sm(q.t/0.6);
+      PO.setMatrixAt(n++, EBK_cmp(q.x, y, q.z, 0, Math.atan2(q.x, q.z), 0, 1));
+      if(q.st==='up'){ var sn = q.c && q.c.snap ? Math.min(1, q.c.snap/snapT) : 0, sc = 1.35 + 0.08*Math.sin(t*5) - 0.25*sn; PR.setMatrixAt(nr++, EBK_cmp(q.x, 0.07, q.z, 0, t*0.6, 0, sc)); PR.material.opacity = 0.6 + 0.35*sn + 0.1*Math.sin(t*6); } }
+    PO.count = n; PO.visible = n > 0; PO.instanceMatrix.needsUpdate = true; PR.count = nr; PR.visible = nr > 0; PR.instanceMatrix.needsUpdate = true; }
+  else { if(PO) PO.visible = false; if(PR) PR.visible = false; }
+  var TO = EBK_M.torch, TR = EBK_M.tring; if(on && EBK.torches.length){ TO = EBK_mesh('torch'); TR = EBK_mesh('tring'); n = 0; var nr2 = 0;
+    for(i=0;i<EBK.torches.length && n<6;i++){ var o = EBK.torches[i];
+      if(o.st==='fly'){ if(o.t < 0) continue; var u = Math.min(1, o.t/o.dur); TO.setMatrixAt(n++, EBK_cmp(o.sx + (o.x - o.sx)*u, o.sy + (0.1 - o.sy)*u + 5*u*(1-u), o.sz + (o.z - o.sz)*u, u*9, o.yaw, u*5, 1)); }
+      else { var fade = Math.min(1, (o.life - o.t)/1.5); TO.setMatrixAt(n++, EBK_cmp(o.x, 0.12, o.z, 0, o.yaw, Math.PI/2, Math.max(0.01, fade))); TR.setMatrixAt(nr2++, EBK_cmp(o.x, 0.05, o.z, 0, 0, 0, (1 + 0.06*Math.sin(t*4 + i))*Math.max(0.01, fade))); } }
+    TO.count = n; TO.visible = n > 0; TO.instanceMatrix.needsUpdate = true; TR.count = nr2; TR.visible = nr2 > 0; TR.instanceMatrix.needsUpdate = true; }
+  else { if(TO) TO.visible = false; if(TR) TR.visible = false; }
+  if(on && EBK.lavaK > 0.3 && !EBK.won && Math.random() < rdt*8){ var a = Math.random()*TAU, r = rnd(0, AR() + 4); glowP.emit(Math.cos(a)*r, rnd(8, 11), Math.sin(a)*r, rnd(-0.3, 0.3), -rnd(1, 2), rnd(-0.3, 0.3), 3.5, 0.45, Math.random() < 0.6 ? 0xff7a2a : 0xffb060, 0, 0.1); }   /* falling embers */
+  if(EBK.thT >= 0 && on){ EBK.thT += rdt; EBK.thDrop = 2.3*EBK_sm(EBK.thT/1.8); if(EBK.thT > 1.8 && !EBK.thDust){ EBK.thDust = true; if(typeof PW_TH!=='undefined') rocks(PW_TH.x, Math.max(0.3, PW_TH.y - 2.3), PW_TH.z, 14, 0x4a3a3c, 6); SFX.slam(); } } }
+if(typeof PW_thUpd==='function'){ var EBK_th0 = PW_thUpd;   /* the win: the watcher's empty throne is lowered on its chains (the chains follow the throne matrix) */
+  PW_thUpd = function(){ var d = EBK.thDrop||0, V = typeof PW_EFF!=='undefined' ? PW_EFF : null; if(!d || !V) return EBK_th0.apply(this, arguments); V.y -= d; V.port.y -= d;
+    try{ return EBK_th0.apply(this, arguments); } finally { V.y += d; V.port.y += d; } }; }
+
+/* ---------------------------------------------------------------- sparsio: gold tokens thrown to the crowd ---------------------------------------------------------------- */
+function EBK_sparsio(){ if(!EBK.on) return; var k = EBK.kind, src, R = AR(), n = EBK_LO ? 24 : 48;
+  if(k==='pit' && typeof PW_TH!=='undefined' && PW.built) src = {x:PW_TH.x, y:PW_TH.y + 1.5, z:PW_TH.z};
+  else if(k==='spire' && typeof SP_BOX_A!=='undefined'){ var ba = SP_BOX_A*Math.PI/180; src = {x:Math.cos(ba)*SP_BOX_R, y:3, z:Math.sin(ba)*SP_BOX_R}; }
+  else src = {x:0, y:6, z:-(R + 7)};
+  EBK.toks.length = 0; for(var i=0;i<n;i++){ var near = i < 6 && P, a = Math.random()*TAU, r = R + rnd(4, 9), ex = near ? P.x + rnd(-2.5, 2.5) : Math.cos(a)*r, ez = near ? P.z + rnd(-2.5, 2.5) : Math.sin(a)*r, ey = near ? 0.05 : rnd(1.5, 5);
+    EBK.toks.push({sx:src.x, sy:src.y, sz:src.z, x:ex, y:ey, z:ez, t:-i*0.025, dur:rnd(1.0, 1.5), h:rnd(4, 7), sp:rnd(6, 14)}); }
+  EBK.tokT = 0; if(lim('ebktok', 1)) [784, 988, 1175, 1568].forEach(function(f, i){ tone(f, 0.12, 'triangle', 0.035, null, i*0.07); }); }
+function EBK_tokUpd(t, rdt){ var TM = EBK_M.token; if(!EBK.on || EBK.tokT < 0 || !EBK_envOk()){ if(TM) TM.visible = false; return; } TM = EBK_mesh('token'); EBK.tokT += rdt; var n = 0;
+  for(var i=0;i<EBK.toks.length && n<TM.instanceMatrix.count;i++){ var o = EBK.toks[i]; o.t += rdt; if(o.t < 0) continue; var u = Math.min(1, o.t/o.dur), lie = o.t - o.dur;
+    if(lie > 1.6) continue; var s = lie > 1.0 ? Math.max(0.01, 1 - (lie - 1.0)/0.6) : 1;
+    TM.setMatrixAt(n++, EBK_cmp(o.sx + (o.x - o.sx)*u, o.sy + (o.y - o.sy)*u + o.h*4*u*(1-u), o.sz + (o.z - o.sz)*u, u < 1 ? o.t*o.sp : Math.PI/2, o.t*3, 0, s)); }
+  TM.count = n; TM.visible = n > 0; TM.instanceMatrix.needsUpdate = true; if(EBK.tokT > 4) EBK.tokT = -1; }
+
+/* ---------------------------------------------------------------- colour grade (applied last: updateRigs runs just before renderer.render) ---------------------------------------------------------------- */
+function EBK_hemiL(){ if(EBK.hemi && EBK.hemi.parent) return EBK.hemi; EBK.hemi = null; for(var i=0;i<scene.children.length;i++) if(scene.children[i].isHemisphereLight){ EBK.hemi = scene.children[i]; break; } return EBK.hemi; }
+function EBK_state(){ return {bg:new THREE.Color(), bgObj:null, tex:0, fog:new THREE.Color(), hs:new THREE.Color(), hg:new THREE.Color(), hi:0, sc:new THREE.Color(), si:0, lc:new THREE.Color(), lm:1}; }
+function EBK_copy(d, s){ d.bg.copy(s.bg); d.bgObj = s.bgObj; d.tex = s.tex; d.fog.copy(s.fog); d.hs.copy(s.hs); d.hg.copy(s.hg); d.hi = s.hi; d.sc.copy(s.sc); d.si = s.si; d.lc.copy(s.lc); d.lm = s.lm; return d; }
+function EBK_gCapture(){ var S = EBK.g0 = EBK.g0 || EBK_state(), h = EBK_hemiL(), bg = scene.background; S.bgObj = bg; if(bg && bg.isColor) S.bg.copy(bg); S.tex = 0;
+  if(scene.fog) S.fog.copy(scene.fog.color); if(h){ S.hs.copy(h.color); S.hg.copy(h.groundColor); S.hi = h.intensity; } S.sc.copy(sun.color); S.si = sun.intensity; S.lc.copy(lavaLight.color); S.lm = 1;
+  var m = {}; (EBK_GR[EBK.kind]||[]).forEach(function(sp){ if(sp) for(var k in sp) m[k] = 1; }); EBK.gMask = m;
+  EBK.gF = EBK.gF || EBK_state(); EBK.gT = EBK.gT || EBK_state(); EBK.gC = EBK.gC || EBK_state(); EBK_copy(EBK.gF, S); EBK_copy(EBK.gT, S); EBK_copy(EBK.gC, S); EBK.gk = 1; }
+function EBK_gTo(spec, dur){ if(!EBK.g0) return; EBK_copy(EBK.gF, EBK.gOn ? EBK.gC : EBK.g0); var T = EBK_copy(EBK.gT, EBK.g0);
+  if(spec){ if(spec.bg!=null) T.bg.setHex(spec.bg); if(spec.fog!=null) T.fog.setHex(spec.fog); if(spec.hs!=null) T.hs.setHex(spec.hs); if(spec.hg!=null) T.hg.setHex(spec.hg); if(spec.hi!=null) T.hi = spec.hi;
+    if(spec.sc!=null) T.sc.setHex(spec.sc); if(spec.si!=null) T.si = spec.si; if(spec.lc!=null) T.lc.setHex(spec.lc); if(spec.lm!=null) T.lm = spec.lm; if(spec.tex) T.tex = 1; }
+  EBK.gk = 0; EBK.gDur = dur||1; EBK.gOn = true; EBK.gBack = !spec; }
+function EBK_gWrite(S){ var m = EBK.gMask || {}, h = EBK_hemiL();
+  if(m.bg && S.bgObj && S.bgObj.isColor && scene.background && scene.background.isColor) scene.background.copy(S.bg);
+  if(m.tex){ var want = S.tex ? EBK_mesh('sky') : S.bgObj; if(want && scene.background !== want) scene.background = want; }
+  if(m.fog && scene.fog) scene.fog.color.copy(S.fog); if(h){ if(m.hs) h.color.copy(S.hs); if(m.hg) h.groundColor.copy(S.hg); if(m.hi) h.intensity = S.hi; }
+  if(m.sc) sun.color.copy(S.sc); if(m.si) sun.intensity = S.si; if(m.lc || m.lm) lavaLight.color.copy(S.lc).multiplyScalar(S.lm*(1 + 0.7*EBK.rimP)); }
+function EBK_gApply(){ var F = EBK.gF, T = EBK.gT, C = EBK.gC, k = EBK_sm(EBK.gk);
+  C.bg.copy(F.bg).lerp(T.bg, k); C.bgObj = EBK.g0.bgObj; C.tex = k > 0.5 ? T.tex : F.tex; C.fog.copy(F.fog).lerp(T.fog, k); C.hs.copy(F.hs).lerp(T.hs, k); C.hg.copy(F.hg).lerp(T.hg, k); C.hi = F.hi + (T.hi - F.hi)*k;
+  C.sc.copy(F.sc).lerp(T.sc, k); C.si = F.si + (T.si - F.si)*k; C.lc.copy(F.lc).lerp(T.lc, k); C.lm = F.lm + (T.lm - F.lm)*k; EBK_gWrite(C);
+  if(EBK.gk >= 1 && EBK.gBack){ EBK.gOn = false; EBK.gBack = false; } }
+var EBK_ur0 = updateRigs;
+updateRigs = function(){ var r = EBK_ur0.apply(this, arguments);
+  try{ if(EBK.on && EBK_envOk()){ if(EBK.gOn) EBK_gApply(); else if(EBK.kind==='pit' && EBK.g0 && (EBK.rimP > 0 || EBK.lcFix)){ EBK.lcFix = EBK.rimP > 0; lavaLight.color.copy(EBK.g0.lc).multiplyScalar(1 + 0.7*EBK.rimP); } } }catch(err){ if(DEV) console.warn('ebk grade', err); }
+  return r; };
+
+/* ---------------------------------------------------------------- camera: low intro framing, victory push-in (one continuous shot, no cutaways) ---------------------------------------------------------------- */
+function EBK_low(base, out, k){ var L = base.length(), y = base.y*(1 - 0.38*k), h0 = Math.hypot(base.x, base.z)||1, h1 = Math.sqrt(Math.max(0.01, L*L - y*y)); return out.set(base.x*h1/h0, y, base.z*h1/h0); }
+function EBK_camUpd(rdt){ var t = EBK.t, port = innerWidth < innerHeight, want = 0;
+  if(EBK.first && !EBK.skipped && !EBK.won && EBK.t < 2.2) want = t < 1.6 ? EBK_sm(t/0.5) : 1 - EBK_sm((t - 1.6)/0.5);
+  EBK.camK = EBK.skipped ? Math.max(0, Math.min(want, EBK.camK - rdt*4)) : want;   /* the timeline is already eased; a skip glides back in ~0.25 s */
+  var vk = 0; if(EBK.vcamT >= 0){ EBK.vcamT += rdt; var vt = EBK.vcamT; vk = vt < 0.5 ? EBK_sm(vt/0.5) : vt < 1.3 ? 1 : 1 - EBK_sm((vt - 1.3)/0.8); if(vt > 2.1){ EBK.vcamT = -1; vk = 0; } }
+  var k = Math.max(EBK.camK, vk), other = G.camO && G.camO!==EBK.cam ? G.camO : null;
+  if(k <= 0){ if(G.camO===EBK.cam) G.camO = null; if(EBK.ownIso){ if(EBK.ownIso.iso===EBK.isoV) EBK.ownIso.iso = null; EBK.ownIso = null; } EBK.iso0 = null; return; }
+  if(other){ if(vk > 0 && EBK.camK <= 0) return; EBK_low(ISO, EBK.isoV, EBK.camK); other.iso = EBK.isoV; EBK.ownIso = other; return; }   /* the boss's own entrance camera keeps its framing; it only gets the low angle */
+  if(!EBK.iso0){ EBK.iso0 = camera.position.clone().sub(camFocus); EBK.z0 = camera.zoom || 1; }
+  var cf = (G.act!==2 && !port) ? 0.4 : 0.6, nx = P ? P.x*cf : 0, nz = P ? P.z*cf : 0, C = EBK.cam, E = EBK_K[EBK.kind].ent();
+  if(vk > EBK.camK){ C.x = nx + (EBK.vx*0.6 - nx)*0.55*vk; C.z = nz + (EBK.vz*0.6 - nz)*0.55*vk; C.zoom = EBK.z0*(1 + 0.12*vk); EBK.isoV.copy(EBK.iso0); }
+  else { C.x = nx + (E.x*0.55 - nx)*0.55*k; C.z = nz + (E.z*0.55 - nz)*0.55*k; C.zoom = EBK.z0*(1 + 0.06*k); EBK_low(EBK.iso0, EBK.isoV, k); }
+  C.iso = EBK.isoV; G.camO = C; }
+
+/* ---------------------------------------------------------------- the render hook ---------------------------------------------------------------- */
+function EBK_render(t, adt){ var rdt = EBK.lrt < 0 ? 0 : Math.min(0.1, Math.max(0, G.rt - EBK.lrt)); EBK.lrt = G.rt; if(G.paused) rdt = 0;
+  if(!EBK.on || EBK.noVis){ EBK_hideAll(); if(!EBK.on) return; }
+  for(var i=EBK.rtq.length-1;i>=0;i--){ var q = EBK.rtq[i]; q.t -= rdt; if(q.t <= 0){ EBK.rtq.splice(i, 1); try{ q.fn(); }catch(err){ if(DEV) console.warn('ebk timer', err); } } }
+  if(!EBK.on) return;
+  if(EBK.slowT > 0 && !(G.hitstop > 0)) EBK.slowT -= rdt;
+  if(EBK.peakT > 0){ EBK.peakT -= rdt; crowdCheer = Math.max(crowdCheer, 0.9); }
+  if(EBK.rimP > 0) EBK.rimP = Math.max(0, EBK.rimP - rdt*1.4);
+  if(EBK.gOn && EBK.gk < 1) EBK.gk = Math.min(1, EBK.gk + rdt/EBK.gDur);
+  EBK_sinkUpd(); if(G.state==='play') EBK_camUpd(rdt);
+  if(EBK.noVis) return; EBK_pitUpd(t, rdt); EBK_lavaUpd(t, rdt); EBK_spireUpd(t, rdt); EBK_gardenUpd(t, rdt, adt); EBK_tokUpd(t, rdt); }
+/* the pillars leave: sink through hatches (Pit), under the paving (Garden), or are pulled up into the storm (Spire). Sim-timed, so a skip lands them. */
+function EBK_sinkUpd(){ var S = EBK.saved; if(!S.length) return; var sp = EBK.kind==='spire', k = Math.min(1, Math.max(0, (EBK.t - EBK.sinkAt)/EBK.sinkDur)), started = false;
+  for(var i=0;i<S.length;i++){ var s = S[i], p = s.p; if(pillars.indexOf(p) < 0) continue;
+    if(EBK.t >= EBK.sinkAt && !s.go){ s.go = true; started = true; p.dead = true; p.pcN = 0; EBK_dust(s.x, s.z, sp); }
+    if(!s.go || s.sunk) continue;
+    if(k >= 1){ s.sunk = true; p.g.visible = false; p.g.position.y = 0; if(!sp) rocks(s.x, 0.2, s.z, 6, 0x5a4430, 4); continue; }
+    if(sp){ var c = EBK_sm((k - 0.3)/0.7); p.g.position.y = c*c*38; } else p.g.position.y = -3.9*EBK_sm(k); }
+  if(started){ shake(0.25); tone(60, 0.7, 'sine', 0.22, 30); noise(1.1, 0.1, 320, 'lowpass', 0, null, 80); if(sp){ tone(240, 0.16, 'square', 0.03, 110); noise(0.3, 0.05, 2400, 'bandpass'); } } }
+
+/* ---------------------------------------------------------------- music: the boss theme (procedural), one layer per phase, changes on the bar ---------------------------------------------------------------- */
+var EBK_PROG = [0, -4, -2, -5];   /* i - VI - VII - v */
+var EBK_ss0 = schedStep;
+schedStep = function(s, t){ if(s%16===0 && EBK.musP!=null){ EBK.musL = EBK.musP; EBK.musP = null; EBK.musBar = 0; }
+  if(!EBK.musL) return EBK_ss0.apply(this, arguments); var L = EBK.musL, ss = s%16, bar = Math.floor(s/16)%4;
+  if(L < 0) return;   /* the hush */
+  var root = 45 - (EBK.kind ? EBK_K[EBK.kind].act : 0) + EBK.lift;
+  if(L===4){ if(ss===0){ if(EBK.musBar >= 2){ EBK.musL = 0; return EBK_ss0.apply(this, arguments); }   /* two bars of cadence, then the act's own music */
+      var chord = EBK.musBar===0 ? [5, 9, 12, 17] : [0, 4, 7, 12]; for(var c=0;c<chord.length;c++) tone(mhz(root + 12 + chord[c]), 1.7, 'triangle', 0.05, null, c*0.02, musG, t); tone(110, 0.3, 'sine', 0.45, 40, 0, musG, t); EBK.musBar++; } return; }
+  var r = root + EBK_PROG[bar];
+  if(ss%4===0) tone(110, 0.2, 'sine', 0.5, 40, 0, musG, t);
+  if(ss===4 || ss===12){ tone(150, 0.16, 'sine', 0.22, 70, 0, musG, t); noise(0.08, 0.05, 900, 'lowpass', 0, musG, null, t); }
+  if(ss%2===0) tone(mhz(r + [0, 0, 12, 0, 7, 0, 10, 0][ss>>1]), 0.12, 'sawtooth', 0.055, null, 0, musG, t);
+  if(ss%2===1 || L >= 3) noise(0.025, L >= 3 ? 0.028 : 0.035, 7800, 'highpass', 0, musG, null, t);
+  if(L >= 2){ var m = MEL[s%32]; if(m > 0) tone(mhz(m + (r - 45) - 12 + (bar===1 ? 0 : 0)), 0.16, 'triangle', 0.045, null, 0, musG, t); }
+  if(L >= 3 && ss===0){ tone(mhz(r + 19), 2.0, 'sine', 0.035, null, 0, musG, t); tone(mhz(r + 24), 2.0, 'sine', 0.02, null, 0, musG, t); } };
+var EBK_is0 = I_STEP;
+I_STEP = function(){ return EBK.musL ? 0.13 : EBK_is0.apply(this, arguments); };
+
+/* ---------------------------------------------------------------- slow motion: the victory beat (x0.35 for 0.6 s after the kill hitstop) ---------------------------------------------------------------- */
+var EBK_step0 = step;
+step = function(dt){ if(EBK.slowT > 0 && !(G.hitstop > 0)){ EBK.sAcc += 0.35; if(EBK.sAcc < 1) return; EBK.sAcc -= 1; } return EBK_step0.apply(this, arguments); };
+
+/* ---------------------------------------------------------------- wrappers ---------------------------------------------------------------- */
+if(typeof DU!=='undefined' && DU) DU.auto = false;   /* 84-duel: the challenge comes after this kit's intro */
+var EBK_sw0 = startWave;
+startWave = function(n){ if(EBK.on) EBK_end(); var r = EBK_sw0.apply(this, arguments), kind = null;
+  try{ kind = EBK_detect(); if(kind) EBK_begin(kind); }catch(err){ if(DEV) console.warn('ebk begin', err); }
+  /* a duel boss this kit does not stage (e.g. a later boss): open the challenge the way 84 would */
+  if(!kind && typeof DU!=='undefined' && DU && typeof DU_challenge==='function' && typeof DU_BOSS!=='undefined' && G.waveActive){ var rt = G.round; if(DU_BOSS[rt]) after(rt==='hesk' ? 5.8 : 3.4, function(){ if(G.waveActive && !DU.chDone) DU_challenge(null); }); }
+  return r; };
+var EBK_cw0 = clearWorld; clearWorld = function(){ EBK_end(); return EBK_cw0.apply(this, arguments); };
+var EBK_nr0 = newRun; newRun = function(){ EBK_end(); return EBK_nr0.apply(this, arguments); };
+var EBK_sm0 = showMenu; showMenu = function(){ EBK_end(); return EBK_sm0.apply(this, arguments); };
+var EBK_bd0 = bossDeath; bossDeath = function(b){ if(EBK.on && b && b.type==='boss'){ try{ EBK_win(b); }catch(err){ if(DEV) console.warn('ebk win', err); } } return EBK_bd0.apply(this, arguments); };
+/* the act changes: the kit ends first (pillars back before the lift) */
+if(typeof A2_enterAct==='function'){ var EBK_a2e0 = A2_enterAct; A2_enterAct = function(){ EBK_end(); return EBK_a2e0.apply(this, arguments); }; }
+if(typeof A2_startAscent==='function'){ var EBK_a2s0 = A2_startAscent; A2_startAscent = function(){ EBK_end(); return EBK_a2s0.apply(this, arguments); }; }
+if(typeof A3_enterAct==='function'){ var EBK_a3e0 = A3_enterAct; A3_enterAct = function(){ EBK_end(); return EBK_a3e0.apply(this, arguments); }; }
+if(typeof A3_startDescent==='function'){ var EBK_a3d0 = A3_startDescent; A3_startDescent = function(){ EBK_end(); return EBK_a3d0.apply(this, arguments); }; }
+/* the Pitmaster's own lines name the prop that is really on the floor (no edit to 80-pitmaster.js) */
+if(typeof PM_say==='function'){ var EBK_pms = PM_say; PM_say = function(t, s, d){ if(EBK.on && EBK.kind==='pit' && typeof s==='string') s = s.replace(/across a pillar/g, 'across the post').replace(/The pillar breaks/g, 'The post breaks'); return EBK_pms.call(this, t, s, d); }; }
+/* phase hooks: each boss's own phase change (the call runs first; the kit only stages it) */
+if(typeof PM_toP2==='function'){ var EBK_pm2 = PM_toP2; PM_toP2 = function(){ var r = EBK_pm2.apply(this, arguments); if(EBK.kind==='pit') EBK_phase(2); return r; }; }
+if(typeof PM_toP3==='function'){ var EBK_pm3 = PM_toP3; PM_toP3 = function(){ var r = EBK_pm3.apply(this, arguments); if(EBK.kind==='pit') EBK_phase(3); return r; }; }
+if(typeof SW_phaseSlam==='function'){ var EBK_swp = SW_phaseSlam; SW_phaseSlam = function(b){ var r = EBK_swp.apply(this, arguments); if(EBK.kind==='spire' && b) EBK_phase(b.phase); return r; }; }
+if(typeof SW_rodGo==='function'){ var EBK_rod0 = SW_rodGo; SW_rodGo = function(i){ var r = EBK_rod0.apply(this, arguments); if(EBK.on && EBK.kind==='spire' && EBK.ph >= 3 && !EBK.won) EBK_rodStrike(i); return r; }; }
+if(typeof HK_phase==='function'){ var EBK_hkp = HK_phase; HK_phase = function(n){ var r = EBK_hkp.apply(this, arguments); if(EBK.kind==='garden') EBK_phase(n); return r; }; }
+/* Hesk's grounding rings stand on the topiaries (doc §4 #8). A topiary too close to where he roots moves (it sinks and rises again). */
+if(typeof HK_ringsOn==='function'){ var EBK_hkr = HK_ringsOn; HK_ringsOn = function(){ var r = EBK_hkr.apply(this, arguments);
+    if(EBK.on && EBK.kind==='garden' && EBK.topi.length===3 && typeof HK!=='undefined'){ var bad = false; for(var i=0;i<3;i++) if(Math.hypot(EBK.topi[i].x - HK.x, EBK.topi[i].z - HK.z) < HK_R + 5) bad = true;
+      if(bad) EBK_topiRise(); HK.rings = EBK_snapPoints('hesk'); }
+    return r; }; }
+STEP_HOOKS.push(EBK_step);
+RENDER_HOOKS.push(EBK_render);
+
+/* ---------------------------------------------------------------- DEV: window.__feat.ebk ---------------------------------------------------------------- */
+if(DEV){ window.__feat = window.__feat || {}; window.__feat.ebk = { EBK:EBK, skip:function(){ EBK_skip(); return EBK.introEnd; }, strike:function(i){ EBK_rodStrike(i||0); return EBK.boltT; }, phase:function(n){ EBK_phase(n); return EBK.ph; }, spots:EBK_snapPoints,
+  state:function(){ return {on:EBK.on, kind:EBK.kind, t:+EBK.t.toFixed(2), L:EBK.L, first:EBK.first, intro:EBK.intro, introEnd:EBK.introEnd, du:EBK.du, card:EBK.cardShown, theme:EBK.themeOn, ph:EBK.ph, won:EBK.won,
+    sunk:EBK.saved.filter(function(s){ return s.sunk; }).length, saved:EBK.saved.length, posts:EBK.posts.map(function(q){ return q.st; }), torches:EBK.torches.length, topi:EBK.topi.length, lavaK:+EBK.lavaK.toFixed(2), gOn:EBK.gOn, musL:EBK.musL, edge:EBK.edgeN, lb:!!EBK.lbOn, camO:G.camO===EBK.cam}; },
+  delta:function(){ var f = window.__feat.ebk.calls; EBK.noVis = true; var a = f(); EBK.noVis = false; var b = f(); return {without:a, with:b, dCalls:b.calls - a.calls, dTris:b.tris - a.tris}; },
+  calls:function(){ renderer.info.autoReset = false; renderer.info.reset(); render(1/60, 0); var o = {calls:renderer.info.render.calls, tris:renderer.info.render.triangles}; renderer.info.autoReset = true; return o; } }; }
 /* ---------- hints & banner ---------- */
 var hintT = 0, hintId = null;
 var HINTS = {
