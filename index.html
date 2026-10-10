@@ -15041,9 +15041,7 @@ function PTY_nextIdx(){ for(var k=1;k<HEROES.length;k++){ var i = (PTY.ctl.i + k
 /* ---- input: Tab cycles (never Z/X/C: Z is "up" on AZERTY), G toggles Press/Rally; portrait clicks also work under pointer lock ---- */
 window.addEventListener('keydown', function(e){ if(!PTY.on || G.state!=='play' || G.paused) return;
   if(e.code==='Tab'){ e.preventDefault(); if(!e.repeat) PTY_next(); } else if(e.code==='KeyG' && !e.repeat) PTY_mode(); }, {passive:false});
-canvas.addEventListener('mousedown', function(e){ if(!PTY.on || !locked || e.button!==0 || G.state!=='play' || G.paused) return; var D = PTY.dom;
-  for(var i=0;i<D.ps.length;i++){ var r = D.ps[i].b.getBoundingClientRect(); if(mouseX>=r.left && mouseX<=r.right && mouseY>=r.top && mouseY<=r.bottom){ PTY_swap(i); e.stopImmediatePropagation(); return; } }
-  if(D.mode){ var mr = D.mode.getBoundingClientRect(); if(mouseX>=mr.left && mouseX<=mr.right && mouseY>=mr.top && mouseY<=mr.bottom){ PTY_mode(); e.stopImmediatePropagation(); } } });
+/* portrait/chip clicks under pointer lock: handled by 76-partyhud.js (the plates replaced #ptyBar) */
 
 /* ---- extra public API (hub) and DEV helpers ---- */
 PARTY.heroes = function(){ return HEROES.map(function(h){ return {cls:h.st.cls, hp:h.st.hp, maxHp:h.st.maxHp, ctl:h===PTY.ctl, downed:!!h.st.downed, out:!!h.st.out, over:h.st.over, ai:h.ai.state}; }); };
@@ -15618,151 +15616,167 @@ function OF_skip(){ OF_hide();
   if(typeof DLY!=='undefined' && DLY.run && typeof DLY_claim==='function' && DLY_claim(G.wave) && P){ SFX.pick(); dmgText(P.x, 2.8, P.z, 'DAILY TRIAL COMPLETE +'+DLY_REWARD, '#ffd27a', 20); }
   nextWave(); }
 
-/* ---------- styles ---------- */
+/* ---------- styles: "Focus" layout (design/research/16-offering-redesign.md, concept B, owner pick 2026-10-10) ----------
+   Title and subtitle stay #bgTitle / #bgSub (Acts II/III and the Daily rewrite them), the Act II decree (#a2Dec) stays above.
+   Below them, #ofWrap holds: two framed groups of compact tiles (GIFTS bronze, BARGAINS ember), one detail panel for the hovered or
+   chosen card (full text, hero chips, Glory), and a footer: stake now -> after the pick, "Leave now, bank", one named confirm.
+   The old card row, detail strip and #stakeRow are hidden; #bargain keeps its --uiM zoom from 58-uiscale. No white: emoji icons are
+   tinted bronze/ember, the vector spell icons keep their own colour. The backdrop is a static dim plus a light CSS blur. */
 (function(){ var st = document.createElement('style'); st.id = 'ofCss'; st.textContent = [
-'#bargain.of #bgCards,#bargain.of #bgCurses,#bargain.of #bgStake{display:none}',
-'#bargain.of #bgSub{font-size:clamp(13px,2vh,15px);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92vw}',
-'#ofWrap{display:flex;flex-direction:column;align-items:center;gap:clamp(8px,1.8vh,14px);margin-top:clamp(8px,2vh,16px);max-width:100%;width:100%}',
-'#ofWrap .ofCards{display:flex;gap:clamp(8px,1vw,14px);justify-content:center;align-items:stretch;max-width:100%}',
-'#ofWrap .ofc{width:clamp(134px,15vw,200px);display:flex;flex-direction:column;align-items:center;padding:clamp(24px,3.4vh,30px) clamp(9px,1vw,13px) clamp(10px,1.6vh,14px);cursor:pointer;text-align:center}',
-'#ofWrap .ofc.split{margin-left:clamp(10px,2.4vw,30px)}',
-'#ofWrap .ofc .rar{position:absolute;left:9px;top:8px;font-size:12px;letter-spacing:.12em}',
-'#ofWrap .ofc .ofk{position:absolute;right:9px;top:7px;font:600 12px Rubik,sans-serif;color:#e6b48a;padding:0 5px;box-shadow:inset 0 0 0 1px rgba(255,122,46,.45)}',
-'body.touch #ofWrap .ofc .ofk{display:none}',
-'#ofWrap .ofc .ic{width:clamp(40px,6.4vh,52px);height:clamp(40px,6.4vh,52px);font-size:clamp(20px,3.3vh,26px);margin:0 auto clamp(4px,.9vh,7px)}',
-'#ofWrap .ofc h3{font-size:clamp(13px,2.1vh,15px);line-height:1.2}',
-'#ofWrap .ofEff{margin-top:5px;font-size:clamp(12px,1.9vh,13px);line-height:1.3;color:var(--arm-bone2)}',
-'#ofWrap .ofGl{margin-top:auto;padding-top:clamp(7px,1.3vh,10px);font-family:Cinzel,serif;font-weight:900;font-size:clamp(17px,3vh,22px);letter-spacing:.04em;color:var(--arm-gild);text-shadow:0 2px 0 #000,0 0 16px rgba(226,200,154,.18);line-height:1}',
-'#ofWrap .ofGl small{font-family:Rubik,sans-serif;font-weight:600;font-size:12px;letter-spacing:.12em;color:var(--arm-bone3);margin-left:4px;vertical-align:middle}',
-/* gifts: warm bronze; bargains: darker, rust-edged */
-'#ofWrap .ofG{background:linear-gradient(180deg,rgba(255,206,140,.07),transparent 38%),linear-gradient(180deg,rgba(38,30,28,.97),rgba(25,19,18,.97));box-shadow:inset 0 0 0 1px #5a4630,inset 0 1px 0 1px rgba(255,220,170,.1),inset 0 -12px 24px rgba(0,0,0,.35)}',
-'#ofWrap .ofG.r3{background:linear-gradient(180deg,rgba(255,150,90,.06),transparent 38%),linear-gradient(180deg,rgba(34,25,25,.97),rgba(22,16,16,.97))}',
-'#ofWrap .ofB{background:radial-gradient(ellipse 90% 60% at 50% 0,rgba(150,40,20,.22),transparent 70%),linear-gradient(180deg,rgba(24,16,17,.98),rgba(13,9,10,.98));box-shadow:inset 0 0 0 1px #6e2716,inset 0 0 0 2px rgba(0,0,0,.6),inset 0 0 0 3px rgba(168,68,26,.18),inset 0 -14px 26px rgba(0,0,0,.5)}',
-'#ofWrap .ofB .ic{box-shadow:inset 0 0 0 1px #8a3420,inset 0 0 0 4px #120c0d,inset 0 0 0 5px #4a2018}#ofWrap .ofB h3{color:#ecc8b2}',
-'#ofWrap .ofB .rar{color:var(--arm-emberD)}#ofWrap .ofB .rar.up{color:var(--arm-ember)}',
-'#ofWrap .ofB .ofGl{font-size:clamp(18px,3.2vh,24px);color:#ffd27a;text-shadow:0 2px 0 #000,0 0 18px rgba(255,122,46,.35)}',
-/* selection */
-'#ofWrap .ofc.sel{transform:translateY(-3px)}#ofWrap .ofG.sel{box-shadow:inset 0 0 0 2px var(--arm-gild),inset 0 0 30px rgba(226,200,154,.16),inset 0 -12px 24px rgba(0,0,0,.35)}',
-'#ofWrap .ofB.sel{box-shadow:inset 0 0 0 2px var(--arm-ember),inset 0 0 34px rgba(255,90,30,.2),inset 0 -14px 26px rgba(0,0,0,.5)}',
-'#ofWrap .ofc.sel .ofk{display:none}#ofWrap .ofc.sel:before{content:"\\2713";position:absolute;right:0;top:0;padding:1px 7px;font:700 12px Rubik,sans-serif;letter-spacing:0;color:#1a0c06;background:var(--arm-gild)}#ofWrap .ofB.sel:before{background:var(--arm-ember)}',
-'#ofWrap.has .ofc:not(.sel){filter:brightness(.68) saturate(.7)}#ofWrap.has .ofc:not(.sel):hover{filter:brightness(.95)}',
-/* one detail line under the cards: the hovered or selected card, in full */
-'#ofWrap .ofDet{width:min(100%,660px);box-sizing:border-box;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 14px;font-size:13px;line-height:1.4;color:var(--arm-bone2);text-align:center;background:#100c0e;box-shadow:inset 0 0 0 1px #2a2224}',
-'#ofWrap .ofDet span{display:block}#ofWrap .ofDet .ofWl{color:#e6b48a}',
-'#ofWrap .ofDet i{font-style:normal;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#b8cc98}',
-/* action row: Choose (primary) and Take it, plus a small reroll */
-'#ofGo{min-width:clamp(170px,20vw,240px)}#ofGo[disabled]{filter:saturate(.25) brightness(.75);cursor:default}#ofGo small{font:600 12px Rubik,sans-serif;letter-spacing:.1em;color:#e6b48a;padding:1px 5px;box-shadow:inset 0 0 0 1px rgba(255,122,46,.45)}body.touch #ofGo small{display:none}',
-'#ofGo.nudge,#ofWrap.nudge{animation:ofNd .35s}@keyframes ofNd{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}',
-'#bargain.of #stakeRow .btn{font-size:12px}#bargain.of #rerollBtn{min-height:40px;padding:0 12px;letter-spacing:.12em;opacity:.85}',
-/* short landscape (800x450 and similar): tighter cards, all five still in one row */
-'#bargain.ofL #ofWrap .ofc{width:clamp(116px,calc((100vw - 150px)/5),190px);padding:22px 7px 8px}',
-'#bargain.ofL #ofWrap .ofc .ic{width:34px;height:34px;font-size:17px}#bargain.ofL #ofWrap .ofc h3{font-size:12.5px}#bargain.ofL #ofWrap .ofEff{font-size:12px;margin-top:3px}#bargain.ofL #ofWrap .ofGl{font-size:17px}',
-'@media (max-height:620px){#bargain.ofL #bgSub{font-size:12px}#bargain.ofL #stakeRow{margin-top:8px}#bargain.ofL #stakeRow .btn{min-height:40px}#bargain.ofL #bgTitle{font-size:18px}#bargain.ofL #ofWrap .ofDet{min-height:36px;padding:6px 12px}}',
-/* phone portrait: one compact row per card, sticky action bar */
-'@media (max-width:700px) and (orientation:portrait){#bargain.of{padding-top:calc(var(--sat) + 108px);touch-action:pan-y}#bargain.of #bgTitle{font-size:18px}',
-'  #bargain.of #bgSub{white-space:normal;font-size:12.5px}',
-'  #ofWrap{width:100%;gap:6px;margin-top:4px}#ofWrap .ofCards{flex-direction:column;align-items:center;gap:6px;width:100%}',
-'  #ofWrap .ofc{width:min(94vw,380px);display:grid;grid-template-columns:40px minmax(0,1fr) auto;column-gap:10px;align-items:center;text-align:left;padding:24px 10px 9px}',
-'  #ofWrap .ofc .rar{top:7px}#ofWrap .ofc .ic{grid-row:1/4;grid-column:1;width:38px;height:38px;font-size:18px;margin:0}#ofWrap .ofc h3,#ofWrap .ofc .ofEff,#ofWrap .ofc .ofTo2,#ofWrap .ofc .ofFor{grid-column:2}',
-'  #ofWrap .ofc .ofEff{margin-top:1px}#ofWrap .ofc.split{margin-left:0;margin-top:6px}',
-'  #ofWrap .ofGl{grid-column:3;grid-row:1/4;align-self:center;margin:0;padding:0;font-size:17px;text-align:right}#ofWrap .ofGl small{display:block;margin:2px 0 0}',
-'  #ofWrap .ofc.sel{transform:none}#ofWrap .ofc .rar{top:6px}',
-'  #bargain.of #stakeRow{position:sticky;bottom:0;z-index:2;width:100%;margin-top:8px;padding:8px 0 calc(var(--sab) + 6px);background:linear-gradient(0deg,rgba(7,5,6,.97) 70%,rgba(7,5,6,0))}#bargain.of #stakeRow .btn{min-height:44px;padding:0 10px;font-size:12px;letter-spacing:.1em}#ofGo{flex:1 1 100%;order:-1;font-size:14px!important}',
-'  #ofWrap .ofDet{font-size:12.5px}}'
+'#bargain.of #bgCards,#bargain.of #bgCurses,#bargain.of #stakeRow{display:none!important}',
+'#bargain.of{justify-content:center;overflow-y:auto;background:radial-gradient(ellipse 80% 75% at 50% 48%,rgba(14,9,10,.86),rgba(6,4,5,.96)),rgba(7,5,6,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}',
+'#bargain.of #bgTitle{margin:0}#bargain.of #bgSub{margin-top:clamp(5px,1vh,9px);font-size:clamp(13px,2vh,15px);line-height:1.3;color:var(--arm-bone2);text-align:center;max-width:92vw}',
+'#ofWrap{display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2vh,18px);width:min(100%,1060px);margin-top:clamp(10px,2vh,18px);color:var(--arm-bone)}',
+'#ofWrap :where(button){font:inherit;color:inherit;border:0;background:none;text-align:left;cursor:pointer;padding:0;border-radius:0}',
+'#ofWrap .ofK{flex:none;font:600 12px/18px Rubik,sans-serif;min-width:18px;text-align:center;color:#e6b48a;box-shadow:inset 0 0 0 1px rgba(255,122,46,.45)}body.touch #ofWrap .ofK{display:none}',
+/* one icon frame for every card */
+'#ofWrap .ofIc{flex:none;width:clamp(40px,6.4vh,52px);height:clamp(40px,6.4vh,52px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(20px,3.2vh,26px);line-height:1;background:radial-gradient(circle at 50% 35%,#33271f,#0f0b0c 72%);box-shadow:inset 0 0 0 1px #6a5236,inset 0 0 0 4px #141012,inset 0 0 0 5px #3a2e24}',
+'#ofWrap .ofIc span{filter:grayscale(1) brightness(.66) sepia(1) saturate(2.2) hue-rotate(-8deg) contrast(1.25)}',
+'#ofWrap .ofIc.b{background:radial-gradient(circle at 50% 35%,#3a1a12,#0e0809 72%);box-shadow:inset 0 0 0 1px #9a3a1e,inset 0 0 0 4px #120c0d,inset 0 0 0 5px #4a2018}#ofWrap .ofIc.b span{filter:grayscale(1) brightness(.6) sepia(1) saturate(4.2) hue-rotate(-26deg) contrast(1.3)}',
+'#ofWrap .ofIc.v span{filter:none;display:flex;width:62%;height:62%}#ofWrap .ofIc .vxi{width:100%;height:100%;color:var(--vxc,#ffd27a);filter:drop-shadow(0 0 5px var(--vxc,#ffb347))}#ofWrap .ofIc .vxi .h,#ofWrap .ofIc .vxi .h2{fill:#ffd9a0}',
+'#ofWrap .lab{font:600 12px/1.2 Rubik,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--arm-bone3)}#ofWrap .b .lab{color:var(--arm-emberD)}',
+'#ofWrap h3{margin:2px 0 0;font:700 clamp(13px,2.2vh,16px)/1.2 Cinzel,serif;letter-spacing:.07em;text-transform:uppercase;color:var(--arm-bone)}#ofWrap .b h3{color:#f0cdb4}',
+'#ofWrap p{margin:3px 0 0;font-size:clamp(12px,1.9vh,13.5px);line-height:1.35;color:var(--arm-bone2)}#ofWrap p.up{color:#cfe0a8}#ofWrap p.dn{color:#f0a27a}',
+'#ofWrap .ofGl{flex:none;font:900 clamp(15px,2.6vh,19px)/1 Cinzel,serif;color:var(--arm-bone3);white-space:nowrap}#ofWrap .ofGl em{font-style:normal;margin-left:2px;font-size:.8em}',
+'#ofWrap .ofGl.big{font-size:clamp(22px,4.4vh,34px);color:#ffd27a;text-shadow:0 2px 0 #000,0 0 18px rgba(255,122,46,.4);text-align:center}#ofWrap .ofGl.big small{display:block;margin-top:4px;font:600 12px Rubik,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#d08a5a;text-shadow:none}',
+/* party: a portrait in the class colour; the chosen hero shows name and rank */
+'#ofWrap .ofFor{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px}#ofWrap .ofForL{font:700 12px/1 Rubik,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--arm-bone3)}#ofWrap .ofForL small{font-weight:600;letter-spacing:.06em;color:#e6b48a;margin-left:4px}body.touch #ofWrap .ofForL small{display:none}',
+'#ofWrap .ofH{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0;border-radius:14px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px rgba(226,200,154,.16);cursor:pointer;touch-action:manipulation}',
+'#ofWrap .ofH i{font-style:normal;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;background:radial-gradient(circle at 50% 35%,#3a2822,#120a0b);box-shadow:inset 0 0 0 2px var(--hc)}',
+'#ofWrap .ofH.on{padding-right:9px;box-shadow:inset 0 0 0 1px var(--hc),0 0 10px rgba(226,200,154,.18)}#ofWrap .ofH:not(.on) i{filter:saturate(.5) brightness(.75)}#ofWrap .ofH:not(.on):hover i{filter:none}',
+'#ofWrap .ofH b{font:600 12px/1 Rubik,sans-serif;letter-spacing:.06em;color:var(--arm-bone);white-space:nowrap}',
+'body.touch #ofWrap .ofH,body.touch #ofWrap .ofH i{height:36px}body.touch #ofWrap .ofH{border-radius:18px}body.touch #ofWrap .ofH i{width:36px;font-size:18px}',
+'#ofWrap .ofAll{margin-top:5px;font:600 12px/1 Rubik,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#b8cc98}',
+/* tiles in two framed groups */
+'#ofWrap .ofTiles{display:flex;justify-content:center;align-items:stretch;gap:clamp(10px,2vw,28px);width:100%}',
+'#ofWrap .ofGrp{display:flex;flex-direction:column;gap:6px;padding:8px 10px 10px}#ofWrap .ofGrp.g{background:rgba(30,24,22,.72);box-shadow:inset 0 0 0 1px #4a3a2a}',
+'#ofWrap .ofGrp.b{background:radial-gradient(ellipse 100% 70% at 50% 0,rgba(160,46,20,.24),transparent 70%),rgba(18,10,11,.9);box-shadow:inset 0 0 0 1px #6e2716}',
+'#ofWrap .ofGh{display:flex;align-items:baseline;min-height:20px;font:700 12px Cinzel,serif;letter-spacing:.22em;text-transform:uppercase;color:var(--arm-gild);padding-left:2px}#ofWrap .ofGrp.b .ofGh{color:var(--arm-ember)}',
+'#ofWrap .ofGh span{margin-left:8px;font:500 12px Rubik,sans-serif;letter-spacing:.04em;text-transform:none;color:var(--arm-bone3)}#ofWrap .ofGrp.b .ofGh span{color:#c07a58}',
+'#ofWrap .ofRr{margin:0 0 0 auto;padding:0 2px 0 12px;font:600 12px Rubik,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--arm-bone3);text-decoration:underline;text-decoration-color:rgba(226,200,154,.25);text-underline-offset:3px}#ofWrap .ofRr:hover{color:var(--arm-gild)}',
+'#ofWrap .ofTr{display:flex;gap:clamp(6px,.9vw,10px)}',
+'#ofWrap .ofT{position:relative;width:clamp(104px,11.5vw,138px);min-height:clamp(112px,18vh,140px);display:flex;flex-direction:column;align-items:center;gap:6px;padding:clamp(22px,3vh,26px) 6px 10px;text-align:center;background:linear-gradient(180deg,rgba(38,30,28,.97),rgba(25,19,18,.97));box-shadow:inset 0 0 0 1px #5a4630;transition:transform .12s,filter .12s}',
+'#ofWrap .ofT .ofK{position:absolute;top:6px;right:6px}#ofWrap .ofT h3{font-size:12.5px;line-height:1.15}#ofWrap .ofT .tl{margin-top:auto;font-size:12px;letter-spacing:.1em}',
+'#ofWrap .ofT .tp{position:absolute;top:5px;left:6px;font-size:12px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#120a0b;box-shadow:inset 0 0 0 1.5px var(--hc)}',
+'#ofWrap .ofT.b{background:radial-gradient(ellipse 90% 60% at 50% 0,rgba(150,40,20,.24),transparent 70%),linear-gradient(180deg,rgba(24,16,17,.98),rgba(13,9,10,.98));box-shadow:inset 0 0 0 1px #6e2716}',
+'#ofWrap .ofT.b .ofGl{margin-top:auto;font-size:clamp(18px,3vh,22px);color:#ffd27a;text-shadow:0 0 14px rgba(255,122,46,.4)}',
+'#ofWrap .ofT:hover,#ofWrap .ofT:focus-visible{outline:none;filter:brightness(1.15)}',
+'#ofWrap .ofT.sel{transform:translateY(-3px);box-shadow:inset 0 0 0 2px var(--arm-gild),inset 0 0 24px rgba(226,200,154,.14)}#ofWrap .ofT.b.sel{box-shadow:inset 0 0 0 2px var(--arm-ember),inset 0 0 28px rgba(255,90,30,.2)}',
+/* the detail panel */
+'#ofWrap .ofPan{width:100%;min-height:clamp(92px,17vh,130px);display:flex;background:rgba(14,10,11,.92);box-shadow:inset 0 0 0 1px #3b3033}',
+'#ofWrap .ofPc{flex:1;display:flex;align-items:center;gap:clamp(12px,2vw,22px);padding:clamp(10px,2vh,18px) clamp(14px,2vw,24px)}#ofWrap .ofPc .tx{flex:1;min-width:0}#ofWrap .ofPc .ofIc{width:clamp(52px,9vh,72px);height:clamp(52px,9vh,72px);font-size:clamp(26px,4.6vh,36px)}',
+'#ofWrap .ofPc.g{box-shadow:inset 3px 0 0 var(--arm-gild)}#ofWrap .ofPc.b{box-shadow:inset 3px 0 0 var(--arm-ember);background:radial-gradient(ellipse 60% 100% at 100% 50%,rgba(150,40,20,.18),transparent)}',
+'#ofWrap .ofP0{flex:1;display:flex;align-items:center;justify-content:center;gap:clamp(16px,4vw,48px);padding:12px 18px;font-size:13px;color:var(--arm-bone2);flex-wrap:wrap}#ofWrap .ofP0 b{font:700 12px Cinzel,serif;letter-spacing:.18em;text-transform:uppercase;margin-right:6px}#ofWrap .ofP0 b.g{color:var(--arm-gild)}#ofWrap .ofP0 b.b{color:var(--arm-ember)}',
+/* footer: stake, leave, one confirm */
+'#ofWrap .ofFoot{display:flex;align-items:center;justify-content:space-between;gap:clamp(12px,3vw,40px);width:100%;padding-top:clamp(8px,1.6vh,14px);box-shadow:0 -1px 0 rgba(226,200,154,.12)}',
+'#ofWrap .ofStk{display:flex;align-items:center;gap:clamp(10px,2vw,22px)}#ofWrap .ofSk{display:flex;flex-direction:column;gap:2px}#ofWrap .ofSk .l{font:600 12px Rubik,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--arm-bone3)}',
+'#ofWrap .ofSk b{font:900 clamp(17px,3vh,22px)/1 Cinzel,serif;color:var(--arm-gild);white-space:nowrap}#ofWrap .ofSk b i{font-style:normal;color:#ffd27a}#ofWrap .ofSk .s{font-size:12px;color:var(--arm-bone3)}',
+'#ofWrap .ofLeave{flex:none;white-space:nowrap;min-height:40px;padding:0 14px;font:600 12px Rubik,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--arm-bone2);box-shadow:inset 0 0 0 1px var(--arm-edge)}#ofWrap .ofLeave:hover{color:var(--arm-bone);box-shadow:inset 0 0 0 1px var(--arm-bronze)}',
+'#ofWrap .ofGo{flex:none;min-width:clamp(220px,26vw,340px);gap:10px;padding:0 20px;text-align:center}#ofWrap .ofGo small{font:600 12px Rubik,sans-serif;letter-spacing:.1em;color:#e6b48a;padding:1px 5px;box-shadow:inset 0 0 0 1px rgba(255,122,46,.45)}body.touch #ofWrap .ofGo small{display:none}',
+'#ofWrap .ofPick{min-width:clamp(220px,26vw,340px);text-align:center;font:600 13px Rubik,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--arm-bone3)}#ofWrap .ofPick span{margin-left:6px;color:#e6b48a}',
+'#ofWrap .nudge,#ofWrap.nudge{animation:ofNd .35s}@keyframes ofNd{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}',
+/* short landscape (800x450) */
+'@media (max-height:520px) and (orientation:landscape){#bargain.of{justify-content:flex-start;padding-top:calc(var(--sat) + 8px);padding-bottom:calc(var(--sab) + 6px)}#bargain.of #bgTitle{font-size:18px}#bargain.of #bgSub{font-size:12px;margin-top:3px}',
+'  #ofWrap{gap:6px;margin-top:6px}#ofWrap .ofIc{width:34px;height:34px;font-size:17px}#ofWrap p{font-size:12px;line-height:1.28;margin-top:1px}#ofWrap h3{font-size:12.5px}#ofWrap .lab{font-size:11px}',
+'  #ofWrap .ofFoot{padding-top:6px}#ofWrap .btn.ofGo{min-height:40px}#ofWrap .ofSk b{font-size:16px}#ofWrap .ofFor{margin-top:3px}#ofWrap .ofH,#ofWrap .ofH i{height:24px}#ofWrap .ofH i{width:24px;font-size:13px}',
+'  #ofWrap .ofT{min-height:92px;padding-top:20px;width:112px}#ofWrap .ofPan{min-height:84px}#ofWrap .ofPc{padding:8px 14px}#ofWrap .ofPc .ofIc{width:46px;height:46px;font-size:22px}}',
+/* phone portrait: groups stacked, sticky footer */
+'@media (max-width:700px) and (orientation:portrait){#bargain.of{justify-content:flex-start;padding:calc(var(--sat) + 14px) 10px 0;touch-action:pan-y}#bargain.of #bgTitle{font-size:20px;letter-spacing:.18em}#bargain.of #bgSub{font-size:13px;padding:0 6px}',
+'  #ofWrap{flex:1;gap:10px;margin-top:10px}#ofWrap .ofTiles{flex-direction:column;gap:8px;align-items:stretch}#ofWrap .ofTr{gap:6px}#ofWrap .ofT{flex:1;width:auto;min-height:96px}#ofWrap .ofGrp.b .ofT{min-height:84px}',
+'  #ofWrap .ofPc{flex-wrap:wrap;align-items:flex-start;gap:10px;padding:12px}#ofWrap .ofPc .ofIc{width:44px;height:44px;font-size:22px}#ofWrap .ofPc .tx{flex:1 1 220px}#ofWrap .ofPc .ofGl{align-self:flex-start}',
+'  #ofWrap .ofFoot{position:sticky;bottom:0;z-index:2;margin-top:auto;flex-direction:column-reverse;align-items:stretch;gap:8px;padding:10px 4px calc(var(--sab) + 10px);background:linear-gradient(0deg,rgba(7,5,6,.99) 80%,rgba(7,5,6,0));box-shadow:none}',
+'  #ofWrap .ofStk{justify-content:space-between}#ofWrap .ofGo,#ofWrap .ofPick{min-width:0;width:100%;min-height:48px}#ofWrap .ofPick{display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px var(--arm-edge)}}'
 ].join('\n'); document.head.appendChild(st); })();
 
 /* ---------- DOM ---------- */
+var OF_HC = {mage:'#7f8cff', blade:'#e0574a', archer:'#7fcf6a'};
 function OF_dom(){ if(OF.wrap) return; var w = document.createElement('div'); w.id = 'ofWrap'; w.className = 'pe'; w.hidden = true; $('bgCards').insertAdjacentElement('afterend', w); OF.wrap = w;
-  var go = document.createElement('button'); go.id = 'ofGo'; go.className = 'btn main'; go.hidden = true; $('stakeRow').insertBefore(go, $('stakeRow').firstChild); OF.go = go;
-  go.addEventListener('click', function(){ OF_confirm(); });
-  $('rerollBtn').addEventListener('click', function(){ if(!OF.on || !P || P.rerolls<=0) return; P.rerolls--; SFX.click(); OF.gifts = OF_roll().map(OF_giftOf); OF.gi = -1; OF_render(); }); }
-/* short lines for the cards (one line, about 8 words); the full text goes in the detail line under the cards */
-var OF_GS = {afterglow:'Old ward lasts 1.2s longer.', guard:'Block the first hit each round.', timed:'Dashes go 50% further, longer invulnerability.',
-  chkindle:'A Marked foe that dies spreads its Mark.', rxprime:'+1 max prime; every 4th absorb primes 2.', rxtide:'Tide-Turn: 4.5 m reach, 1.5 s recharge.', rxtrine:'Three colors within 4 s: a Crown of Three.', chfuse:'Chains stay open 0.75 s longer.', chcruc:'Ruptures need 3 deaths, fusions hit 40% harder.'};
-var OF_SS = {'Meteor':'Meteor at your aim. Big area damage.', 'Frost Nova':'Blast around you that slows foes.', 'Chain Lightning':'Lightning leaps between up to 5 foes.', 'Blink':'Teleport toward your aim, exploding.', 'Raise Stone':'Raise a pillar that blocks bolts.', 'Pit Shackles':'Chains root foes in an area.', 'Ember Familiar':'An ember sprite fights beside you.', 'Mirror Shell':'Bolts that touch you bounce back.'};
-var OF_CS = {deadly:['Enemy hits deal +25% damage.'], resist:['Foes have +20% HP.','Foes have +40% HP.'], swarm:['+20% more foes to defeat.','+40% more foes to defeat.'],
-  arena:['The arena shrinks by 15%.','The arena shrinks by 25%.'], recov:['Healing is 40% less effective.','Healing is 65% less effective.'], cold:['Frost blisters burst when you get close.','Many blisters burst quickly.'],
-  dead:['Braziers spit fire if you linger near.','Many braziers spit fire.'], runes:['Linger in a sigil and lightning strikes.','Large sigils appear.'], razor:['Blades fly at you; hits make you bleed.','Fans of blades fly at you.'],
-  miasma:['A choking ash cloud follows you.','A large ash cloud follows you.'], escspd:['Foes speed up the longer they live.'], escdmg:['Damage you take rises each round.'],
-  prism:['1 in 5 enemy bolts changes color.'], reach:['Shots fly 20% slower, spells 15% smaller.'], slowcd:['Spells and dash recharge slower.'], drain:['Overload drains 6% a second.'],
-  impot:['No damage for 2s every 8s.'], unstop:['Foes resist slows and knockback.'], shield:['Foes block 30% of your hits.'], totem:['A totem empowers foes but burns their HP.'],
-  brittle:['Pillars take 50% more damage.'], drought:['Foes drop no healing embers.'], hinder:['Dashing slows you by 40%.'],
-  litany:['Caster fans mix two colors.','Caster fans mix all three colors.'], yoked:['Brutes arrive in chained pairs.','Pairs enrage when one partner dies.'],
-  kiln:['Slain foes burst later. Match their color.','Slain foes burst in a bigger blast.'], menders:['Mender totems rise every 15 s and heal foes.','A mender totem rises every 11 s.'],
-  champion:['One extra elite foe joins each round.','Two extra elite foes join each round.'], slag:['Missed stones leave molten slag for 3 s.','Larger slag pools that last 6 s.'],
-  moths:['A moth swarm hunts you. It reforms.','Two moth swarms hunt you.'], brands:['A flame circles each pillar; match its color.','Two faster flames circle each pillar.'],
-  marks:['Unabsorbed hits carve marks. 16 marks: you fall.','Unabsorbed hits carve marks. 12 marks: you fall.'], wither:['Max HP is 10% lower.','Max HP is 20% lower.'],
-  myopia:['Shots fly 15% shorter, blade reach 10% less.','Shots 25% shorter, blade reach 18% less.'], leak:['Every hit you take spills 10 Overload.','Every hit you take spills 20 Overload.']};
+  w.addEventListener('click', function(e){ var t = e.target, a = t.closest('[data-a]'), hc = t.closest('.ofH'), c = t.closest('[data-r]');
+    if(a){ var k = a.getAttribute('data-a'); if(k==='go') OF_confirm(); else if(k==='leave') takeIt(); else if(k==='rr') OF_reroll(); return; }
+    if(hc){ var gi = c ? +c.getAttribute('data-i') : OF.pkGi(); if(gi>=0) OF_setTarget(gi, +hc.getAttribute('data-t')); return; }
+    if(c) OF_pick(+c.getAttribute('data-r'), +c.getAttribute('data-i')); });
+  /* hover or keyboard focus on a tile shows it in the panel; leaving falls back to the chosen card */
+  var peek = function(e){ var c = e.target.closest ? e.target.closest('.ofT') : null; OF_peek(c ? +c.getAttribute('data-r') : 0, c ? +c.getAttribute('data-i') : -1); };
+  w.addEventListener('mouseover', peek); w.addEventListener('focusin', peek);
+  w.addEventListener('mouseleave', function(){ OF_peek(0, -1); }); }
+/* the gift whose chips are in the panel right now (the hovered gift, else the chosen one) */
+OF.pkGi = function(){ var p = OF.pk; return p && !p.row ? p.i : OF.gi; };
+function OF_reroll(){ if(!OF.on || !P || P.rerolls<=0 || G.state!=='bargain') return; P.rerolls--; SFX.click(); OF.gifts = OF_roll().map(OF_giftOf); if(OF.gi>=0) OF.gi = -1; OF_render(); }
 function OF_strip(s){ return String(s==null?'':s).replace(/<[^>]+>/g,''); }
-function OF_short(s){ s = OF_strip(s).trim(); var w = s.split(/\s+/); if(w.length <= 8) return s; var c = s.split(/[.;]\s/)[0]; if(c.split(/\s+/).length <= 8) return c.replace(/[.;:,]?$/, '.'); return w.slice(0, 8).join(' ') + '…'; }
-function OF_giftEff(x){ var b = x.card, t = x.hs ? x.hs[x.ti] : null;
-  if(x.pact) return OF_short(b.up);
-  if(b.spell){ var base = String(t && t.name ? t.name : b.name).replace(/ (II|III)$/, ''); if(!(t ? t.up : b.up) && OF_SS[base]) return OF_SS[base]; return OF_short(t && t.desc ? t.desc : b.desc); }
-  return OF_GS[b.id] || OF_short(b.desc); }
-function OF_barEff(x){ if(x.wager) return 'Two curses at once, for ×2 Glory.'; var b = x.card, s = OF_CS[b.id]; return s && s[b.tier-1] ? s[b.tier-1] : OF_short(b.desc); }
 function OF_esc(s){ return String(s==null?'':s).replace(/[<>&"]/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
-/* card faces: label, slot, icon, name, one line, Glory. Party target chips stay inline on the selected gift. */
-function OF_giftHtml(x, i){ var b = x.card, r = b.r||0, t = x.hs ? x.hs[x.ti] : null, up = t ? t.up : (!x.pact && b.up);
-  var lab = x.pact ? 'PACT' : b.spell ? (up ? 'UPGRADE' : 'SPELL') : (RARN[r] || 'BOON'), nm = t && t.name ? t.name : b.name;
-  return '<span class="rar">'+lab+'</span><span class="ofk">'+(i+1)+'</span><div class="ic">'+b.icon+'</div><h3>'+nm+'</h3><p class="ofEff">'+OF_esc(OF_giftEff(x))+'</p>'+OF_chips(x, i)+
-    '<div class="ofGl">+⚜ '+x.glory+'<small>Glory</small></div>'; }
-function OF_barHtml(x, i){ var b = x.card, lab = x.wager ? 'WAGER ×2' : (b.up ? 'TIER '+ROMAN[b.tier]+' ▲' : 'NEW CURSE');
-  return '<span class="rar'+(x.wager||b.up?' up':'')+'">'+lab+'</span><span class="ofk">'+(i+4)+'</span><div class="ic">'+(x.wager?'⚖️':b.icon)+'</div><h3>'+(x.wager?'Double or Nothing':b.name)+
-    '</h3><p class="ofEff">'+OF_esc(OF_barEff(x))+'</p><div class="ofGl">+⚜ '+x.glory+'<small>Glory</small></div>'; }
-/* the detail line: the hovered or focused card, else the selected one */
-function OF_giftDet(x){ var b = x.card, t = x.hs ? x.hs[x.ti] : null, s;
-  if(x.pact) s = '<span>▲ '+OF_esc(b.up)+'</span><span class="ofWl">▼ '+OF_esc(b.down)+'</span>';
-  else s = '<span>'+OF_esc(OF_strip(t && t.desc ? t.desc : b.desc))+'</span>';
-  if(x.all) s += '<i>All heroes</i>';
-  return s; }
-function OF_barDet(x){ var b = x.card;
-  if(x.wager){ var ln = function(c){ return '<span class="ofWl">'+c.icon+' '+OF_esc(c.name)+' '+ROMAN[c.tier]+': '+OF_esc(OF_strip(c.desc))+'</span>'; }; return ln(b.a)+ln(b.b)+'<i>Two curses · ×2 their Glory</i>'; }
-  return '<span>'+OF_esc(OF_strip(b.desc))+'</span><i>'+['','Light','Moderate','Heavy'][x.lvl]+' curse'+(b.up ? ' · tier '+ROMAN[b.tier] : '')+'</i>'; }
-function OF_showDet(){ var d = OF.det; if(!d) return; var p = OF.pk, x = null;
-  if(p) x = p.row ? OF.bargains[p.i] : OF.gifts[p.i]; else if(OF.gi>=0) x = OF.gifts[OF.gi]; else if(OF.bi>=0) x = OF.bargains[OF.bi];
-  if(!x){ d.innerHTML = '<span>'+(OF.noBargain ? 'Every bargain is taken. Take a gift, or bank your stake.' : 'Pick one card. Hover or focus a card to read it in full.')+'</span>'; return; }
-  d.innerHTML = x.kind==='bargain' ? OF_barDet(x) : OF_giftDet(x); }
-function OF_peek(row, i){ OF.pk = i>=0 ? {row:row, i:i} : null; OF_showDet(); }
-function OF_render(){ var w = OF.wrap; if(!w) return; w.innerHTML = ''; OF.pk = null;
-  var cards = document.createElement('div'); cards.className = 'ofCards'; w.appendChild(cards);
-  var peek = function(c, row, i){ c.addEventListener('mouseenter', function(){ OF_peek(row, i); }); c.addEventListener('mouseleave', function(){ OF_peek(0, -1); });
-    c.addEventListener('focus', function(){ OF_peek(row, i); }); c.addEventListener('blur', function(){ OF_peek(0, -1); }); };
-  OF.gifts.forEach(function(x, i){ var c = document.createElement('button'); c.className = 'card ofc ofG r'+(x.card.r||0)+(i===OF.gi?' sel':''); c.innerHTML = OF_giftHtml(x, i);
-    if(x.card.spell && typeof VX_meta==='function'){ try{ c.style.setProperty('--vxc', VX_meta(x.card.spell).c); }catch(e){} }
-    c.addEventListener('click', function(ev){ var ch = ev.target && ev.target.closest ? ev.target.closest('.ofChip') : null; if(ch && OF.gi===i){ OF_setTarget(i, +ch.getAttribute('data-t')); return; } OF_pick(0, i); });
-    peek(c, 0, i); cards.appendChild(c); });
-  OF.bargains.forEach(function(x, i){ var c = document.createElement('button'); c.className = 'card ofc ofB'+(x.wager?' ofWg':'')+(i===OF.bi?' sel':'')+(i===0?' split':''); c.innerHTML = OF_barHtml(x, i);
-    c.addEventListener('click', function(){ OF_pick(1, i); }); peek(c, 1, i); cards.appendChild(c); });
-  var det = document.createElement('div'); det.className = 'ofDet'; w.appendChild(det); OF.det = det;
-  w.classList.toggle('has', OF.gi>=0 || OF.bi>=0);
-  var rb = $('rerollBtn'), rr = P ? P.rerolls : 0; rb.hidden = !(rr>0); rb.textContent = 'Reroll gifts ('+rr+')';
-  OF_bar(); OF_showDet(); OF_fit(); }
-function OF_fit(){ var b = $('bargain'); if(!b) return; b.classList.remove('ofL'); if(!OF.on || innerWidth <= innerHeight) return;
-  if(innerHeight <= 620 || b.scrollHeight > b.clientHeight + 2) b.classList.add('ofL'); }
-window.addEventListener('resize', function(){ if(OF.on) OF_fit(); });
-function OF_giftVerb(){ var g = OF.gifts[OF.gi]; if(g && g.hs){ var h = g.hs[g.ti].h; return h===PTY.ctl ? 'Take it yourself' : 'Give to the '+CLASSES[h.st.cls].name.split(' ')[1]; } return 'Take the gift'; }
+function OF_cn(h){ return CLASSES[h.st.cls].name.split(' ')[1]; }
+function OF_gName(x){ var t = x.hs ? x.hs[x.ti] : null; return OF_esc(String(t && t.name ? t.name : x.card.name)); }
+function OF_bName(x){ return x.wager ? 'Double or Nothing' : OF_esc(x.card.name); }
+function OF_gLab(x){ var b = x.card, t = x.hs ? x.hs[x.ti] : null, up = t ? t.up : (!x.pact && b.up); return x.pact ? 'Pact' : b.spell ? (up ? 'Spell upgrade' : 'New spell') : (['Common','Rare','Legendary'][b.r||0] || 'Boon'); }
+function OF_bLab(x){ var b = x.card; return x.wager ? 'Wager · two curses' : (b.up ? 'Curse · tier '+ROMAN[b.tier] : 'New curse')+' · '+['','light','moderate','heavy'][x.lvl]; }
+/* full text, never cut: a pact shows its upside and its downside, the Wager both curses */
+function OF_gText(x){ var b = x.card, t = x.hs ? x.hs[x.ti] : null;
+  if(x.pact) return '<p class="up">▲ '+OF_esc(b.up)+'</p><p class="dn">▼ '+OF_esc(b.down)+'</p>';
+  return '<p>'+OF_esc(OF_strip(t && t.desc ? t.desc : b.desc))+'</p>'; }
+function OF_bText(x){ var b = x.card;
+  if(x.wager) return [b.a, b.b].map(function(c){ return '<p class="dn">'+OF_esc(c.name)+' '+ROMAN[c.tier]+': '+OF_esc(OF_strip(c.desc))+'</p>'; }).join('');
+  return '<p>'+OF_esc(OF_strip(b.desc))+'</p>'; }
+function OF_ic(x, bar){ var s = bar && x.wager ? '⚖️' : x.card.icon, vc = '';
+  if(!bar && x.card.spell && typeof VX_meta==='function'){ try{ vc = ' style="--vxc:'+OF_noWhite(VX_meta(x.card.spell).c)+'"'; }catch(e){} }
+  return '<div class="ofIc'+(bar ? ' b' : '')+(/<svg/.test(s) ? ' v' : '')+'"'+vc+'><span>'+s+'</span></div>'; }
+/* a near-white spell colour (Mirror Shell, Prism Lance) is pulled toward bronze: no white icons on this screen */
+function OF_noWhite(c){ var m = /^#([0-9a-f]{6})$/i.exec(c||''); if(!m) return c; var n = parseInt(m[1], 16), r = n>>16, g = (n>>8)&255, b = n&255;
+  if(Math.min(r, g, b) < 0xc8) return c; var mix = function(v, t){ return Math.round(v*0.45 + t*0.55); };
+  return 'rgb('+mix(r, 0xc9)+','+mix(g, 0xa5)+','+mix(b, 0x5a)+')'; }
+function OF_key(n){ return '<span class="ofK">'+n+'</span>'; }
+function OF_gl(x, big){ return '<div class="ofGl'+(big ? ' big' : '')+'">+'+x.glory+'<em>⚜</em>'+(big ? '<small>Glory</small>' : '')+'</div>'; }
+/* party chips: every eligible hero as a portrait; the target also shows name and what it gets */
+function OF_heroes(x, sel){ if(!x.hs) return x.all ? '<div class="ofAll">All heroes</div>' : '';
+  return '<div class="ofFor"><span class="ofForL">'+(sel ? 'Give to' : 'For')+(sel && x.hs.length > 1 ? '<small>Tab</small>' : '')+'</span>'+x.hs.map(function(q, k){ var h = q.h, stt = x.card.spell ? (q.up ? 'rank '+ROMAN[(q.lv||0)+1] : 'new') : '';
+    return '<span class="ofH'+(k===x.ti ? ' on' : '')+'" role="button" data-t="'+k+'" title="'+CLASSES[h.st.cls].name+(stt ? ' · '+stt : '')+'" style="--hc:'+(OF_HC[h.st.cls] || '#e2c89a')+'"><i>'+CLASSES[h.st.cls].icon+'</i>'+
+      (k===x.ti ? '<b>'+OF_cn(h)+(h===PTY.ctl ? ' (you)' : '')+(stt ? ' · '+stt.toUpperCase() : '')+'</b>' : '')+'</span>'; }).join('')+'</div>'; }
+function OF_sel(){ return OF.gi>=0 ? OF.gifts[OF.gi] : OF.bi>=0 ? OF.bargains[OF.bi] : null; }
+function OF_panel(){ var p = OF.pk, x = p ? (p.row ? OF.bargains[p.i] : OF.gifts[p.i]) : OF_sel();
+  if(!x) return OF.noBargain ? '<div class="ofP0"><div>Every bargain is taken. Take a gift, or bank your stake.</div></div>'
+    : '<div class="ofP0"><div><b class="g">Gift</b>a boon for you'+(OF_pon() ? ' or a hero' : '')+'. Small Glory.</div><div><b class="b">Bargain</b>a curse on the Pit. 3–4× the Glory.</div></div>';
+  var bar = x.kind==='bargain', s = bar ? OF.bargains.indexOf(x)===OF.bi : OF.gifts.indexOf(x)===OF.gi;
+  return '<div class="ofPc '+(bar ? 'b' : 'g')+'">'+OF_ic(x, bar)+'<div class="tx"><div class="lab">'+(bar ? OF_bLab(x) : OF_gLab(x))+'</div><h3>'+(bar ? OF_bName(x) : OF_gName(x))+'</h3>'+
+    (bar ? OF_bText(x) : OF_gText(x)+OF_heroes(x, s))+'</div>'+OF_gl(x, bar)+'</div>'; }
+function OF_verb(){ var x = OF_sel(); if(!x) return '';
+  if(OF_voting()) return 'Vote on the decree first';
+  if(x.kind==='bargain') return x.wager ? 'Accept both curses' : 'Accept '+OF_bName(x);
+  if(x.hs){ var h = x.hs[x.ti].h; return h===PTY.ctl ? 'Take '+OF_gName(x) : 'Give to the '+OF_cn(h); }
+  return 'Take '+OF_gName(x); }
+function OF_foot(){ var x = OF_sel(), add = x ? x.glory : 0, kb = !document.body.classList.contains('touch'), pl = '';
+  try{ if(OF_pon() && typeof PTY_label==='function') pl = ' · '+PTY_label()+' ×'+PTY_f(PARTY.glory)+' Glory'; }catch(e){}
+  var risk = OF.bossNext ? (G.act===3 ? 'Beat the Undermaw next round for 3×.' : G.act===2 ? 'Beat the Stormwright next round for 3×.' : 'Beat the Pitmaster next round for 2×.') : 'Lost if you fall.';
+  var cf = x ? '<button class="btn main ofGo" data-a="go">'+OF_verb()+(kb ? '<small>Enter</small>' : '')+'</button>' : '<div class="ofPick">Choose one card'+(kb ? ' <span>1–5</span>' : '')+'</div>';
+  return '<div class="ofFoot"><div class="ofStk"><div class="ofSk"><span class="l">Your stake</span><b>⚜ '+G.stake+(x ? ' <i>→ ⚜ '+(G.stake+add)+'</i>' : '')+'</b><span class="s">'+risk+pl+'</span></div>'+
+    '<button class="ofLeave" data-a="leave" title="Bank your stake and end the run">Leave now, bank ⚜ '+G.stake+'</button></div>'+cf+'</div>'; }
+function OF_render(){ var w = OF.wrap; if(!w) return; var h = '', rr = P ? P.rerolls : 0;
+  h += '<div class="ofTiles"><div class="ofGrp g"><div class="ofGh">Gifts <span>grow stronger</span>'+(rr > 0 ? '<button class="ofRr" data-a="rr">↻ Reroll gifts ('+rr+')</button>' : '')+'</div><div class="ofTr">';
+  OF.gifts.forEach(function(x, i){ var t = x.hs ? x.hs[x.ti].h : null;
+    h += '<button class="ofT g'+(i===OF.gi ? ' sel' : '')+'" data-r="0" data-i="'+i+'">'+OF_key(i+1)+OF_ic(x)+'<h3>'+OF_gName(x)+'</h3><div class="lab tl">'+OF_gLab(x)+'</div>'+
+      (t ? '<div class="tp" title="For the '+OF_cn(t)+'" style="--hc:'+(OF_HC[t.st.cls] || '#e2c89a')+'">'+CLASSES[t.st.cls].icon+'</div>' : '')+'</button>'; });
+  h += '</div></div>';
+  if(OF.bargains.length){ h += '<div class="ofGrp b"><div class="ofGh">Bargains <span>3–4× Glory</span></div><div class="ofTr">';
+    OF.bargains.forEach(function(x, i){ h += '<button class="ofT b'+(i===OF.bi ? ' sel' : '')+'" data-r="1" data-i="'+i+'">'+OF_key(i+4)+OF_ic(x, 1)+'<h3>'+OF_bName(x)+'</h3>'+OF_gl(x)+'</button>'; });
+    h += '</div></div>'; }
+  h += '</div><div class="ofPan">'+OF_panel()+'</div>'+OF_foot();
+  w.innerHTML = h; OF_bar(); }
+function OF_peek(row, i){ var p = i>=0 ? {row:row, i:i} : null; if(JSON.stringify(p)===JSON.stringify(OF.pk || null)) return; OF.pk = p; var pn = OF.wrap && OF.wrap.querySelector('.ofPan'); if(pn) pn.innerHTML = OF_panel(); }
 function OF_ready(){ return OF.gi>=0 || OF.bi>=0; }
 function OF_voting(){ return G.act===2 && typeof A2!=='undefined' && A2 && A2.voting; }
-function OF_add(){ return (OF.gi>=0 ? OF.gifts[OF.gi].glory : 0) + (OF.bi>=0 && OF.bargains[OF.bi] ? OF.bargains[OF.bi].glory : 0); }
-function OF_bar(){ var go = OF.go, ready = OF_ready(), add = OF_add(); if(!go) return;
-  go.disabled = !ready || OF_voting();
-  go.innerHTML = OF_voting() && ready ? 'Cast the Court\'s vote' : !ready ? 'Choose a card' : 'Choose  +⚜ '+add+' <small>Enter</small>';
-  var tk = $('takeBtn'); if(!tk) return; tk.textContent = 'Take it (bank ⚜ '+G.stake+')';
-  /* party runs: the damage shares that used to sit above the cards live on the Take button's tooltip */
+/* the hidden core Take button keeps an honest label (other code and bots may read it); the party shares stay on its tooltip */
+function OF_bar(){ var tk = $('takeBtn'); if(!tk) return; tk.textContent = 'Take it (bank ⚜ '+G.stake+')';
   var sh = ''; try{ var c = OF_pon() && typeof PTY_contrib==='function' ? PTY_contrib('round') : null; if(c) sh = c.map(function(q){ return q.name+' '+q.share+'%'; }).join(' · '); }catch(e){}
-  tk.title = sh ? 'Party damage this round: '+sh : ''; }
+  var lv = OF.wrap && OF.wrap.querySelector('.ofLeave'); if(lv && sh) lv.title = 'Bank your stake and end the run. Party damage this round: '+sh; }
 function OF_pick(row, i, kb){ if(!OF.on || G.state!=='bargain') return; var list = row ? OF.bargains : OF.gifts; if(!list[i]) return; audioInit();
-  if(row){ OF.bi = i; OF.gi = -1; } else { OF.gi = i; OF.bi = -1; } OF.row = row; SFX.click(); OF_render();
-  if(kb){ var cs = OF.wrap.querySelectorAll(row ? '.ofB' : '.ofG'); if(cs[i]) try{ cs[i].focus({preventScroll:true}); }catch(e){} }
-  /* touch / narrow: bring the confirm bar into view once both are chosen */
-  if(OF_ready() && OF.go && OF.go.scrollIntoView && innerWidth < innerHeight) try{ OF.go.scrollIntoView({block:'nearest'}); }catch(e){} }
+  if(row){ OF.bi = i; OF.gi = -1; } else { OF.gi = i; OF.bi = -1; } OF.row = row; OF.pk = null; SFX.click(); OF_render();
+  if(kb){ var cs = OF.wrap.querySelectorAll('.ofT[data-r="'+row+'"]'); if(cs[i]) try{ cs[i].focus({preventScroll:true}); }catch(e){} OF.pk = null; var pn = OF.wrap.querySelector('.ofPan'); if(pn) pn.innerHTML = OF_panel(); }
+  /* touch / narrow: keep the confirm bar in view */
+  var go = OF.wrap.querySelector('.ofGo'); if(go && go.scrollIntoView && innerWidth < innerHeight) try{ go.scrollIntoView({block:'nearest'}); }catch(e){} }
 function OF_nudge(el){ if(!el) return; el.classList.remove('nudge'); void el.offsetWidth; el.classList.add('nudge'); }
 
 /* ---------- party: gifts drawn from every hero's pool, a hero target picker inline on the selected card (design/PARTY-LOADOUT.md) ---------- */
 var OF_HEROB = {pierce:1, reach:1};          /* class-flavoured boons: they go to one hero you choose */
 var OF_SELF = {mirror:1, attune:1, familiar:1}; /* spells an AI ally never auto-casts: the picker favours the controlled hero */
 function OF_pon(){ return typeof PTY!=='undefined' && PTY.on && !PTY.legacy && typeof HEROES!=='undefined' && HEROES.length > 1; }
-function OF_clsName(h){ return CLASSES[h.st.cls].name.split(' ')[1].toUpperCase(); }
 function OF_on(h, fn){ return h===PTY.ctl ? fn() : withHero(h, fn); }
 /* spellCards() during a party offering: one card per spell any standing hero can learn or upgrade, with each hero's version */
 var OF_sc0 = spellCards;
@@ -15785,10 +15799,6 @@ function OF_score(b, t){ var st = t.h.st, ai = t.h !== PTY.ctl, n = (st.spells||
   if(b.spell){ s = t.up ? 1 + (t.lv===1 ? 0.5 : 0) : 3 - n; if(typeof RL_SIGIL!=='undefined' && RL_SIGIL[st.cls]===b.spell) s += 0.75; if(OF_SELF[b.spell] && ai) s -= 2.5; }
   else { s = 1; if(b.id==='pierce' && st.cls==='archer') s += 0.5; }
   if(!ai) s += 0.01; return s; }
-function OF_chips(x, i){ if(!x.hs) return ''; var t = x.hs[x.ti];
-  if(i !== OF.gi) return '<div class="ofTo2">→ '+CLASSES[t.h.st.cls].name.split(' ')[1]+(x.hs.length > 1 ? ' <small>+'+(x.hs.length-1)+'</small>' : '')+'</div>';
-  return '<div class="ofFor"><span class="ofForL">For'+(x.hs.length > 1 ? '<small> Tab</small>' : '')+'</span>'+x.hs.map(function(q, k){ var st = q.h.st, stt = x.card.spell ? (q.up ? ROMAN[(q.lv||0)+1] : 'NEW') : '';
-    return '<span class="ofChip'+(k===x.ti ? ' on' : '')+(q.h===PTY.ctl ? ' me' : '')+'" role="button" tabindex="-1" data-t="'+k+'" title="'+CLASSES[st.cls].name+'"><i>'+CLASSES[st.cls].icon+'</i>'+(stt ? '<b>'+stt+'</b>' : '')+'</span>'; }).join('')+'</div>'; }
 function OF_setTarget(i, t){ var x = OF.gifts[i]; if(!x || !x.hs || !x.hs[t]) return; if(OF.gi !== i){ OF.gi = i; OF.bi = -1; OF.row = 0; } x.ti = t; SFX.click(); OF_render(); }
 /* apply a hero-specific gift to its target, then run the normal gift flow (codex, ledger, crowd, nextWave) with a no-op card */
 function OF_giveTo(g){ var b = g.card, t = g.hs[g.ti], h = t.h, dummy = {id:b.id || ('spell_'+b.spell), name:t.name || b.name, icon:b.icon, r:b.r||0, desc:t.desc || b.desc, ap:function(){}};
@@ -15799,20 +15809,9 @@ function OF_giveTo(g){ var b = g.card, t = g.hs[g.ti], h = t.h, dummy = {id:b.id
   else OF_on(h, function(){ if(!b.ok || b.ok()) b.ap(); });
   if(h !== PTY.ctl) after(1.0, function(){ if(PTY.on && !h.st.dead && G.state==='play'){ dmgText(h.st.x, 2.6, h.st.z, (b.spell ? (t.up ? 'RANK UP' : 'NEW SPELL') : b.name.toUpperCase()), '#ffd27a', 16); ringBurst(h.st.x, h.st.z, 1.3, 16, 0xffd27a, 0.5); } });
   choose(dummy, false); refreshSkills(); }
-(function(){ var st = document.createElement('style'); st.textContent = [
-'#ofWrap .ofTo2{margin-top:5px;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--arm-bone3)}#ofWrap .ofTo2 small{opacity:.75}',
-'#ofWrap .ofFor{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:6px;padding:5px 4px 2px;box-shadow:0 -1px 0 rgba(226,200,154,.16)}',
-'#ofWrap .ofForL{font:700 12px/1 Cinzel,serif;letter-spacing:.16em;text-transform:uppercase;color:var(--arm-gild)}#ofWrap .ofForL small{font:600 12px Rubik,sans-serif;letter-spacing:.06em;color:#e6b48a;margin-left:3px}body.touch #ofWrap .ofForL small{display:none}',
-'#ofWrap .ofChip{position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;cursor:pointer;background:radial-gradient(circle at 50% 35%,#3a2822,#120a0b);box-shadow:inset 0 0 0 1px #5a4630;font-size:16px;line-height:1;touch-action:manipulation}',
-'#ofWrap .ofChip i{font-style:normal}#ofWrap .ofChip b{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);font:700 12px/1 Rubik,sans-serif;letter-spacing:.04em;color:#1a0c06;background:var(--arm-bone3);padding:1px 3px}',
-'#ofWrap .ofChip.on{box-shadow:inset 0 0 0 2px var(--arm-gild),0 0 10px rgba(226,200,154,.35);background:radial-gradient(circle at 50% 35%,#5a3a22,#1a0e0b)}#ofWrap .ofChip.on b{background:var(--arm-gild)}#ofWrap .ofChip:not(.on){filter:saturate(.6) brightness(.8)}',
-'#ofWrap .ofChip.me:after{content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;transform:rotate(45deg);background:var(--arm-ember)}',
-'body.touch #ofWrap .ofChip{width:40px;height:40px;font-size:18px}',
-'@media (max-width:700px) and (orientation:portrait){#ofWrap .ofFor,#ofWrap .ofTo2{grid-column:2;justify-content:flex-start;margin-top:3px}#ofWrap .ofFor{padding:4px 0 3px;box-shadow:none}}'
-].join('\n'); document.head.appendChild(st); })();
 
 /* ---------- open / close ---------- */
-function OF_hide(){ OF.on = false; OF.pk = null; var b = $('bargain'); if(b) b.classList.remove('of', 'ofL'); if(OF.wrap){ OF.wrap.hidden = true; OF.wrap.innerHTML = ''; } if(OF.go) OF.go.hidden = true;
+function OF_hide(){ OF.on = false; OF.pk = null; var b = $('bargain'); if(b) b.classList.remove('of'); if(OF.wrap){ OF.wrap.hidden = true; OF.wrap.innerHTML = ''; }
   var to = document.querySelector('#bgStake .ofTo'); if(to) to.remove(); }
 function OF_setSub(txt){ var s = $('bgSub'); if(!s) return; if(s.firstChild && s.firstChild.nodeType===3) s.firstChild.nodeValue = txt; else s.insertBefore(document.createTextNode(txt), s.firstChild); }
 function OF_build(first){ OF_dom(); var noC = G.noCurses || G.bgPhase!=='curse', nx = G.wave+1;
@@ -15823,12 +15822,12 @@ function OF_build(first){ OF_dom(); var noC = G.noCurses || G.bgPhase!=='curse',
   else gifts = (G.cardList||[]).slice();
   OF.noBargain = bars.length===0; OF.gifts = gifts.map(OF_giftOf); OF.bargains = bars.map(OF_bargainOf);
   G.bgPhase = 'offer'; G.cardList = null; G.cardCurse = false; G.offer = OF; OF.on = true;
-  $('bargain').classList.add('of'); OF.wrap.hidden = false; OF.go.hidden = false; $('takeBtn').hidden = false;
+  $('bargain').classList.add('of'); OF.wrap.hidden = false; $('takeBtn').hidden = false; OF.pk = null;
   var a2 = G.act===2;
   $('bgTitle').textContent = a2 ? (nx>=20 ? 'The Final Offering' : "The Storm Court's Offering") : (OF.bossNext ? 'The Last Offering' : 'The Offering');
   OF_setSub(first ? 'Your Glory is at stake. Bank it, or choose ONE card.'
     : OF.bossNext ? (a2 ? 'Round 20: beat the Stormwright for 3× your stake.' : 'Round '+nx+': beat the Pitmaster for 2× your stake.')
-    : 'Choose ONE card. Bargains pay far more.');
+    : 'A gift makes you stronger. A bargain curses the Pit and pays far more Glory.');
   if(a2 && typeof A2!=='undefined' && A2.offer && !A2.voting && $('a2Dec').hidden && typeof A2_showVote==='function') A2_showVote();
   OF_render(); }
 function OF_confirm(){ if(!OF.on || G.state!=='bargain') return; audioInit();
@@ -15850,6 +15849,8 @@ var OF_open = function(){ var force = OF.force; OF.force = false;
   try { r = OF_ob0.apply(this, arguments); } finally { CURSES = saved; }
   if(G.state==='bargain') OF_build(first); return r; };
 openBargain = typeof PTY_atCtl==='function' ? PTY_atCtl(OF_open) : OF_open;
+/* Act II: once the decree vote is cast, refresh the confirm label */
+if(typeof A2_vote==='function'){ var OF_vote0 = A2_vote; A2_vote = function(){ var r = OF_vote0.apply(this, arguments); if(OF.on) OF_render(); return r; }; }
 var OF_take0 = takeIt;
 takeIt = function(){ if(OF.on && G.state==='bargain'){ OF_hide(); G.bgPhase = 'curse'; } return OF_take0.apply(this, arguments); };
 var OF_showMenu0 = showMenu;
@@ -16258,7 +16259,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:31',h:'15015f0'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 13:45',h:'eb161d6'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
