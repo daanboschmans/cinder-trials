@@ -16372,7 +16372,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-11 13:00',h:'59e5dbe'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-11 13:02',h:'a2efae7'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -20566,7 +20566,7 @@ function BG_inCircle(h, x, z, pad){ return Math.hypot(x-h.x, z-h.z) < (h.r||1)+(
 /* ---------------------------------------------------------------- the Pitmaster: tuning ---------------------------------------------------------------- */
 /* PM_HP_SOLO: his HP in the solo duel (tier 0, before curses). The ONE number to set from the HP-scaling model; nothing else reads a literal.
    Interim (2026-10-11): 6500 = 75 s at ~87 DPS, the measured DPS of a real-rAF "new player" bot (shoots his body, dodges, no catches). */
-var PM_HP_SOLO = 6500;
+var PM_HP_SOLO = 6200;
 var PM_T = {hp:PM_HP_SOLO,
   p2:0.65, p3:0.30,
   throwCd:7, throwCd80:5.5, throwP2:9, throwP3:6, wind:1.1, laneW:2.2, laneL:16, feintLead:0.6, spearSpd:34,
@@ -20580,7 +20580,7 @@ var PM_T = {hp:PM_HP_SOLO,
   enrageT:180, enrageEvery:20, enrageStep:2, enrageMin:7, enrageDmg:0.08, enrageCd:0.9,
   roar:1.3, beat:0.5,
   /* ARMED failure state. Floor x0.75 (was x0.35: with its heals it beat the DPS of a player who just shoots, the owner's "I do no damage") */
-  armed:[1, 0.9, 0.82, 0.75], armHeal:0.03, healK:0.15,
+  armed:[1, 0.85, 0.72, 0.6], armHeal:0.03, healK:0.15,
   /* learnable first boss (2026-10-11): the first throw of the fight is a slow tutorial throw */
   tutWind:1.7, tutLaneW:3.0, tutSlow:0.4};
 
@@ -21035,7 +21035,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.pm = { T:PM_T, D:PM_
    Overrides pieces of 56-stormwright.js (each wrapper calls the original where it still applies):
    - removed: the x0.55 Storm Mantle, the 2.5%/s cap, Temper and the Temper Quench, Twin Hammerfall, Storm Crown;
    - punish windows: STAGGERED (he kneels, x2) from Anvil Bait (P1), a grounded rod (P2/P3) or a redirected Verdict (P3);
-   - CHARGED: an unanswered rod bolt or Verdict runs into him (heals up to 3%, at most 15% of the damage since his last heal; takes x0.75 / x0.65 / x0.55
+   - CHARGED: an unanswered rod bolt or Verdict runs into him (heals up to 3%, at most 15% of the damage since his last heal; takes x0.7 / x0.6 / x0.5
      per unanswered storm until the next stagger: ignoring the rods costs ~60% of your damage at wave 20, never all of it, design/SCALING.md);
    - new moves: the Anvil Charge (a lane; put the anvil in it) and Skyfall (he leaps onto you; the rim behind him cracks);
    - party: boss fights are solo duels (84-duel.js): he always fights one champion with solo HP and solo mechanics (party branches removed);
@@ -21043,10 +21043,10 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.pm = { T:PM_T, D:PM_
      stack, one more rim sector cracks per stack (arena pressure), and the outer ring (beyond the inner platform) turns to charged storm ground
      that ticks in storm (absorbable; never within 0.5 s of another colour), creeping 1.2 u inward per stack from the 3rd (it stops 2.5 u short of the Eye ring).
    Shape grammar (local; same visual language as the shared BG_* helpers): lane, numbered circles, gold dashed rings, gold chevrons. */
-var SW2_HP_SOLO = 10500;                 /* his HP in the solo duel (before curses). design/SCALING.md: ~122 DPS (average champion, wave 20) x 95 s x ~0.9 uptime.
+var SW2_HP_SOLO = 8000;                  /* his HP in the solo duel (before curses). design/SCALING.md: ~122 DPS (average champion, wave 20) x 95 s x ~0.7 uptime (CHARGED, rod runs).
                                             Was 2600 x 3.77 x 2.3 = 22.5k, tuned with party DPS in mind (a solo champion needed ~450 s). */
 var SW2_STAG = {bait:4, ground:3.5, redirect:5, temper:3.5};
-var SW2_HEAL = 0.03, SW2_HEALK = 0.15, SW2_CHG = [1, 0.75, 0.65, 0.55], SW2_UNB = 150, SW2_UNB_STEP = 15, SW2_UNB_MAX = 6, SW2_GND = {tick:0.6, dmg:8, creep:1.2, minR:5.5};
+var SW2_HEAL = 0.03, SW2_HEALK = 0.15, SW2_CHG = [1, 0.7, 0.6, 0.5], SW2_UNB = 150, SW2_UNB_STEP = 15, SW2_UNB_MAX = 6, SW2_GND = {tick:0.6, dmg:8, creep:1.2, minR:5.5};
 var SW2_GAP0 = SW_GAP.slice(), SW2_CH_SPD = 11, SW2_CH_W = 2.4;
 var SW2 = {t:0, chg:false, chgN:0, stk:0, anvCh:0, a1:false, n:{bait:0, ground:0, redirect:0, feed:0}, log:null, lanes:[], digs:[], seqHit:null};
 
@@ -21296,7 +21296,7 @@ if(typeof CX_BOSS!=='undefined' && CX_BOSS.stormwright){ var SW2_CX = CX_BOSS.st
     ['Gale Breath','A wedge of wind in his tip colour pushes you toward the edge and carries bolts.'],
     ['Storm Rods','From the second phase he walks to a rim rod and charges it: a lane runs through the platform. Stand in the rod\'s gold ring to ground the bolt into him (STAGGERED). Left alone, the bolt runs into him: CHARGED.'],
     ['Verdict of Thunder','In the last phase the whole platform is struck every 14 s in the colour its haze shows. Match it or shelter in the Eye to live, but he drinks it (CHARGED). Hold a rod in its gold ring and the bolt strikes him instead: STAGGERED 5 s.'],
-    ['Charged','An unanswered rod or Verdict heals him a little and cuts your damage (×0.75, down to ×0.55 as storms pile up) until you stagger him again.'],
+    ['Charged','An unanswered rod or Verdict heals him a little and cuts your damage (×0.7, down to ×0.5 as storms pile up) until you stagger him again.'],
     ['Storm Unbound','If the fight runs long, the rim breaks away piece by piece, the outer ring crackles with storm (hold storm there, or stay inside) and he strikes faster. It never hurts through the right ward.']];
   SW2_CX.phases = [['100–65%','The Forge: bait his charge into the anvil.'], ['65–30%','The Conductor: ground his rods; Heave, two Kite Wardens, two edge sectors crack.'], ['Under 30%','Eye of the Storm: the outer ring cracks; turn the Verdict through a rod.']];
   SW2_CX.tips = 'Your ward keeps you alive; your position decides whether he weakens. Every greedy answer (anvil in the lane, a grounded rod, a redirected Verdict) STAGGERS him for double damage. Every storm you leave alone CHARGES him. Every attack he has can be absorbed by the matching ward.'; }
