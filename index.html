@@ -10517,7 +10517,8 @@ var CX_ROUND = {
 var CX_BOSS = {
   boss:{n:'The Pitmaster', act:'Act I', el:'flame', pz:1.12,
     lore:'The house\'s champion. He duels you for the crowd: he throws, he chains, he bets, and he respects a clean catch. Meet his colour on purpose and he loses his weapon.',
-    moves:[['Spear Throw','A lane fills out from his hand toward you for 1.1 s; the spear head shows its colour. Stand in it with that ward to CATCH the spear: he is Disarmed for 4 s and takes ×1.75. Step out and the spear sticks in the sand; he walks over and pulls it back along a line.'],
+    moves:[['Spear Throw','A lane fills out from his hand toward you for 1.1 s, in the spear\'s colour, with a key chip beside it. Stand in it with that ward to CATCH the spear: he is Disarmed for 4 s and takes ×1.75 (a gold ring at his feet counts down). Step out and the spear sticks in the sand; he walks over and pulls it back along a line. His first throw of the fight is slow, so you can learn the catch.'],
+      ['Armed','Skip his moves and the crowd throws him a spare spear: he takes a little less damage (down to ×0.75) and heals a little. Any Disarm clears it. You can always still bring him down.'],
       ['Feint','From 80% health he sometimes pumps once and the spear head changes colour 0.6 s before the throw, with a call. Switch late to still catch it.'],
       ['Sunder Wedge','When you are close, a 60° wedge from his feet in his colour. Go around it, or absorb it.'],
       ['Shockwave','A ring rolls out from him in his colour. Dash through it, or absorb it.'],
@@ -10526,8 +10527,8 @@ var CX_BOSS = {
     party:[['Pair and trio','Two bodies in the spear lane brace the catch (one alone is knocked down, no Disarm). A free ally can cut a chain by standing on it for 1 s; a trio faces two chains. Sequences come one per body: keep apart, overlapping circles hit twice. Allies follow the gold markers.']],
     act2:{sunder:['Sunder','A slam that tears a line of fire toward you. In phase 2 it splits into three lines.'], cyclone:['Cyclone','He spins with the spear in his colour: match it or step out of reach. In phase 2 the spin turns colour once.'], shockwave:['Shockwave','A ring in his colour rolls outward. Match it, or dash through it as it reaches you. In phase 2 a second ring follows in another colour.'], throw:['Spear throw','He hurls the spear in his colour. Match it, then watch for the recall.'],
       trimortar:['Three mortars','Three shells land one after another in three colours. Switch in rhythm as each lands.'], heart:['Heart tether','He chains you to a heart. Stay within the chain\'s reach and shoot the heart to hurt him.'], spikes:['Spikes','Spikes in his colour erupt in a trail under you. Match them or keep moving. In phase 2 the last spikes come in a second colour.'], omega:['Omega orb','An orb bounces off the walls. Match its colour to absorb it.'], recall:['Recall','The thrown spear flies back to him along a line in his colour. Match it, or do not stand between them.']},
-    phases:[['100–65% · Spear Catch','Spear throws, feints from 80%, the wedge and the shockwave.'], ['65–30% · The Chain','The chain every 14 s, spear throws every 9 s. At 50% the Temptation: gold orbs offer more Glory, and each one unleashes a hazard.'], ['30% · The Final Wager','Time kneels. Stand in RISK IT (the win pays ×2.5 instead of ×2, one more note per sequence) or TAKE IT (5 s; Take is the default).'], ['30–0%','Kneel Sequences every 8 s, spear throws every 6 s.'], ['After 3:00','The crowd grows restless: the pit closes 2 u every 20 s and he hits harder.']],
-    tips:'Every attack he has carries a colour and can be absorbed. Different colours always land at least half a second apart, so each switch is possible. Catching is the greedy answer; stepping out always works.'}
+    phases:[['100–65% · Spear Catch','Spear throws, feints from 80%, the wedge and the shockwave.'], ['65–30% · The Chain','The chain every 14 s, spear throws every 9 s. At 50% the Temptation: gold orbs offer more Glory, and each one unleashes a hazard.'], ['30% · The Final Wager','Time kneels. Stand in a disc for 1.5 s: RISK IT (the win pays ×2.5 instead of ×2, one more note per sequence) or TAKE IT (the normal finale; after 5 s with no choice you take it).'], ['30–0%','Kneel Sequences every 8 s, spear throws every 6 s.'], ['After 3:00','The crowd grows restless: the pit closes 2 u every 20 s and he hits harder.']],
+    tips:'Aim anywhere on his body. Every attack he has carries a colour and can be absorbed. Different colours always land at least half a second apart, so each switch is possible. Catching the spear is the fast way to win; stepping out always works, just slower.'}
 };
 
 /* ---------- the Armoury adapter (another agent owns it; everything is optional and defensive) ---------- */
@@ -16366,7 +16367,7 @@ if(DEV){ window.__feat = window.__feat || {}; window.__feat.hb = {
    Bump the version by editing the VERSION file at the project root; build.py ships whatever assemble.py stamped.
    Shows a tiny low-contrast corner label on the lobby / hub and the pause (and lobby Settings) screen, never during play,
    plus a selectable "Build ..." line inside the pause/settings panel for bug reports. */
-var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-10 23:52',h:'8a07db9'}/*@/BUILD*/;
+var BUILD = /*@BUILD*/{v:'0.16.0',t:'2026-10-11 12:26',h:'d569615'}/*@/BUILD*/;
 function VER_text(long){ var d = BUILD.t ? (long ? BUILD.t : BUILD.t.slice(0, 10)) : 'unstamped';
   return 'v' + BUILD.v + (long ? ' · build ' + d : ''); }
 (function(){ var st = document.createElement('style'); st.id = 'verCss'; st.textContent = [
@@ -20381,7 +20382,8 @@ function BG_draw(h, rt){ var g = h.g, el = h.el||'gold', k = h.k||0, i;
   if(h.follow && !h.lock){ h.x = h.follow.x; h.z = h.follow.z; } g.position.set(h.x, 0, h.z);
   if(h.kind==='lane'){ var L = h.len, w = h.w; g.rotation.y = h.ang; h.under.scale.set(w,1,L); h.under.position.z = L/2; h.fill.scale.set(w,1,Math.max(0.01,L*k)); h.fill.position.z = L*k/2;
     h.e1.scale.set(0.13,1,L); h.e2.scale.set(0.13,1,L); h.e1.position.set(w/2,0.07,L/2); h.e2.position.set(-w/2,0.07,L/2);
-    BG_tint(h.under, el, 0.12); BG_tint(h.fill, el, 0.22+0.2*k); BG_tint(h.e1, el, 0.6+0.35*Math.abs(Math.sin(rt*10))); BG_tint(h.e2, el, h.e1.material.opacity); }
+    if(h.bold){ h.e1.scale.x = h.e2.scale.x = 0.22; BG_tint(h.under, el, 0.3); BG_tint(h.fill, el, 0.34+0.3*k); } else { BG_tint(h.under, el, 0.12); BG_tint(h.fill, el, 0.22+0.2*k); }
+    BG_tint(h.e1, el, 0.6+0.35*Math.abs(Math.sin(rt*10))); BG_tint(h.e2, el, h.e1.material.opacity); }
   else if(h.kind==='wedge'){ var kk = BG_wgeo(h.half), r = h.r; g.rotation.y = h.ang; if(h.under.geometry!==BG_geo.wedge[kk]){ h.under.geometry = BG_geo.wedge[kk]; h.fill.geometry = BG_geo.wedge[kk]; h.rim.geometry = BG_geo.wrim[kk]; }
     h.under.scale.set(r,1,r); h.fill.scale.set(r*Math.max(0.01,k),1,r*Math.max(0.01,k)); h.rim.scale.set(r,1,r);
     h.e1.scale.set(0.12,1,r); h.e2.scale.set(0.12,1,r); h.e1.rotation.y = h.half; h.e2.rotation.y = -h.half; h.e1.position.set(Math.sin(h.half)*r/2,0.07,Math.cos(h.half)*r/2); h.e2.position.set(-Math.sin(h.half)*r/2,0.07,Math.cos(h.half)*r/2);
@@ -20421,7 +20423,10 @@ function BG_inWedge(h, x, z, pad){ pad = pad||0; var dx = x-h.x, dz = z-h.z, d =
 function BG_inCircle(h, x, z, pad){ return Math.hypot(x-h.x, z-h.z) < (h.r||1)+(pad||0); }
 
 /* ---------------------------------------------------------------- the Pitmaster: tuning ---------------------------------------------------------------- */
-var PM_T = {hp:8000,
+/* PM_HP_SOLO: his HP in the solo duel (tier 0, before curses). The ONE number to set from the HP-scaling model; nothing else reads a literal.
+   Interim (2026-10-11): 6500 = 75 s at ~87 DPS, the measured DPS of a real-rAF "new player" bot (shoots his body, dodges, no catches). */
+var PM_HP_SOLO = 6500;
+var PM_T = {hp:PM_HP_SOLO,
   p2:0.65, p3:0.30,
   throwCd:7, throwCd80:5.5, throwP2:9, throwP3:6, wind:1.1, laneW:2.2, laneL:16, feintLead:0.6, spearSpd:34,
   catchDmg:28, kb:3, disarm:4, disarmMul:1.75, knock:1.5, chip:8,
@@ -20433,8 +20438,10 @@ var PM_T = {hp:8000,
   seqEvery:8, seqLead:1.4, seqGap:0.6, seqR:1.9, seqDmg:18, seqLock:0.6, seqOff:2.7, emberT:4.0, emberTick:0.5, emberDmg:8, emberR:1.7,
   enrageT:180, enrageEvery:20, enrageStep:2, enrageMin:7, enrageDmg:0.08, enrageCd:0.9,
   roar:1.3, beat:0.5,
-  /* ARMED failure state */
-  armed:[1, 0.7, 0.5, 0.35], armHeal:0.03};
+  /* ARMED failure state. Floor x0.75 (was x0.35: with its heals it beat the DPS of a player who just shoots, the owner's "I do no damage") */
+  armed:[1, 0.9, 0.82, 0.75], armHeal:0.03, healK:0.15,
+  /* learnable first boss (2026-10-11): the first throw of the fight is a slow tutorial throw */
+  tutWind:1.7, tutLaneW:3.0, tutSlow:0.4};
 
 /* ---------------------------------------------------------------- helpers ---------------------------------------------------------------- */
 function PM_is(b){ return !!(b && b.type==='boss' && b.stance==='spear' && !b.sw && !b.um && !b.hk && !b.hesk && !b.sw2 && !b.pmOff); }
@@ -20459,7 +20466,7 @@ function PM_knock(st, ux, uz, d){ st.x += ux*d; st.z += uz*d; clampArena(st, 0.3
 function PM_cheer(n){ if(typeof crowdCheer!=='undefined') crowdCheer = Math.max(crowdCheer, n||0.6); }
 
 /* ---------------------------------------------------------------- spawn / HP ---------------------------------------------------------------- */
-function PM_init(b){ var tier = b.tier||0, hp = PM_T.hp * (G.mods ? G.mods.ehp : 1) * (1 + 0.35*tier);
+function PM_init(b){ var tier = b.tier||0, hp = PM_HP_SOLO * (G.mods ? G.mods.ehp : 1) * (1 + 0.35*tier);
   b.hp = b.maxHp = hp; b.ult75 = b.ult25 = b.tempt = true; b.elT = 1e9; b.shifting = 0; b.act = null; b.wind = 0; b.whirl = 0; b.phase = 1;
   b.pm = {ph:1, pend:0, ft:0, act:null, disarm:0, stumble:0, sp:'hand', spEl:null, feintN:0, throwT:3.4, fillT:5.2, chainT:1.6, seqT:1.6, chains:[], embers:[], cutJob:null,
     retr:null, temptDone:false, risk:false, enr:0, enrT:PM_T.enrageT, strafe:Math.random()<0.5?1:-1, strT:5, face:null, catches:0, snaps:0, seqDis:0, arm:0, armH:null, disMul:PM_T.disarmMul, actN:0, log:{armed:0, disarmed:0, catch:0, step:0, wrong:0, yank:0, snap:0, cut:0, seqCatch:0, held:0}};
@@ -20517,9 +20524,9 @@ function PM_start(b, id, f){ var pm = b.pm, A = {id:id, t:0, step:0, f:f, n:++pm
 function PM_rearm(b){ var pm = b.pm; pm.disarm = 0; pm.sp = 'hand'; pm.retr = null; if(G.spear){ damagePillar(G.spear, 99999); G.spear = null; } b.stance = 'spear'; b.act = null; spearStuck.visible = false; if(b.M.extra && b.M.extra.spear) b.M.extra.spear.visible = true;
   burst(b.x, 3, b.z, 18, BG_GOLD, 5, 0.5, 1.2); SFX.blink(); pm.throwT = Math.max(pm.throwT, 1.8); }
 function PM_disarm(b, el, why){ var pm = b.pm; pm.disarm = PM_T.disarm; pm.disMul = PM_T.disarmMul; pm.act = null; pm.log.disarmed++;
-  if(pm.arm && (why==='seq' || pm.ph < 3)) PM_armClear(b, why);   /* ARMED: any Disarm clears it, except a plain catch in the Final Wager (only a Kneel Sequence does there) */ b.wind = 0; b.stance = 'glove'; pm.sp = 'caught';
+  if(pm.arm) PM_armClear(b, why);   /* ARMED: any Disarm clears it */ b.wind = 0; b.stance = 'glove'; pm.sp = 'caught';
   b.act = {id:'spikes', step:1, t:0, n:22}; pm.throwT = PM_T.disarm + PM_throwCd(b)*0.6; pm.fillT = Math.max(pm.fillT, PM_T.disarm + 1.2);
-  PM_say(why==='seq' ? 'SEQUENCE CAUGHT!' : 'CAUGHT!', 'He is Disarmed: strike now (x'+PM_T.disarmMul+')'+(pm.arm ? ' · still ARMED' : ''), 2.0); SFX.roar(); shake(0.5); G.hitstop = Math.max(G.hitstop||0, 0.08); PM_cheer(0.9);
+  PM_cue(why==='seq' ? 'SEQUENCE CAUGHT!' : 'CAUGHT!', 'DISARMED: <b class="gd">HIT HIM NOW ×'+PM_T.disarmMul+'</b> · the gold ring is the time left', 2.6); PM_SLOW.on = false; SFX.roar(); shake(0.5); G.hitstop = Math.max(G.hitstop||0, 0.08); PM_cheer(0.9);
   var g = PM_T.chip + 2*(G.wave||10); G.stake += g; stakePop(); dmgText(b.x, 5.5, b.z, '+'+g+' ⚜', '#ffd27a', 22);
   try{ if(typeof RX_apply==='function') RX_apply(b, el, 1); }catch(err){}
   ringBurst(b.x, b.z, 2.6, 26, BG_GOLD); pm.catches++; }
@@ -20528,18 +20535,21 @@ function PM_disarm(b, el, why){ var pm = b.pm; pm.disarm = PM_T.disarm; pm.disMu
 var PM_ACT = {
   /* P1 signature: the Spear Throw down a lane at the Favourite (fills outward 1.1 s; the spear head shows the colour from the wind-up) */
   throw:function(b, A, dt, f, init){ var pm = b.pm, wm = PM_wm(b), T = PM_T;
-    if(init){ f = A.tg = PM_fav(b); var ang = Math.atan2(f.x-b.x, f.z-b.z), len = T.laneL, sx = b.x + Math.sin(ang)*1.4, sz = b.z + Math.cos(ang)*1.4;
+    if(init){ f = A.tg = PM_fav(b); A.tut = !pm.tutDone; A.wind = A.tut ? T.tutWind : T.wind; var ang = Math.atan2(f.x-b.x, f.z-b.z), len = T.laneL, sx = b.x + Math.sin(ang)*1.4, sz = b.z + Math.cos(ang)*1.4;
         for(var s=0; s<40 && len>4; s++){ var ex = sx+Math.sin(ang)*len, ez = sz+Math.cos(ang)*len; if(Math.hypot(ex,ez) <= AR()-0.4) break; len -= 0.4; }
-        var el = PM_pick(G.t+T.wind, PM_prefs(pick(EL.filter(function(e){ return e!==pm.spEl; })), null)); if(!el){ pm.act = null; pm.throwT = 0.3; return true; }
-        A.el = el; A.ang = ang; A.x = sx; A.z = sz; A.len = len; A.res = PM_book(T.wind, el); pm.spEl = el; PM_setEl(b, el); PM_call(b, el); b.wind = 1;
-        var fp = b.hp/b.maxHp < 0.8 || pm.ph>1; A.feint = pm.ph===1 ? (fp && (pm.feintN++ % 2)===0) : (Math.random() < 0.35);
-        A.h = BG_lane({x:sx, z:sz, ang:ang, len:len, w:T.laneW, el:el, dur:T.wind, ttl:0});
+        /* the tutorial throw never asks for the colour you already hold: you learn the switch */
+        var el = PM_pick(G.t+A.wind, PM_prefs(pick(EL.filter(function(e){ return e!==pm.spEl && !(A.tut && P && e===P.ward); })), null)); if(!el){ pm.act = null; pm.throwT = 0.3; return true; }
+        A.el = el; A.ang = ang; A.x = sx; A.z = sz; A.len = len; A.res = PM_book(A.wind, el); pm.spEl = el; PM_setEl(b, el); PM_call(b, el); b.wind = 1;
+        var fp = b.hp/b.maxHp < 0.8 || pm.ph>1; A.feint = A.tut ? false : pm.ph===1 ? (fp && (pm.feintN++ % 2)===0) : (Math.random() < 0.35);
+        A.h = BG_lane({x:sx, z:sz, ang:ang, len:len, w:A.tut ? T.tutLaneW : T.laneW, el:el, dur:A.wind, ttl:0, bold:true}); PM_props();
+        if(A.tut){ pm.tutDone = true; PM_SLOW.on = true; PM_SLOW.acc = 0; PM_cue('STAND IN THE LANE · SWITCH TO '+PM_key(el), 'Meet his spear with its colour to <b class="gd">CATCH</b> it: he is disarmed and takes <b class="gd">×'+T.disarmMul+'</b>', 9, true); }
         hintOnce('pmCatch'); return false; }
-    var k = Math.min(1, A.t/T.wind); pm.face = A.ang;
+    var k = Math.min(1, A.t/A.wind); pm.face = A.ang;
     if(A.step===0){ b.act = {id:'throw', step:0, t:k*0.43*0.5*wm/0.5}; if(Math.random()<dt*30) glowP.emit(b.x+Math.sin(A.ang)*0.9, 4.2, b.z+Math.cos(A.ang)*0.9, 0, 1.2, 0, 0.35, 1.0, ELC[A.el], 0, 1);
-      if(A.feint && !A.fd && A.t >= T.wind - T.feintLead){ A.fd = true; var e2 = PM_pick(G.t + (T.wind-A.t), PM_prefs(null, A.el).filter(function(e){ return e!==A.el; }), A.res);
+      if(A.tut && PM_ui && PM_ui.hold && P && P.ward===A.el && !A.okSaid){ A.okSaid = true; PM_cue('GOOD · NOW STAY IN THE LANE', 'Hold '+PM_key(A.el)+' until the spear arrives', 9, true); }
+      if(A.feint && !A.fd && A.t >= A.wind - T.feintLead){ A.fd = true; var e2 = PM_pick(G.t + (A.wind-A.t), PM_prefs(null, A.el).filter(function(e){ return e!==A.el; }), A.res);
         if(e2){ A.el = e2; A.res.el = e2; A.h.el = e2; PM_setEl(b, e2); pm.spEl = e2; dmgText(b.x, 6.6, b.z, 'FEINT! '+ELNAME[e2]+'!', ELCSS[e2], 30); SFX.tele(); shake(0.15); hintOnce('pmFeint'); } }
-      if(A.t >= T.wind){ A.step = 1; A.t = 0; b.wind = 0; PM_release(b, A); } return false; }
+      if(A.t >= A.wind){ A.step = 1; A.t = 0; b.wind = 0; if(A.tut){ PM_SLOW.on = false; PM_cueOff(); } PM_release(b, A); } return false; }
     if(A.step===1){ b.act = {id:'throw', step:1, t:A.t}; var fk = Math.min(1, A.t/A.fl), px = A.x + Math.sin(A.ang)*A.stop*fk, pz = A.z + Math.cos(A.ang)*A.stop*fk;
       spearFly.visible = true; spearFly.position.set(px, 1.6, pz); spearFly.rotation.order = 'YXZ'; spearFly.rotation.set(Math.PI/2, A.ang, 0);
       if(fk>=1){ spearFly.visible = false; PM_land(b, A); A.step = 2; A.t = 0; } return false; }
@@ -20582,7 +20592,9 @@ var PM_ACT = {
   hook:function(b, A, dt, f, init){ var pm = b.pm, T = PM_T;
     if(init){ f = PM_fav(b); var tg = [f];
       A.tg = tg; A.hs = tg.map(function(st){ return BG_tether({a:b, b:st, el:b.el, hook:0, ya:3.2, yb:1.0}); }); A.lea = BG_dashed({follow:b, r:T.leash, el:b.el, op:0.55});
-      PM_say('THE CHAIN', 'Stay inside the dashed ring. Drag it across a pillar to snap it, or hold it.', 2.2); SFX.roar(); b.wind = 1; hintOnce('pmChain'); return false; }
+      if(!pm.chainSaid){ pm.chainSaid = true; PM_cue('DRAG THE CHAIN OVER '+PM_postWord().toUpperCase(), 'Walk so '+PM_postWord()+' sits between you and him for 1 s: the chain snaps and he stumbles (<b class="gd">×'+T.stumbleMul+'</b>). Stay inside the dashed ring or he yanks you.', 5.5); }
+      else PM_say('THE CHAIN', 'Stay inside the dashed ring. Drag it across a pillar to snap it, or hold it.', 2.2);
+      SFX.roar(); b.wind = 1; hintOnce('pmChain'); return false; }
     b.act = {id:'heart', step:A.t < 0.5 ? 0 : 1, t:A.t < 0.5 ? A.t : A.t-0.5, fireT:9}; pm.face = Math.atan2(f.x-b.x, f.z-b.z);
     for(var i=0;i<A.hs.length;i++) A.hs[i].hook = Math.min(1, A.t/T.hook);
     if(A.t >= T.hook){ b.wind = 0; for(var j=0;j<A.tg.length;j++){ var st = A.tg[j]; if(st.dead){ BG_free(A.hs[j]); continue; }
@@ -20601,7 +20613,10 @@ var PM_ACT = {
         for(var k2=0;k2<n;k2++){ var last = k2===n-1, aa = a0 + k2*2.2, o = last ? {follow:st} : {x:st.x+Math.sin(aa)*T.seqOff, z:st.z+Math.cos(aa)*T.seqOff};
           o.r = T.seqR; o.el = els[k2]; o.n = k2+1; o.dur = A.T[k2]; o.ttl = A.T[k2]+0.25; var hh = BG_num(o); if(!last) clampArena(hh, 0.6); hs.push(hh); }
         return {st:st, hs:hs, landed:0, caught:0, mk:null}; });
-      A.i = 0; b.wind = 1; SFX.tele(); PM_say('KNEEL', 'Step into 1 → '+n+' in order with each colour, or stay clear.', 1.6); hintOnce('pmSeq'); return false; }
+      A.i = 0; b.wind = 1; SFX.tele();
+      if(!pm.seqSaid){ pm.seqSaid = true; PM_cue('STEP INTO 1, 2, 3 SWITCHING COLOURS', els.map(function(e, i){ return '<b class="gd">'+(i+1)+'</b> '+PM_key(e); }).join(' &nbsp;→&nbsp; ')+'<br>Catch every note to disarm him again. Or stay clear of the circles.', 4.5); }
+      else PM_say('KNEEL', 'Step into 1 → '+n+' in order with each colour, or stay clear.', 1.6);
+      hintOnce('pmSeq'); return false; }
     pm.face = Math.atan2(f.x-b.x, f.z-b.z); b.act = {id:'trimortar', step:A.t < 0.5 ? 0 : 1, t:A.t < 0.5 ? A.t : A.t-0.5};
     for(var s=0;s<A.seqs.length;s++){ var L = A.seqs[s].hs[A.n-1]; if(!L.lock && A.t >= A.T[A.n-1] - T.seqLock) L.lock = true; }
     while(A.i < A.n && A.t >= A.T[A.i]){ PM_note(b, A, A.i); A.i++; }
@@ -20621,7 +20636,11 @@ function PM_release(b, A){ var pm = b.pm, T = PM_T, H = PTY_heroes().slice(), in
   for(j=0;j<n;j++){ var s3 = inL[j]; if(s3===catcher || s3.dashT>0 || PM_ok(s3, A.el)) continue; if(catcher) continue;   /* a braced catch shelters the line */
     var r = PM_sig(s3, PM_dmg(b, T.catchDmg)/Math.max(1,n), A.el, b); if(r==='hit' || r==='guard' || r==='none'){ PM_knock(s3, ux, uz, T.kb); pm.log.wrong++; } }
   if(catcher){ A.catcher = catcher; A.stop = Math.max(1, Math.hypot(catcher.x-A.x, catcher.z-A.z)); }
-  else { A.stop = A.len; if(!n) pm.log.step++; }
+  else { A.stop = A.len; if(!n) pm.log.step++;
+    /* say what happened and what to do next time (the first few throws only) */
+    pm.tells = (pm.tells||0) + 1; if(pm.tells <= 3 || A.tut){ var me = P && !P.dead && inL.indexOf(P) >= 0;
+      if(me && !(P.dashT>0)) PM_cue('WRONG COLOUR', 'Switch to '+PM_key(A.el)+' while you stand in the lane to catch it', 2.6);
+      else PM_cue('DODGED', 'Catch it next time to disarm him: stand in the lane with '+PM_key(A.el), 2.4); } }
   A.fl = Math.max(0.12, A.stop/T.spearSpd); if(A.mk){ BG_free(A.mk); A.mk = null; } A.h.ttl = A.h.t + A.fl + 0.1; }
 function PM_land(b, A){ var pm = b.pm, ex = A.x + Math.sin(A.ang)*A.stop, ez = A.z + Math.cos(A.ang)*A.stop;
   burst(ex, 0.5, ez, 22, ELC[A.el], 7, 0.5, 1.3); rocks(ex, 0.3, ez, 8, 0x4a3a3c, 6); SFX.slam();
@@ -20684,7 +20703,7 @@ function PM_yank(b, c){ var pm = b.pm, T = PM_T, st = c.st, el = c.nx || b.el;
   PM_knock(st, dx/d, dz/d, pull); var r2 = PM_sig(st, PM_dmg(b, T.yankDmg), el, b, {noDodge:true}); st.stun = Math.max(st.stun||0, T.yankStun);   /* the pull floors you (not damage: an absorbed yank still floors you) */ c.yankCd = T.yankCd; c.taut = 0; pm.log.yank++; if(r2==='hit') pm.log.yankHit = (pm.log.yankHit||0)+1;
   dmgText(st.x, 2.7, st.z, 'YANKED', ELCSS[el], 20); SFX.zap(); shake(0.4); burst(st.x, 1, st.z, 14, ELC[el], 6, 0.4, 1.2); }
 function PM_endChain(b, c, why){ var pm = b.pm, i = pm.chains.indexOf(c); if(i>=0) pm.chains.splice(i,1); if(c.pulse) PM_unbook(c.pulse.res); BG_free(c.h);
-  if(why==='snap' || why==='cut'){ if(pm.arm) PM_armClear(b, why); PM_say('THE CHAIN SNAPS', why==='cut' ? 'Cut free! He stumbles (x'+PM_T.stumbleMul+')' : 'The pillar breaks. He stumbles (x'+PM_T.stumbleMul+')', 1.6); SFX.zap(); shake(0.5);
+  if(why==='snap' || why==='cut'){ if(pm.arm) PM_armClear(b, why); if(!pm.snapSaid){ pm.snapSaid = true; PM_cue('THE CHAIN SNAPS!', 'He stumbles: <b class="gd">HIT HIM NOW ×'+PM_T.stumbleMul+'</b>', 2.4); } else PM_say('THE CHAIN SNAPS', why==='cut' ? 'Cut free! He stumbles (x'+PM_T.stumbleMul+')' : 'The pillar breaks. He stumbles (x'+PM_T.stumbleMul+')', 1.6); SFX.zap(); shake(0.5);
     if(!(pm.disarm>0)){ pm.stumble = Math.max(pm.stumble, PM_T.stumble); if(pm.act && pm.act.res) PM_unbook(pm.act.res); if(pm.act && pm.act.h) BG_free(pm.act.h); if(pm.act && pm.act.mk) BG_free(pm.act.mk); pm.act = null; b.wind = 0; b.act = {id:'spikes', step:1, t:0, n:8}; } PM_cheer(0.6); }
   else if(why==='held'){ dmgText(b.x, 5.8, b.z, 'HE DROPS THE CHAIN', '#ffd27a', 18); }
   burst(c.st.x, 1, c.st.z, 12, ELC[c.h.el||b.el], 5, 0.4, 1.1); }
@@ -20694,25 +20713,25 @@ function PM_mul(b){ var pm = b.pm, m = pm.disarm>0 ? (pm.disMul||PM_T.disarmMul)
 
 /* ---------------------------------------------------------------- ARMED: the failure state (ladder open item, 2026-10-10) ----------------------------------------------------------------
    Ignore his mechanic and the crowd throws him a spare spear: a spear he recalls from the sand (uncaught), or a Kneel Sequence nobody finishes.
-   Each adds a stack (max 3): he takes x0.7 / x0.5 / x0.35 and heals 3% (never above the line of
-   the phase he is in). A Disarm clears it (in the Final Wager only a caught Kneel Sequence does, and he cannot fall while ARMED there: he
-   holds at 1 HP), and so does a snapped chain. A bronze dashed ring at his feet shows it. Never touches his damage: a correct ward still takes 0. */
+   Each adds a stack (max 3): he takes x0.9 / x0.82 / x0.75 and heals up to 3%, but never more than 15% of the damage he took since his
+   last heal (and never above the line of the phase he is in). Any Disarm clears it, and so does a snapped chain. A bronze dashed ring at his
+   feet shows it. Never touches his damage: a correct ward still takes 0.
+   Learnability pass (2026-10-11, owner: "how do I kill the Pitmaster ... I do no damage"): the floor was x0.35 and in the Final Wager he
+   could not fall while ARMED (PM_armHold, 1 HP). Both are gone: ignoring his moves makes the fight slower, never unwinnable. */
 function PM_armTop(b){ var ph = b.pm.ph; return b.maxHp*(ph===1 ? 1 : ph===2 ? PM_T.p2 : PM_T.p3) - 1; }
 function PM_armUp(b, why){ var pm = b.pm; if(!pm || b.dead) return; pm.arm = Math.min(PM_T.armed.length-1, (pm.arm||0)+1); pm.log.armed++;
-  var top = PM_armTop(b), hv = Math.max(0, Math.min(b.maxHp*PM_T.armHeal, top - b.hp)); if(hv > 0){ b.hp += hv; dmgText(b.x, 5.0, b.z, '+'+Math.round(hv), '#e0a060', 18); }
+  var top = PM_armTop(b), hv = Math.max(0, Math.min(b.maxHp*PM_T.armHeal, (pm.took||0)*PM_T.healK, top - b.hp)); pm.took = 0; if(hv > 0){ b.hp += hv; pm.log.healed = (pm.log.healed||0) + Math.round(hv); dmgText(b.x, 5.0, b.z, '+'+Math.round(hv), '#e0a060', 18); }
   if(!pm.armH) pm.armH = BG_dashed({follow:b, r:2.6, el:'bronze', op:0.95});
   dmgText(b.x, 6.0, b.z, 'ARMED x'+PM_T.armed[pm.arm], '#e0a060', 24); PM_cheer(0.5); SFX.blink(); burst(b.x, 3, b.z, 14, BG_BRONZE, 5, 0.5, 1.1);
   PM_say('ARMED', why==='recall' ? 'He took his spear back: catch the next one' : 'The crowd arms him: finish a Kneel Sequence', 1.6); PM_hints(); hintOnce('pmArmed'); }
-/* in the Final Wager an ARMED Pitmaster cannot be finished: he holds at 1 HP until a Kneel Sequence is caught */
-function PM_armHold(b){ var pm = b.pm; b.hp = Math.max(b.hp, 1); if(G.t - (pm.holdT||-9) > 3){ pm.holdT = G.t; dmgText(b.x, 6.2, b.z, 'ARMED: CATCH A KNEEL SEQUENCE', '#e0a060', 20); } }
 function PM_armClear(b, why){ var pm = b.pm; if(!pm || !pm.arm) return; pm.arm = 0; if(pm.armH){ BG_free(pm.armH); pm.armH = null; } dmgText(b.x, 6.0, b.z, 'DISARMED OF HIS SPARES', '#ffd27a', 18); ringBurst(b.x, b.z, 2.6, 18, BG_BRONZE); }
 
 /* hints (HINTS lives in 40-ui-loop, later in the build: registered on first use) */
 function PM_hints(){ if(typeof HINTS==='undefined' || HINTS.pmArmed) return;
-  HINTS.pmArmed = function(){ return '<b style="color:#e0a060">ARMED</b>: you ignored his move, so the crowd threw him a spare spear. He heals a little and takes <b>less damage</b> until you Disarm him. In the Final Wager only a caught <b>Kneel Sequence</b> clears it, and he cannot fall while ARMED.'; }; }
+  HINTS.pmArmed = function(){ return '<b style="color:#e0a060">ARMED</b>: you skipped his move, so the crowd threw him a spare spear. He heals a little and takes a bit <b>less damage</b> until you catch a spear (or a Kneel Sequence) to Disarm him. Keep hitting him: he still goes down.'; }; }
 
 /* ---------------------------------------------------------------- phases ---------------------------------------------------------------- */
-function PM_clearAct(b){ var pm = b.pm, A = pm.act; if(!A) return; if(A.res) PM_unbook(A.res); if(A.res && A.res.length) A.res.forEach(PM_unbook); if(A.h) BG_free(A.h); if(A.mk) BG_free(A.mk); if(A.hs) A.hs.forEach(BG_free); if(A.lea) BG_free(A.lea); if(A.seqs) A.seqs.forEach(function(S){ S.hs.forEach(BG_free); if(S.mk) BG_free(S.mk); }); pm.act = null; b.act = null; b.wind = 0; }
+function PM_clearAct(b){ var pm = b.pm, A = pm.act; PM_SLOW.on = false; if(!A) return; if(A.res) PM_unbook(A.res); if(A.res && A.res.length) A.res.forEach(PM_unbook); if(A.h) BG_free(A.h); if(A.mk) BG_free(A.mk); if(A.hs) A.hs.forEach(BG_free); if(A.lea) BG_free(A.lea); if(A.seqs) A.seqs.forEach(function(S){ S.hs.forEach(BG_free); if(S.mk) BG_free(S.mk); }); pm.act = null; b.act = null; b.wind = 0; }
 function PM_toP2(b){ var pm = b.pm; pm.ph = 2; b.phase = 2; pm.chainT = PM_T.roar + 0.4; pm.throwT = Math.max(pm.throwT, 4.5); pm.fillT = Math.max(pm.fillT, 3.2);
   PM_say('PHASE II · THE CHAIN', '"You catch well. Let us see you hold."', 2.2); SFX.roar(); shake(0.6); PM_start(b, 'roar', PM_fav(b)); }
 function PM_toP3(b){ var pm = b.pm, f = PM_fav(b); PM_clearAct(b); while(pm.chains.length) PM_endChain(b, pm.chains[0], 'gone'); pm.ph = 3; b.phase = 2;
@@ -20720,13 +20739,14 @@ function PM_toP3(b){ var pm = b.pm, f = PM_fav(b); PM_clearAct(b); while(pm.chai
   var R = {x:mx+px*2.8, z:mz+pz*2.8}, K = {x:mx-px*2.8, z:mz-pz*2.8}; clampArena(R, 1.6); clampArena(K, 1.6);
   [R, K].forEach(function(o){ var ox = o.x-cx, oz = o.z-cz, od = Math.hypot(ox,oz); if(od < 2.4){ o.x = cx - cx/(r0||1)*2.6; o.z = cz - cz/(r0||1)*2.6; if(o===K){ o.x = cx + (cx-R.x); o.z = cz + (cz-R.z); clampArena(o, 1.6); } } });   /* never start inside a disc */
   var W = {pm:1, t:0, dur:PM_T.wagerDur, b:b, blinks:0, n:0, marks:[], hr:0, hk:0,
-    risk:BG_pad({x:R.x, z:R.z, r:1.5, el:'gold', label:'RISK IT'}), take:BG_pad({x:K.x, z:K.z, r:1.5, el:'bronze', label:'TAKE IT'})};
+    risk:BG_pad({x:R.x, z:R.z, r:1.5, el:'gold', label:'RISK IT ×2.5'}), take:BG_pad({x:K.x, z:K.z, r:1.5, el:'bronze', label:'TAKE IT · SAFE'})};
   G.timestop = W; $('tstop').classList.add('on'); G.hitstop = 0.1; SFX.ult(); b.act = null;
-  PM_say('THE FINAL WAGER', 'Time kneels. Stand in RISK IT (win pays x2.5, +1 note) or TAKE IT.', 3.2); hintOnce('pmWager'); }
+  PM_cue('THE FINAL WAGER · STAND IN A DISC', '<b class="gd">RISK IT</b>: the win pays <b class="gd">×2.5 glory</b>, but every Kneel Sequence gets one more note<br><b class="bz">TAKE IT</b>: the normal finale, the win pays ×2 · no choice in '+PM_T.wagerDur+' s = TAKE IT', PM_T.wagerDur + 0.3);
+  hintOnce('pmWager'); }
 function PM_wagerStep(dt){ var W = G.timestop, b = W.b; W.t += dt; BG_tick(dt); var ctl = P;
   var inR = ctl && !ctl.dead && BG_inCircle(W.risk, ctl.x, ctl.z, 0), inK = ctl && !ctl.dead && BG_inCircle(W.take, ctl.x, ctl.z, 0);
   W.hr = inR ? W.hr + dt : Math.max(0, W.hr - dt); W.hk = inK ? W.hk + dt : Math.max(0, W.hk - dt); W.risk.k = W.hr/PM_T.wagerHold; W.take.k = W.hk/PM_T.wagerHold;
-  W.risk.label = 'RISK IT' + (W.hr>0 ? ' '+Math.ceil(PM_T.wagerHold-W.hr) : ''); W.take.label = 'TAKE IT' + (W.t > PM_T.wagerDur-3 && !inR ? ' · '+Math.max(0, Math.ceil(PM_T.wagerDur-W.t))+'s' : '');
+  W.risk.label = W.hr>0 ? 'RISK IT · '+Math.ceil(PM_T.wagerHold-W.hr) : 'RISK IT ×2.5'; W.take.label = W.hk>0 ? 'TAKE IT · '+Math.ceil(PM_T.wagerHold-W.hk) : 'TAKE IT' + (W.t > PM_T.wagerDur-3 && !inR ? ' · '+Math.max(0, Math.ceil(PM_T.wagerDur-W.t))+'s' : ' · SAFE');
   var ch = W.hr >= PM_T.wagerHold ? 'risk' : (W.hk >= PM_T.wagerHold || W.t >= W.dur) ? 'take' : null; if(ch) PM_wagerEnd(b, ch); }
 function PM_wagerEnd(b, ch){ var W = G.timestop; BG_free(W.risk); BG_free(W.take); G.timestop = null; $('tstop').classList.remove('on');
   if(!b || b.dead || !b.pm) return; var pm = b.pm; pm.risk = ch==='risk'; G.pmRisk = pm.risk; pm.seqT = 1.6; pm.throwT = Math.max(pm.throwT, 4); pm.fillT = Math.max(pm.fillT, 3);
@@ -20741,15 +20761,120 @@ function PM_enrage(b, dt){ var pm = b.pm; pm.enrT -= dt; if(pm.enrT > 0) return;
   var r0 = AR(), r1 = Math.max(PM_T.enrageMin, r0 - PM_T.enrageStep); if(r1 >= r0 - 0.01 && pm.enr > 0){ pm.enr++; return; } pm.enr++; G.mods.arenaR = r1;
   BG_close({x:0, z:0, r0:r0, r1:r1, el:'flame', dur:2.0}); PM_say('THE CROWD GROWS RESTLESS', 'The pit closes in. He hits harder.', 1.8); PM_cheer(0.8); SFX.roar(); }
 
+/* ---------------------------------------------------------------- learnability (2026-10-11) ----------------------------------------------------------------
+   Owner: "how do I kill the Pitmaster? He throws a spear but I have no idea what to do, and I do no damage."
+   Found in a real rAF page: a cursor on his chest aimed at the floor far behind him (most shots flew past: ~40% of the DPS of aiming at his feet),
+   ARMED stacked to x0.35 with 3% heals, and in the Final Wager he could not fall while ARMED. Fixes:
+   - aim: a cursor anywhere over his body aims at him (PM_aimPick, like Hesk's HK_pick);
+   - ARMED floor x0.75, heal capped at 15% of the damage taken since his last heal, no 1 HP hold;
+   - damage feedback: element-coloured rim pulse per hit, a gold recent-damage chunk on the bar, a DAMAGE xn badge and a phase tip under the bar;
+   - the first throw of the fight is a slow TUTORIAL THROW (time at 40% during the wind-up, wider lane, no feint) with a big prompt
+     "STAND IN THE LANE · SWITCH TO [icon] [key]"; every lane is drawn bold, with chevrons pointing down the throw, an arrow over the spear head
+     and a ward-key chip at the lane, all in the spear's colour;
+   - after a catch: "CAUGHT! DISARMED: HIT HIM NOW x1.75" and a gold timer ring around him; a dodge says how to catch it next time;
+   - the first chain and the first Kneel Sequence get one clear prompt each; RISK IT / TAKE IT say what they do. */
+function PM_live(){ var b = G.bossRef; return (b && b.pm && !b.dead) ? b : null; }
+/* aim */
+var PM_ray = new THREE.Raycaster(), PM_ndc = new THREE.Vector2(), PM_AIM = {x:0, z:0};
+function PM_aimPick(){ var b = PM_live(); if(!b || G.touch || typeof camera==='undefined' || b.leap) return null;
+  PM_ndc.set(mouseX/innerWidth*2 - 1, -(mouseY/innerHeight)*2 + 1); PM_ray.setFromCamera(PM_ndc, camera); var o = PM_ray.ray.origin, d = PM_ray.ray.direction, l2 = d.x*d.x + d.z*d.z; if(l2 < 1e-6) return null;
+  var t = ((b.x - o.x)*d.x + (b.z - o.z)*d.z)/l2, y = o.y + d.y*t, dist = Math.hypot(o.x + d.x*t - b.x, o.z + d.z*t - b.z);
+  if(y < -0.3 || y > 5.8 || dist > 2.0) return null; PM_AIM.x = b.x; PM_AIM.z = b.z; return PM_AIM; }
+var PM_aim0 = aimPoint; aimPoint = function(){ var r = PM_aim0.apply(this, arguments); var h = PM_aimPick(); return h || r; };
+/* slow time for the tutorial throw: the world steps 40% as often (like the epic kit's win slow-mo) */
+var PM_SLOW = {on:false, acc:0};
+var PM_step0 = step; step = function(dt){ if(PM_SLOW.on && !(G.hitstop > 0) && !G.timestop){ if(!PM_live()){ PM_SLOW.on = false; } else { PM_SLOW.acc += PM_T.tutSlow; if(PM_SLOW.acc < 1) return; PM_SLOW.acc -= 1; } } return PM_step0.apply(this, arguments); };
+/* the ward key for an element: an icon plus the rebindable key (kl), or "tap" on touch */
+function PM_key(el){ var k = (typeof INC_KEY!=='undefined' && INC_KEY[el]) ? INC_KEY[el] : ({flame:'Digit1', frost:'Digit2', storm:'Digit3'})[el];
+  return '<span class="pmK" style="color:'+(ELCSS[el]||'#ffd27a')+'">'+(typeof ICON==='function' ? ICON(el) : '')+'<b>'+(ELNAME[el]||'')+'</b>'+(G.touch ? '' : '<kbd>'+kl(k)+'</kbd>')+'</span>'; }
+function PM_keyTxt(el){ var k = (typeof INC_KEY!=='undefined' && INC_KEY[el]) ? INC_KEY[el] : ({flame:'Digit1', frost:'Digit2', storm:'Digit3'})[el]; return G.touch ? (ELNAME[el]||'') : '['+kl(k)+'] '+(ELNAME[el]||''); }
+function PM_postWord(){ return (typeof EBK!=='undefined' && EBK.on && EBK.kind==='pit') ? 'the gold post' : 'a pillar'; }
+/* DOM: a big cue panel, a DAMAGE xn badge, a recent-damage chunk on the bar and a tip line under it */
+var PM_ui = null;
+function PM_dom(){ if(PM_ui) return PM_ui; var st = document.createElement('style'); st.textContent =
+  '#pmCue{position:absolute;left:50%;top:24%;transform:translate(-50%,0) scale(.96);max-width:min(92vw,720px);padding:12px 22px 11px;text-align:center;pointer-events:none;z-index:7;opacity:0;transition:opacity .25s,transform .25s;'+
+    'background:linear-gradient(180deg,rgba(34,20,14,.94),rgba(16,11,10,.94));box-shadow:inset 0 0 0 1px rgba(255,210,122,.55),0 8px 30px rgba(0,0,0,.6)}'+
+  '#pmCue.on{opacity:1;transform:translate(-50%,0) scale(1)}'+
+  '#pmCue .t{font:700 clamp(17px,3.6vh,30px)/1.15 Cinzel,Georgia,serif;letter-spacing:.12em;color:#ffd27a;text-shadow:0 2px 0 #1a0e0a}'+
+  '#pmCue .s{margin-top:5px;font:600 clamp(11px,2vh,15px)/1.45 Rubik,sans-serif;letter-spacing:.06em;color:#e8dcc6}'+
+  '#pmCue .pmK,#pmTip .pmK{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;white-space:nowrap}#pmCue .pmK svg,#pmTip .pmK svg{width:1.15em;height:1.15em}'+
+  '#pmCue kbd,#pmTip kbd{display:inline-block;min-width:1.4em;padding:1px 5px;margin-left:2px;background:#0d0a0b;box-shadow:inset 0 0 0 1px currentColor;font:700 .9em/1.2 Rubik,sans-serif;color:inherit;text-align:center}'+
+  '#pmCue .gd{color:#ffd27a}#pmCue .bz{color:#e0a060}'+
+  '#pmMul{display:inline-block;margin-left:8px;vertical-align:middle;font:900 clamp(9px,1.4vh,11px)/1 Rubik,sans-serif;letter-spacing:.06em;padding:3px 6px 2px;border-radius:3px;border:1px solid currentColor;background:rgba(8,6,10,.75);text-shadow:0 1px 1px #000}'+
+  '#pmMul.st{color:#ffd27a;box-shadow:0 0 8px rgba(255,190,90,.55)}#pmMul.ar{color:#e0a060}'+
+  '#pmChip{position:absolute;top:0;bottom:0;left:0;width:0;background:linear-gradient(180deg,#ffd27a,#d9822e);opacity:.9;pointer-events:none}'+
+  '#pmTip{font:800 clamp(9px,1.5vh,11px)/1.3 Rubik,sans-serif;letter-spacing:.12em;color:#ffe2a8;text-shadow:0 1px 2px #000;margin-top:3px;min-height:1em}';
+  document.head.appendChild(st);
+  var cue = document.createElement('div'); cue.id = 'pmCue'; cue.innerHTML = '<div class="t"></div><div class="s"></div>'; ($('hud') || document.body).appendChild(cue);
+  var mu = document.createElement('span'); mu.id = 'pmMul'; mu.hidden = true; var nm = $('bossName'); if(nm && nm.parentNode) nm.parentNode.insertBefore(mu, nm.nextSibling);
+  var bar = $('bossFill') && $('bossFill').parentNode, chip = null; if(bar){ if(getComputedStyle(bar).position==='static') bar.style.position = 'relative'; chip = document.createElement('b'); chip.id = 'pmChip'; chip.hidden = true; bar.insertBefore(chip, bar.firstChild); }
+  var tip = document.createElement('div'); tip.id = 'pmTip'; tip.hidden = true; var bb = $('bossBox'); if(bb) bb.appendChild(tip);
+  PM_ui = {cue:cue, cT:cue.children[0], cS:cue.children[1], cueT:0, hold:false, mul:mu, chip:chip, tip:tip, mk:'', tk:'', trail:1, hd:0, lastF:1}; return PM_ui; }
+/* show the cue for `dur` real seconds (hold: until PM_cueOff) */
+function PM_cue(t, s, dur, hold){ var d = PM_dom(); d.cT.innerHTML = t; d.cS.innerHTML = s||''; d.cS.style.display = s ? '' : 'none'; d.cueT = dur||2; d.hold = !!hold; d.cue.classList.add('on'); if(DEV){ PM_D.cues.push(d.cT.textContent + ' | ' + d.cS.textContent); } }
+function PM_cueOff(){ if(PM_ui){ PM_ui.hold = false; PM_ui.cueT = Math.min(PM_ui.cueT, 0.35); } }
+var PM_TIP = [null, 'CATCH THE SPEAR: STAND IN ITS LANE WITH ITS COLOUR', 'DRAG THE CHAIN OVER THE POST TO SNAP IT', 'KNEEL: STEP INTO 1 → 2 → 3, SWITCHING COLOURS'];
+function PM_hud(adt){ var d = PM_ui; if(!d) return; adt = adt||0.016;
+  if(d.cueT > 0 && !d.hold){ d.cueT -= adt; if(d.cueT <= 0) d.cue.classList.remove('on'); }
+  var b = G.bossRef, on = !!(b && b.pm && !b.dead && G.state==='play');
+  if(!on){ d.mul.hidden = true; d.tip.hidden = true; if(d.chip) d.chip.hidden = true; d.trail = 1; d.mk = ''; d.tk = ''; if(!b || !b.pm){ if(d.cueT > 0 || d.hold){ d.hold = false; d.cueT = 0; d.cue.classList.remove('on'); } } return; }
+  var pm = b.pm, f = Math.max(0, b.hp/b.maxHp);
+  /* recent-damage chunk: holds 0.45 s after the last hit, then drains, so every volley visibly takes a bite out of the bar */
+  if(f > d.trail) d.trail = f; else if(f < d.trail - 0.0005){ if(d.hd <= 0 || d.lastF !== f) d.hd = 0.45; }
+  d.lastF = f; if(d.hd > 0) d.hd -= adt; else d.trail = Math.max(f, d.trail - adt*0.06);
+  if(d.chip){ var w = d.trail - f; d.chip.hidden = w < 0.0008; if(!d.chip.hidden){ d.chip.style.left = (f*100).toFixed(2)+'%'; d.chip.style.width = (Math.max(0.35, w*100)).toFixed(2)+'%'; } }
+  var m = +PM_mul(b).toFixed(2), mk = m===1 ? '' : (m > 1 ? 'st' : 'ar') + m;
+  if(mk!==d.mk){ d.mk = mk; d.mul.hidden = !mk; d.mul.className = m > 1 ? 'st' : 'ar'; d.mul.textContent = 'DAMAGE ×' + m + (m < 1 ? ' · ARMED' : ''); }
+  var tk = pm.disarm > 0 ? 'DISARMED: HIT HIM NOW · ×' + PM_T.disarmMul + ' · ' + pm.disarm.toFixed(1) + ' s'
+    : pm.stumble > 0 ? 'HE STUMBLES · ×' + PM_T.stumbleMul + ' · ' + pm.stumble.toFixed(1) + ' s'
+    : (PM_TIP[pm.ph] || '').replace('THE POST', PM_postWord()==='a pillar' ? 'A PILLAR' : 'THE GOLD POST') + (pm.arm ? '  ·  ARMED: DISARM HIM TO CLEAR IT' : '');
+  d.tip.hidden = false; if(tk!==d.tk){ d.tk = tk; d.tip.textContent = tk; } }
+/* 3D teach props for every throw: chevrons down the lane, a ward-key chip beside it, an arrow over the spear head; and the Disarm timer ring */
+var PM_G = null;
+function PM_props(){ if(PM_G) return PM_G; var g = new THREE.Group(); g.visible = false; scene.add(g); var o = {g:g, chev:[], chip:null, arrow:null, ring:null};
+  for(var i=0;i<4;i++){ var m = new THREE.Mesh(BG_geo.tri, BG_mat(0.9)); m.renderOrder = 3; g.add(m); o.chev.push(m); }
+  o.chip = new THREE.Sprite(new THREE.SpriteMaterial({transparent:true, depthTest:false, depthWrite:false})); o.chip.renderOrder = 7; o.chip.scale.set(3.4, 0.85, 1); scene.add(o.chip); o.chip.visible = false;
+  o.arrow = new THREE.Sprite(new THREE.SpriteMaterial({transparent:true, depthTest:false, depthWrite:false})); o.arrow.renderOrder = 7; o.arrow.scale.set(1.1, 1.1, 1); scene.add(o.arrow); o.arrow.visible = false;
+  var rg = new THREE.Mesh(BG_geo.rim, BG_mat(0.95)); rg.renderOrder = 3; rg.visible = false; scene.add(rg); o.ring = rg;
+  var rf = new THREE.Mesh(new THREE.RingGeometry(0.88, 1, 48, 1, Math.PI/2, Math.PI*2).rotateX(-Math.PI/2), BG_mat(0.95)); rf.renderOrder = 4; rf.visible = false; scene.add(rf); o.ringF = rf; o.ringK = -1;
+  PM_G = o; return o; }
+function PM_chipTex(el){ var css = ELCSS[el]||'#ffd27a', key = PM_keyTxt(el);
+  return BG_canvasTex('pmchip'+el+key, 256, 64, function(x){ BG_rr(x, 4, 6, 248, 52, 12); x.fillStyle = 'rgba(16,11,10,0.94)'; x.fill(); x.lineWidth = 5; x.strokeStyle = css; x.stroke();
+    x.beginPath(); x.arc(34, 32, 13, 0, Math.PI*2); x.fillStyle = css; x.fill();
+    x.fillStyle = css; x.font = '800 27px Rubik, Arial, sans-serif'; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(key, 58, 34); }); }
+function PM_arrowTex(el){ var css = ELCSS[el]||'#ffd27a';
+  return BG_canvasTex('pmarr'+el, 64, 64, function(x){ x.beginPath(); x.moveTo(8, 14); x.lineTo(56, 14); x.lineTo(32, 56); x.closePath(); x.fillStyle = css; x.fill(); x.lineWidth = 5; x.strokeStyle = 'rgba(16,11,10,0.95)'; x.stroke(); }); }
+var PM_v3 = new THREE.Vector3();
+function PM_propsDraw(rt){ var b = G.bossRef, o = PM_G; if(!o) return; var A = b && b.pm && !b.dead ? b.pm.act : null, th = A && A.id==='throw' && A.step===0 && A.h && A.h.on ? A : null;
+  o.g.visible = !!th; o.chip.visible = !!th; o.arrow.visible = !!th;
+  if(th){ var s = Math.sin(th.ang), c = Math.cos(th.ang), col = BG_col(th.el);
+    for(var i=0;i<o.chev.length;i++){ var m = o.chev[i], u = ((i + rt*1.6) % o.chev.length)/o.chev.length, dd = 1.2 + u*(th.len - 2);
+      m.position.set(th.x + s*dd, 0.1, th.z + c*dd); m.rotation.set(0, th.ang + Math.PI/2, 0); m.scale.set(0.75, 1, 0.55); m.material.color.setHex(col); m.material.opacity = 0.9*Math.sin(u*Math.PI); }
+    var px = -c, pz = s, hw = th.h.w/2 + 1.9, cd = Math.min(th.len*0.55, 7.5); o.chip.position.set(th.x + s*cd + px*hw, 1.3, th.z + c*cd + pz*hw); var ct = PM_chipTex(th.el); if(o.chip.material.map!==ct){ o.chip.material.map = ct; o.chip.material.needsUpdate = true; }
+    var sp = b.M && b.M.extra && b.M.extra.spear; if(sp && sp.getWorldPosition){ sp.getWorldPosition(PM_v3); } else PM_v3.set(b.x, 3, b.z);
+    o.arrow.position.set(PM_v3.x, Math.max(PM_v3.y, 3) + 1.6 + 0.2*Math.sin(rt*8), PM_v3.z); var at = PM_arrowTex(th.el); if(o.arrow.material.map!==at){ o.arrow.material.map = at; o.arrow.material.needsUpdate = true; } }
+  /* the Disarm timer: a gold ring at his feet that empties as the window runs out */
+  var dis = b && b.pm && !b.dead && b.pm.disarm > 0 ? b.pm.disarm/PM_T.disarm : 0; o.ring.visible = o.ringF.visible = dis > 0;
+  if(dis > 0){ var r = 2.7; o.ring.position.set(b.x, 0.08, b.z); o.ring.scale.set(r, 1, r); BG_tint(o.ring, 'bronze', 0.45);
+    var kq = Math.round(dis*48)/48; if(kq!==o.ringK){ o.ringK = kq; o.ringF.geometry.dispose(); o.ringF.geometry = new THREE.RingGeometry(0.86, 1, 48, 1, Math.PI/2, Math.max(0.01, Math.PI*2*kq)).rotateX(-Math.PI/2); }
+    o.ringF.position.set(b.x, 0.1, b.z); o.ringF.scale.set(r, 1, r); BG_tint(o.ringF, 'gold', 0.6 + 0.35*Math.abs(Math.sin(rt*6))); } }
+/* while a teaching cue holds (the tutorial throw), other first-time hints wait (they are not used up), so the spear-lane hint stays on screen */
+var PM_ho0 = hintOnce; hintOnce = function(id){ if(PM_ui && PM_ui.hold && !/^pm/.test(String(id))) return; return PM_ho0.apply(this, arguments); };
+RENDER_HOOKS.push(function PM_render(t, dt){ PM_hud(dt); if(PM_G) PM_propsDraw(t); });
+
 /* ---------------------------------------------------------------- core wrappers ---------------------------------------------------------------- */
 var PM_hurt0 = hurtEnemy;
-hurtEnemy = function(e, dmg){ if(e && e.pm && !e.dead){ var m = PM_mul(e); if(m!==1) arguments[1] = dmg*m; var r = PM_hurt0.apply(this, arguments); PM_hpGate(e); return r; } return PM_hurt0.apply(this, arguments); };
+function PM_hitEl(o){ if(o && o.src && o.src.rxEl) return o.src.rxEl; if(typeof RX!=='undefined' && RX.ctx && RX.ctx.el) return RX.ctx.el; return P ? P.ward : 'flame'; }
+hurtEnemy = function(e, dmg, kx, kz, o){ if(e && e.pm && !e.dead){ var hp0 = e.hp, m = PM_mul(e); if(m!==1) arguments[1] = dmg*m; var r = PM_hurt0.apply(this, arguments); PM_hpGate(e);
+    var lost = Math.max(0, hp0 - e.hp); e.pm.took = (e.pm.took||0) + lost; e.pm.dealt = (e.pm.dealt||0) + lost;
+    if(lost > 0){ var hel = PM_hitEl(o); e.hfPc = ELGLOW[hel] || 0xff6a1f; e.hfPk = 1; }   /* rim pulse in the hit's element colour (59-hitfx draws it; never white) */
+    return r; } return PM_hurt0.apply(this, arguments); };
 /* (was a second `function PM_gate`, which shadowed the colour gate above: yanks and kneel embers never fired; renamed 2026-10-10) */
-function PM_hpGate(e){ var pm = e.pm; if(!pm || e.dead) return; if(pm.ph===3 && pm.arm && e.hp < 1) PM_armHold(e); var thr = pm.ph===1 ? PM_T.p2 : pm.ph===2 ? PM_T.p3 : 0; if(thr && e.hp < e.maxHp*thr){ e.hp = Math.max(e.hp, e.maxHp*thr - 1, 1); if(!pm.pend) pm.pend = pm.ph+1; } }
+function PM_hpGate(e){ var pm = e.pm; if(!pm || e.dead) return; var thr = pm.ph===1 ? PM_T.p2 : pm.ph===2 ? PM_T.p3 : 0; if(thr && e.hp < e.maxHp*thr){ e.hp = Math.max(e.hp, e.maxHp*thr - 1, 1); if(!pm.pend) pm.pend = pm.ph+1; } }
 var PM_kill0 = killEnemy;
-killEnemy = function(e, quiet){ if(e && e.pm && !e.dead && e.pm.ph===3 && e.pm.arm){ PM_armHold(e); return; }
+killEnemy = function(e, quiet){
   if(e && e.pm && !e.dead && e.pm.ph < 3){ e.hp = Math.max(1, e.maxHp*(e.pm.ph===1 ? PM_T.p2 : PM_T.p3) - 1); if(!e.pm.pend) e.pm.pend = e.pm.ph+1; return; } return PM_kill0.apply(this, arguments); };
-function PM_end(b){ BG_clear(); spearFly.visible = false; if(G.timestop && G.timestop.pm){ G.timestop = null; $('tstop').classList.remove('on'); }
+function PM_end(b){ BG_clear(); spearFly.visible = false; PM_SLOW.on = false; PM_cueOff(); if(PM_G){ PM_G.g.visible = PM_G.chip.visible = PM_G.arrow.visible = PM_G.ring.visible = PM_G.ringF.visible = false; } if(G.timestop && G.timestop.pm){ G.timestop = null; $('tstop').classList.remove('on'); }
   if(b && b.pm){ var pm = b.pm; pm.armH = null; pm.chains.length = 0; pm.embers.length = 0; pm.leash = null; pm.act = null; if(pm.enr) recomputeMods(); for(var i=CMB.res.length-1;i>=0;i--) if(CMB.res[i].pm) CMB.res.splice(i,1); } }
 var PM_bossDeath0 = bossDeath;
 bossDeath = function(b){ if(b && b.pm){ if(DEV) PM_D.last = {t:+b.pm.ft.toFixed(1), log:b.pm.log, risk:b.pm.risk, enr:b.pm.enr}; PM_end(b); } return PM_bossDeath0.apply(this, arguments); };
@@ -20762,9 +20887,9 @@ roundCleared = function(boss){ if(boss && G.pmRisk && G.waveActive===false){ var
 STEP_HOOKS.push(function PM_faceStep(dt){ var b = G.bossRef; if(!b || !b.pm || b.dead || b.leap || b.spawnT>0) return; var f = b.pm.face; if(f==null) return; b.face += angDiff(b.face, f)*Math.min(1, dt*(b.pm.act && b.pm.act.id==='throw' ? 14 : 5)); });
 
 /* ---------------------------------------------------------------- DEV ---------------------------------------------------------------- */
-var PM_D = {T:PM_T, last:null};
+var PM_D = {T:PM_T, last:null, cues:[]};
 if(DEV){ window.__feat = window.__feat || {}; window.__feat.pm = { T:PM_T, D:PM_D, b:function(){ return G.bossRef; }, st:function(){ var b = G.bossRef; return b && b.pm ? {ph:b.pm.ph, hp:+(b.hp/b.maxHp).toFixed(3), max:Math.round(b.maxHp), act:b.pm.act && b.pm.act.id, dis:+b.pm.disarm.toFixed(1), stum:+b.pm.stumble.toFixed(1), chains:b.pm.chains.length, sp:b.pm.sp, ft:+b.pm.ft.toFixed(1), risk:b.pm.risk, enr:b.pm.enr, log:b.pm.log, ts:!!(G.timestop && G.timestop.pm)} : null; },
-  wager:function(ch){ if(G.timestop && G.timestop.pm) PM_wagerEnd(G.timestop.b, ch||'take'); }, start:function(id){ var b = G.bossRef; if(b && b.pm && !b.pm.act) PM_start(b, id, PM_fav(b)); }, shapes:function(){ return BG_live.length; }, mv:function(){ var b = G.bossRef; return b && b.pm ? PM_move(b, PM_fav(b), 2) : null; } }; }
+  wager:function(ch){ if(G.timestop && G.timestop.pm) PM_wagerEnd(G.timestop.b, ch||'take'); }, start:function(id){ var b = G.bossRef; if(b && b.pm && !b.pm.act) PM_start(b, id, PM_fav(b)); }, shapes:function(){ return BG_live.length; }, live:function(){ return BG_live; }, inLane:BG_inLane, inCircle:BG_inCircle, mv:function(){ var b = G.bossRef; return b && b.pm ? PM_move(b, PM_fav(b), 2) : null; } }; }
 /* ---------- 81-stormwright2.js — Stormwright rework (wave 20): "Conduct the Storm". Spec: design/ARENA-SW.md, "v2 rework". Prefix SW2_. ----------
    Overrides pieces of 56-stormwright.js (each wrapper calls the original where it still applies):
    - removed: the x0.55 Storm Mantle, the 2.5%/s cap, Temper and the Temper Quench, Twin Hammerfall, Storm Crown;
@@ -22035,7 +22160,7 @@ var HINTS = {
   tempt:function(){ return '<b style="color:#ffd27a">Gold orbs</b> add Glory to your stake, but each one unleashes a hazard.'; },
   trimortar:function(){ return 'Three colors land in a row. Switch wards '+ICON('flame')+ICON('frost')+ICON('storm')+' as they land!'; },
   /* the Pitmaster, "The Wager Duel" (80-pitmaster.js) */
-  pmCatch:function(){ return 'A <b>spear lane</b>! Stand in it with its colour to <b>CATCH</b> the spear and disarm him, or step out of it.'+(PTY_size()>1 ? ' In a party, <b>two bodies</b> in the lane brace the catch (gold markers).' : ''); },
+  pmCatch:function(){ return 'A <b>spear lane</b>! Stand in it and switch to <b>its colour</b> to <b>CATCH</b> the spear: he is disarmed and takes ×1.75. Or step out of it.'; },
   pmFeint:function(){ return '<b>Feint!</b> The spear changed colour just before the throw. Switch late to still catch it.'; },
   pmChain:function(){ return 'Chained! Stay inside the <b>dashed ring</b> or he yanks you. Drag the chain across a <b>pillar</b> to snap it, or hold it for bonus damage.'+(PTY_size()>1 ? ' A free ally can stand on the chain to cut it.' : ''); },
   pmWager:function(){ return '<b style="color:#ffd27a">The Final Wager.</b> Stand in <b style="color:#ffd27a">RISK IT</b> (the win pays ×2.5, harder sequences) or <b>TAKE IT</b>.'; },
